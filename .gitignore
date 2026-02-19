@@ -143,3 +143,14 @@ deployment/nginx/ssl/*.crt
 # Coverage reports
 .coverage.*
 coverage/
+
+# === ELECTRON ===
+python-dist/
+release/
+node_modules/
+*.exe
+*.msi
+
+# === PYINSTALLER ===
+lumina-backend/
+*.spec.bak

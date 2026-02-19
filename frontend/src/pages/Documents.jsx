@@ -72,14 +72,29 @@ const Documents = () => {
   const handleDownload = async (filename) => {
     try {
       const response = await documentsAPI.download(filename);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+
+      if (window.electronAPI) {
+        const result = await window.electronAPI.saveFile({
+          defaultPath: filename,
+          filters: [
+            { name: 'Word Documents', extensions: ['docx'] },
+            { name: 'All Files', extensions: ['*'] }
+          ],
+          data: Array.from(new Uint8Array(response.data))
+        });
+        if (result.success) {
+          showMessage('Documento salvo com sucesso!', 'success');
+        }
+      } else {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Error downloading document:', error);
       showMessage('Erro ao baixar documento', 'error');
@@ -87,7 +102,21 @@ const Documents = () => {
   };
 
   const handleDelete = async (filename) => {
-    if (!window.confirm(`Deseja realmente excluir "${filename}"?`)) return;
+    let confirmed = false;
+
+    if (window.electronAPI) {
+      confirmed = await window.electronAPI.showConfirmDialog({
+        title: 'Confirmar Exclusão',
+        message: `Deseja realmente excluir "${filename}"?`,
+        buttons: ['Cancelar', 'Excluir'],
+        defaultId: 0,
+        cancelId: 0,
+      });
+    } else {
+      confirmed = window.confirm(`Deseja realmente excluir "${filename}"?`);
+    }
+
+    if (!confirmed) return;
 
     try {
       await documentsAPI.delete(filename);
@@ -172,9 +201,9 @@ const Documents = () => {
           plate: formData.guest_plate || null,
           companions: companions.length > 0
             ? companions.filter(c => c.name.trim()).map(c => ({
-                name: c.name,
-                document: c.document || null
-              }))
+              name: c.name,
+              document: c.document || null
+            }))
             : null,
         },
         property: {
@@ -366,25 +395,25 @@ const Documents = () => {
                       O documento sera gerado com os dados da reserva selecionada
                     </small>
                   </div>
-                  
+
                   <div className="button-group" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     <button
-                        className="btn btn-primary"
-                        onClick={handleGenerateFromBooking}
-                        disabled={generating}
-                        style={{ flex: 1 }}
+                      className="btn btn-primary"
+                      onClick={handleGenerateFromBooking}
+                      disabled={generating}
+                      style={{ flex: 1 }}
                     >
-                        <FilePlus size={16} />
-                        Gerar Autorizacao
+                      <FilePlus size={16} />
+                      Gerar Autorizacao
                     </button>
                     <button
-                        className="btn btn-secondary"
-                        onClick={handleGenerateReceipt}
-                        disabled={generating}
-                        style={{ flex: 1 }}
+                      className="btn btn-secondary"
+                      onClick={handleGenerateReceipt}
+                      disabled={generating}
+                      style={{ flex: 1 }}
                     >
-                        <FileText size={16} />
-                        Gerar Recibo
+                      <FileText size={16} />
+                      Gerar Recibo
                     </button>
                   </div>
                 </div>
@@ -486,7 +515,7 @@ const Documents = () => {
                           style={{ width: '100%' }}
                         >
                           <option value="">Selecione</option>
-                          {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                          {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
                             <option key={uf} value={uf}>{uf}</option>
                           ))}
                         </select>
@@ -624,12 +653,12 @@ const Documents = () => {
               </button>
               {generateMode === 'manual' && (
                 <button
-                    className="btn btn-primary"
-                    onClick={handleGenerateManual}
-                    disabled={generating}
+                  className="btn btn-primary"
+                  onClick={handleGenerateManual}
+                  disabled={generating}
                 >
-                    <FilePlus size={16} />
-                    {generating ? 'Gerando...' : 'Gerar Autorizacao'}
+                  <FilePlus size={16} />
+                  {generating ? 'Gerando...' : 'Gerar Autorizacao'}
                 </button>
               )}
             </div>

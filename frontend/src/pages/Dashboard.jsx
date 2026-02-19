@@ -77,10 +77,16 @@ const Dashboard = () => {
   });
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
-  
+
   // Modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
   useEffect(() => {
     loadDashboard();
@@ -145,11 +151,11 @@ const Dashboard = () => {
     try {
       const today = new Date();
       await statisticsAPI.getMonthlyReport(propertyId, today.getMonth() + 1, today.getFullYear(), true);
-      alert('Relatório enviado com sucesso!'); // Idealmente substituir por um Toast
+      showMessage('Relatório enviado com sucesso!', 'success');
       setShowEmailModal(false);
     } catch (error) {
       console.error('Error sending report:', error);
-      alert('Erro ao enviar relatório. Verifique as configurações de email.');
+      showMessage('Erro ao enviar relatório. Verifique as configurações de email.', 'error');
     } finally {
       setSendingReport(false);
     }
@@ -179,6 +185,13 @@ const Dashboard = () => {
         </div>
       </header>
 
+      {message && (
+        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
+          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          <span>{message.text}</span>
+        </div>
+      )}
+
       <div className="bento-grid">
         {/* KPI Cards */}
         <StatCard
@@ -193,9 +206,9 @@ const Dashboard = () => {
           trend="up"
           icon={Wallet}
           extraAction={
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleSendReportClick} 
+            <button
+              className="btn btn-secondary"
+              onClick={handleSendReportClick}
               style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
             >
               <Send size={14} />

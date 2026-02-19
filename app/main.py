@@ -26,10 +26,14 @@ logger = get_logger(__name__)
 
 # Configurar rate limiter GLOBAL
 # Proteção contra DoS: limites aplicados a TODOS os endpoints
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["100/minute", "1000/hour"]  # Global: 100 req/min, 1000 req/hora
-)
+# No modo desktop (localhost), rate limiting é desabilitado
+if settings.LUMINA_DESKTOP:
+    limiter = Limiter(key_func=get_remote_address, default_limits=[])
+else:
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["100/minute", "1000/hour"]  # Global: 100 req/min, 1000 req/hora
+    )
 
 
 # Tarefas de background
@@ -67,8 +71,9 @@ def validate_security_settings():
     """Valida configurações críticas de segurança antes do startup"""
     errors = []
 
-    # Validar SECRET_KEY (já validado pelo Pydantic, mas double-check)
-    if settings.APP_ENV == "production":
+    # No modo desktop, pular validações rígidas de segurança
+    if settings.APP_ENV == "production" and not settings.LUMINA_DESKTOP:
+        # Validar SECRET_KEY (já validado pelo Pydantic, mas double-check)
         if settings.SECRET_KEY == "CHANGE_THIS_SECRET_KEY_IN_PRODUCTION":
             errors.append("SECRET_KEY usa valor padrão inseguro")
 
@@ -114,9 +119,9 @@ async def lifespan(app: FastAPI):
     # Iniciar task de sincronização periódica
     sync_task = asyncio.create_task(sync_calendar_periodically())
 
-    # Iniciar task de backup automático (apenas em produção)
+    # Iniciar task de backup automático (em produção e no modo desktop)
     backup_task = None
-    if settings.APP_ENV == "production":
+    if settings.APP_ENV in ["production", "desktop"]:
         from app.core.backup import scheduled_backup_task
         backup_task = asyncio.create_task(scheduled_backup_task())
         logger.info("Automatic backup task started")
@@ -174,9 +179,11 @@ add_security_headers(app, environment=settings.APP_ENV)
 app.add_middleware(CSRFProtectionMiddleware)
 
 # Configurar CORS para permitir acesso do frontend
+# No modo desktop (Electron), CORS é aberto pois tudo é localhost
+cors_origins = ["*"] if settings.LUMINA_DESKTOP else settings.cors_origins_list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,  # Usar configuração do settings
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Especificar métodos
     allow_headers=["Authorization", "Content-Type"],  # Especificar headers
@@ -195,6 +202,25 @@ app.include_router(sync_actions.router)
 app.include_router(calendar.router)
 app.include_router(settings_router_mod.router)  # Configurações persistentes
 app.include_router(notifications_router_mod.router)  # Central de notificações
+
+
+# === ENDPOINT DE SHUTDOWN (apenas modo desktop) ===
+@app.post("/api/v1/shutdown")
+async def shutdown_server():
+    """Shutdown gracioso do servidor (apenas modo desktop).
+    Chamado pelo Electron antes de encerrar o processo.
+    """
+    if not settings.LUMINA_DESKTOP:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "Only available in desktop mode"}
+        )
+    import os
+    import signal
+    import threading
+    # Dar tempo para a resposta ser enviada antes de encerrar
+    threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGTERM)).start()
+    return {"status": "shutting_down"}
 
 
 # Rotas básicas

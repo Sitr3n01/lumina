@@ -82,29 +82,29 @@ raiz/
 ## Responsabilidades do Agente Claude na Migracao
 
 ### Fase 1: Scaffolding Electron
-- [ ] Criar `electron/main.js` (main process)
-- [ ] Criar `electron/preload.js` (context bridge)
-- [ ] Criar `electron/splash.html` (tela loading)
-- [ ] Criar `package.json` raiz
-- [ ] Criar `electron-builder.yml`
+- [x] Criar `electron/main.js` (main process)
+- [x] Criar `electron/preload.js` (context bridge)
+- [x] Criar `electron/splash.html` (tela loading)
+- [x] Criar `package.json` raiz
+- [x] Criar `electron-builder.yml`
 
 ### Fase 2: Python Bundling
-- [ ] Criar `run_backend.py` (entry point PyInstaller)
-- [ ] Criar `lumina.spec` (config PyInstaller)
-- [ ] Criar `electron/python-manager.js` (gerenciador ciclo de vida)
-- [ ] Modificar `app/config.py` (suporte LUMINA_DATA_DIR, LUMINA_ENV_FILE)
-- [ ] Modificar `app/main.py` (shutdown endpoint, relaxar rate limits)
+- [x] Criar `run_backend.py` (entry point PyInstaller)
+- [x] Criar `lumina.spec` (config PyInstaller)
+- [x] Criar `electron/python-manager.js` (gerenciador ciclo de vida)
+- [x] Modificar `app/config.py` (suporte LUMINA_DATA_DIR, LUMINA_ENV_FILE)
+- [x] Modificar `app/main.py` (shutdown endpoint, relaxar rate limits)
 
 ### Fase 4: IPC + Features Nativas
-- [ ] Criar `electron/ipc-handlers.js` (todos os handlers IPC)
-- [ ] Criar `electron/tray.js` (icone bandeja + menu)
-- [ ] Criar `electron/updater.js` (auto-update)
+- [x] Criar `electron/ipc-handlers.js` (todos os handlers IPC)
+- [x] Criar `electron/tray.js` (icone bandeja + menu)
+- [x] Criar `electron/updater.js` (auto-update)
 
 ### Fase 5: Wizard
-- [ ] Criar `electron/wizard/wizard.html`
-- [ ] Criar `electron/wizard/wizard.js`
-- [ ] Criar `electron/wizard/wizard.css`
-- [ ] Criar `electron/wizard/wizard-preload.js`
+- [x] Criar `electron/wizard/wizard.html`
+- [x] Criar `electron/wizard/wizard.js`
+- [x] Criar `electron/wizard/wizard.css`
+- [x] Criar `electron/wizard/wizard-preload.js`
 
 ## Regras de Commits
 

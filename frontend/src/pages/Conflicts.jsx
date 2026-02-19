@@ -13,6 +13,12 @@ const Conflicts = () => {
   const [selectedConflict, setSelectedConflict] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [resolving, setResolving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
   useEffect(() => {
     loadConflicts();
@@ -46,13 +52,13 @@ const Conflicts = () => {
       await loadConflicts();
     } catch (error) {
       console.error('Error detecting conflicts:', error);
-      alert('Erro ao detectar conflitos');
+      showMessage('Erro ao detectar conflitos', 'error');
     }
   };
 
   const handleResolve = async () => {
     if (!selectedConflict || !resolutionNotes.trim()) {
-      alert('Por favor, adicione notas de resolução');
+      showMessage('Por favor, adicione notas de resolução', 'error');
       return;
     }
 
@@ -64,7 +70,7 @@ const Conflicts = () => {
       await loadConflicts();
     } catch (error) {
       console.error('Error resolving conflict:', error);
-      alert('Erro ao resolver conflito');
+      showMessage('Erro ao resolver conflito', 'error');
     } finally {
       setResolving(false);
     }
@@ -95,6 +101,13 @@ const Conflicts = () => {
           Detectar Conflitos
         </button>
       </div>
+
+      {message && (
+        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
+          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          <span>{message.text}</span>
+        </div>
+      )}
 
       {/* Resumo */}
       {summary && (

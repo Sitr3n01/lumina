@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, Loader } from 'lucide-react';
+import { RefreshCw, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import CalendarComponent from '../components/Calendar';
 import EventModal from '../components/EventModal';
 import { calendarAPI } from '../services/api';
@@ -13,6 +13,12 @@ const Calendar = () => {
   const [syncing, setSyncing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [message, setMessage] = useState(null);
+
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
   useEffect(() => {
     loadEvents();
@@ -52,7 +58,7 @@ const Calendar = () => {
       await loadEvents();
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      alert('Erro ao sincronizar. Verifique se as URLs iCal estão configuradas.');
+      showMessage('Erro ao sincronizar. Verifique se as URLs iCal estão configuradas.', 'error');
     } finally {
       setSyncing(false);
     }
@@ -104,6 +110,13 @@ const Calendar = () => {
           )}
         </button>
       </div>
+
+      {message && (
+        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
+          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          <span>{message.text}</span>
+        </div>
+      )}
 
       {events.length === 0 ? (
         <div className="empty-state">
