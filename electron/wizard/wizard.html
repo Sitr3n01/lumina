@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:;" />
+    <title>LUMINA - Configuração Inicial</title>
+    <link rel="stylesheet" href="wizard.css" />
+</head>
+
+<body>
+    <div class="wizard-container">
+        <!-- Orbs decorativas -->
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+
+        <!-- ===== CABEÇALHO COM PROGRESS BAR ===== -->
+        <div class="progress-header">
+            <div class="logo-row">
+                <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+                    <defs>
+                        <linearGradient id="lgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1" />
+                            <stop offset="100%" style="stop-color:#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M32 8 L58 30 L54 30 L54 56 L10 56 L10 30 L6 30 Z" fill="url(#lgrad)" />
+                    <circle cx="32" cy="8" r="4" fill="#a78bfa" />
+                </svg>
+                <div>
+                    <div class="logo-text">LUMINA</div>
+                    <div class="logo-subtitle">Configuração Inicial</div>
+                </div>
+            </div>
+
+            <!-- Steps Indicator (7 steps) -->
+            <div class="steps-indicator" id="stepsIndicator">
+                <!-- Gerado por wizard.js -->
+            </div>
+        </div>
+
+        <!-- ===== CONTEÚDO DOS STEPS ===== -->
+        <div class="wizard-content">
+
+            <!-- STEP 1: Boas-vindas -->
+            <div class="wizard-step active" data-step="1">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <svg width="80" height="80" viewBox="0 0 64 64" fill="none">
+                            <defs>
+                                <linearGradient id="wgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#6366f1" />
+                                    <stop offset="100%" style="stop-color:#8b5cf6" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M32 4 L60 26 L56 26 L56 60 L8 60 L8 26 L4 26 Z" fill="url(#wgrad)" opacity="0.9" />
+                            <rect x="24" y="38" width="16" height="22" rx="3" fill="#0f0f1a" opacity="0.6" />
+                            <rect x="12" y="32" width="12" height="12" rx="2" fill="#0f0f1a" opacity="0.4" />
+                            <rect x="40" y="32" width="12" height="12" rx="2" fill="#0f0f1a" opacity="0.4" />
+                            <circle cx="32" cy="4" r="5" fill="#a78bfa" />
+                        </svg>
+                    </div>
+                    <h1 class="step-title" style="font-size:1.8rem;">Bem-vindo ao LUMINA</h1>
+                    <p class="step-description" style="max-width:440px; margin:12px auto 0;">
+                        Sistema de Gestão de Apartamentos para Airbnb e Booking.com.<br>
+                        Vamos configurar tudo em <strong style="color:#6366f1;">7 passos simples</strong>.
+                    </p>
+
+                    <div class="welcome-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">📅</div>
+                            <div class="feature-text">
+                                <strong>Calendários Sync</strong>
+                                <span>Airbnb e Booking.com</span>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-text">
+                                <strong>Conflitos</strong>
+                                <span>Detecção automática</span>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📄</div>
+                            <div class="feature-text">
+                                <strong>Documentos</strong>
+                                <span>Geração automática</span>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">📧</div>
+                            <div class="feature-text">
+                                <strong>Emails</strong>
+                                <span>Envio automatizado</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Dados do Imóvel -->
+            <div class="wizard-step" data-step="2">
+                <div class="step-header">
+                    <h2 class="step-title">🏠 Dados do Imóvel</h2>
+                    <p class="step-description">Informações sobre o apartamento que será gerenciado.</p>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="PROPERTY_NAME">Nome do Imóvel <span class="required">*</span></label>
+                        <input type="text" id="PROPERTY_NAME" name="PROPERTY_NAME"
+                            placeholder="Ex: Apto 302 - Centro" />
+                        <div class="field-error" id="err_PROPERTY_NAME"></div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="PROPERTY_ADDRESS">Endereço Completo</label>
+                        <input type="text" id="PROPERTY_ADDRESS" name="PROPERTY_ADDRESS"
+                            placeholder="Ex: Rua das Flores, 123, Apto 302" />
+                    </div>
+                    <div class="form-group">
+                        <label for="CONDO_NAME">Nome do Condomínio</label>
+                        <input type="text" id="CONDO_NAME" name="CONDO_NAME" placeholder="Ex: Residencial Bela Vista" />
+                    </div>
+                    <div class="form-group">
+                        <label for="CONDO_ADMIN_NAME">Nome da Administração</label>
+                        <input type="text" id="CONDO_ADMIN_NAME" name="CONDO_ADMIN_NAME"
+                            placeholder="Ex: Síndico João Silva" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="CONDO_EMAIL">Email do Condomínio</label>
+                        <input type="email" id="CONDO_EMAIL" name="CONDO_EMAIL"
+                            placeholder="Ex: sindico@condominio.com" />
+                        <div class="field-error" id="err_CONDO_EMAIL"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Dados do Proprietário -->
+            <div class="wizard-step" data-step="3">
+                <div class="step-header">
+                    <h2 class="step-title">👤 Dados do Proprietário</h2>
+                    <p class="step-description">Informações do proprietário para uso nos documentos gerados.</p>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="OWNER_NAME">Nome Completo <span class="required">*</span></label>
+                        <input type="text" id="OWNER_NAME" name="OWNER_NAME" placeholder="Ex: Maria da Silva Santos" />
+                        <div class="field-error" id="err_OWNER_NAME"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="OWNER_EMAIL">Email do Proprietário</label>
+                        <input type="email" id="OWNER_EMAIL" name="OWNER_EMAIL"
+                            placeholder="Ex: proprietario@email.com" />
+                        <div class="field-error" id="err_OWNER_EMAIL"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="OWNER_PHONE">Telefone/WhatsApp</label>
+                        <input type="text" id="OWNER_PHONE" name="OWNER_PHONE" placeholder="Ex: (62) 9 9999-9999" />
+                    </div>
+                    <div class="form-group">
+                        <label for="OWNER_APTO">Número do Apartamento</label>
+                        <input type="text" id="OWNER_APTO" name="OWNER_APTO" placeholder="Ex: 302" />
+                    </div>
+                    <div class="form-group">
+                        <label for="OWNER_BLOCO">Bloco</label>
+                        <input type="text" id="OWNER_BLOCO" name="OWNER_BLOCO" placeholder="Ex: A" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="OWNER_GARAGEM">Número da Garagem</label>
+                        <input type="text" id="OWNER_GARAGEM" name="OWNER_GARAGEM" placeholder="Ex: 15" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Calendários -->
+            <div class="wizard-step" data-step="4">
+                <div class="step-header">
+                    <h2 class="step-title">📅 Calendários</h2>
+                    <p class="step-description">URLs dos calendários iCal do Airbnb e Booking.com. Você pode pular e
+                        configurar depois.</p>
+                </div>
+
+                <div class="form-grid single">
+                    <div class="form-group">
+                        <label for="AIRBNB_ICAL_URL">URL do Calendário Airbnb</label>
+                        <div class="input-with-btn">
+                            <input type="url" id="AIRBNB_ICAL_URL" name="AIRBNB_ICAL_URL"
+                                placeholder="https://www.airbnb.com.br/calendar/ical/..." />
+                            <button class="btn btn-secondary btn-sm"
+                                onclick="testIcal('AIRBNB_ICAL_URL', 'airbnb_test')">
+                                Testar
+                            </button>
+                        </div>
+                        <div id="airbnb_test"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="BOOKING_ICAL_URL">URL do Calendário Booking</label>
+                        <div class="input-with-btn">
+                            <input type="url" id="BOOKING_ICAL_URL" name="BOOKING_ICAL_URL"
+                                placeholder="https://admin.booking.com/hotel/hoteladmin/ical/..." />
+                            <button class="btn btn-secondary btn-sm"
+                                onclick="testIcal('BOOKING_ICAL_URL', 'booking_test')">
+                                Testar
+                            </button>
+                        </div>
+                        <div id="booking_test"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="CALENDAR_SYNC_INTERVAL_MINUTES">
+                            Intervalo de Sincronização
+                        </label>
+                        <div class="slider-container">
+                            <input type="range" id="CALENDAR_SYNC_INTERVAL_MINUTES"
+                                name="CALENDAR_SYNC_INTERVAL_MINUTES" min="5" max="120" step="5" value="30"
+                                oninput="document.getElementById('syncIntervalVal').textContent = this.value + 'min'" />
+                            <span class="slider-value" id="syncIntervalVal">30min</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Email -->
+            <div class="wizard-step" data-step="5">
+                <div class="step-header">
+                    <h2 class="step-title">📧 Configuração de Email</h2>
+                    <p class="step-description">Para envio de notificações e documentos por email. Você pode pular e
+                        configurar depois.</p>
+                </div>
+
+                <div class="form-grid single">
+                    <div class="form-group">
+                        <label for="EMAIL_PROVIDER">Provedor de Email</label>
+                        <select id="EMAIL_PROVIDER" name="EMAIL_PROVIDER" onchange="onEmailProviderChange()">
+                            <option value="gmail">Gmail</option>
+                            <option value="outlook">Outlook / Hotmail</option>
+                            <option value="yahoo">Yahoo Mail</option>
+                            <option value="custom">Personalizado (SMTP)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="EMAIL_FROM">Email Remetente</label>
+                        <input type="email" id="EMAIL_FROM" name="EMAIL_FROM" placeholder="seu@email.com" />
+                        <div class="field-error" id="err_EMAIL_FROM"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="EMAIL_PASSWORD">Senha ou App Password</label>
+                        <input type="password" id="EMAIL_PASSWORD" name="EMAIL_PASSWORD"
+                            placeholder="Para Gmail: use App Password (16 caracteres)" />
+                    </div>
+
+                    <!-- Campos customizados (apenas para 'custom') -->
+                    <div class="collapsible-section" id="customEmailSection">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="EMAIL_SMTP_HOST">Host SMTP</label>
+                                <input type="text" id="EMAIL_SMTP_HOST" name="EMAIL_SMTP_HOST"
+                                    placeholder="smtp.seuprovedor.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="EMAIL_SMTP_PORT">Porta SMTP</label>
+                                <input type="number" id="EMAIL_SMTP_PORT" name="EMAIL_SMTP_PORT" value="587" />
+                            </div>
+                            <div class="form-group">
+                                <label for="EMAIL_IMAP_HOST">Host IMAP</label>
+                                <input type="text" id="EMAIL_IMAP_HOST" name="EMAIL_IMAP_HOST"
+                                    placeholder="imap.seuprovedor.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="EMAIL_IMAP_PORT">Porta IMAP</label>
+                                <input type="number" id="EMAIL_IMAP_PORT" name="EMAIL_IMAP_PORT" value="993" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-secondary" onclick="testEmail()" id="testEmailBtn">
+                            🔌 Testar Conexão
+                        </button>
+                        <div id="email_test" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Conta Admin -->
+            <div class="wizard-step" data-step="6">
+                <div class="step-header">
+                    <h2 class="step-title">🔐 Conta Administrador</h2>
+                    <p class="step-description">Crie sua conta de acesso ao sistema. Você poderá criar mais usuários
+                        depois.</p>
+                </div>
+                <div class="form-grid single">
+                    <div class="form-group">
+                        <label for="adminEmail">Email de Acesso <span class="required">*</span></label>
+                        <input type="email" id="adminEmail" name="adminEmail" placeholder="admin@lumina.com" />
+                        <div class="field-error" id="err_adminEmail"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword">Senha <span class="required">*</span></label>
+                        <input type="password" id="adminPassword" name="adminPassword" placeholder="Mínimo 8 caracteres"
+                            oninput="updatePasswordStrength()" />
+                        <div class="password-strength">
+                            <div class="password-strength-bar" id="passwordStrengthBar"
+                                style="width:0%;background:#ef4444;"></div>
+                        </div>
+                        <div class="field-error" id="err_adminPassword"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPasswordConfirm">Confirmar Senha <span class="required">*</span></label>
+                        <input type="password" id="adminPasswordConfirm" name="adminPasswordConfirm"
+                            placeholder="Repita a senha" />
+                        <div class="field-error" id="err_adminPasswordConfirm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 7: Revisão e Confirmação -->
+            <div class="wizard-step" data-step="7">
+                <div class="step-header">
+                    <h2 class="step-title">✅ Revisão Final</h2>
+                    <p class="step-description">Confirme as informações antes de salvar e iniciar o sistema.</p>
+                </div>
+
+                <div class="review-grid" id="reviewGrid">
+                    <!-- Preenchido por wizard.js -->
+                </div>
+
+                <div id="completionMessage"></div>
+            </div>
+
+        </div><!-- /wizard-content -->
+
+        <!-- ===== FOOTER DE NAVEGAÇÃO ===== -->
+        <div class="wizard-footer">
+            <div class="footer-left">
+                <button class="btn btn-secondary" id="btnBack" onclick="wizardBack()" style="display:none;">
+                    ← Anterior
+                </button>
+            </div>
+            <div class="footer-right">
+                <button class="btn btn-ghost" id="btnSkip" onclick="wizardSkip()" style="display:none;">
+                    Pular
+                </button>
+                <button class="btn btn-primary btn-lg" id="btnNext" onclick="wizardNext()">
+                    Começar →
+                </button>
+            </div>
+        </div>
+
+    </div><!-- /wizard-container -->
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Configurando sistema...</div>
+    </div>
+
+    <script src="wizard.js"></script>
+</body>
+
+</html>

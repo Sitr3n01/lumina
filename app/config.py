@@ -2,6 +2,7 @@
 Configuração centralizada da aplicação usando Pydantic Settings.
 Carrega variáveis do arquivo .env e valida tipos.
 """
+import os
 from pathlib import Path
 from typing import List
 from pydantic import Field, field_validator
@@ -16,6 +17,9 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"
     LOG_LEVEL: str = "INFO"
     TIMEZONE: str = "America/Sao_Paulo"
+
+    # === MODO DESKTOP ===
+    LUMINA_DESKTOP: bool = False
 
     # === BANCO DE DADOS ===
     DATABASE_URL: str = "sqlite:///./data/sentinel.db"
@@ -115,8 +119,8 @@ class Settings(BaseSettings):
                     f"Mínimo requerido: 32 caracteres"
                 )
 
-        # Em desenvolvimento, gerar uma aleatória se não configurada
-        if env in ["development", "testing"]:
+        # Em desenvolvimento ou desktop, gerar uma aleatória se não configurada
+        if env in ["development", "testing", "desktop"]:
             if not v or v == "CHANGE_THIS_SECRET_KEY_IN_PRODUCTION":
                 v = secrets.token_urlsafe(32)
                 print(f"[WARNING] SECRET_KEY não configurada. Usando temporária para {env}.")
@@ -141,7 +145,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=os.environ.get('LUMINA_ENV_FILE', '.env'),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"  # Ignora variáveis extras no .env
@@ -186,12 +190,16 @@ class Settings(BaseSettings):
         return Path(self.OUTPUT_DIR)
 
     def ensure_directories(self) -> None:
-        """Cria diretórios necessários se não existirem"""
+        """Cria diretórios necessários se não existirem.
+        No modo desktop, usa LUMINA_DATA_DIR como diretório base.
+        """
+        base = Path(os.environ.get('LUMINA_DATA_DIR', '.'))
         directories = [
-            Path("data"),
-            Path("data/downloads"),
-            Path("data/generated_docs"),
-            Path("data/logs"),
+            base / "data",
+            base / "data" / "downloads",
+            base / "data" / "generated_docs",
+            base / "data" / "logs",
+            base / "data" / "backups",
             Path(self.TEMPLATE_DIR),
         ]
 

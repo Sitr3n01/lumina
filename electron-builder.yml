@@ -1,0 +1,26 @@
+appId: com.lumina.desktop
+productName: LUMINA
+copyright: Copyright 2024-2026
+
+directories:
+  output: release
+  buildResources: electron/assets
+
+files:
+  - electron/**/*
+  - frontend/dist/**/*
+  - "!**/*.map"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: electron/assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: LUMINA
