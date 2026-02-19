@@ -1,6 +1,7 @@
 appId: com.lumina.desktop
 productName: LUMINA
 copyright: Copyright 2024-2026
+compression: maximum
 
 directories:
   output: release
@@ -10,6 +11,17 @@ files:
   - electron/**/*
   - frontend/dist/**/*
   - "!**/*.map"
+  - "!electron/assets/icon.ico" # Avoid duplicating icon into app.asar (it's used by installer)
+
+extraResources:
+  - from: python-dist/lumina-backend/
+    to: python-dist/
+    filter:
+      - "**/*"
+  - from: templates/
+    to: templates/
+    filter:
+      - "**/*"
 
 win:
   target:
@@ -24,3 +36,12 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: LUMINA
+  installerIcon: electron/assets/icon.ico
+  uninstallerIcon: electron/assets/icon.ico
+  deleteAppDataOnUninstall: false
+
+publish:
+  provider: github
+  owner: zegil
+  repo: AP_Controller
+  releaseType: release

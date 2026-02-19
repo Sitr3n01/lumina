@@ -7,6 +7,20 @@ const api = axios.create({
   },
 });
 
+// Resolve base URL dinamica para modo Electron
+let electronBaseUrl = null;
+
+api.interceptors.request.use(async (config) => {
+  if (window.electronAPI && !electronBaseUrl) {
+    const backendUrl = await window.electronAPI.getBackendUrl();
+    electronBaseUrl = `${backendUrl}/api`;
+  }
+  if (electronBaseUrl) {
+    config.baseURL = electronBaseUrl;
+  }
+  return config;
+});
+
 // Interceptor para tratamento de erros
 api.interceptors.response.use(
   (response) => response,
