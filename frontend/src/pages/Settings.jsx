@@ -52,7 +52,42 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    loadSettings();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const response = await settingsAPI.getAll();
+        if (cancelled) return;
+        const data = response.data;
+
+        setSettings(prev => ({
+          ...prev,
+          propertyName: data.propertyName || prev.propertyName,
+          propertyAddress: data.propertyAddress || prev.propertyAddress,
+          condoName: data.condoName || prev.condoName,
+          condoAdminName: data.condoAdminName || prev.condoAdminName,
+          condoEmail: data.condoEmail || prev.condoEmail,
+          ownerName: data.ownerName || prev.ownerName,
+          ownerEmail: data.ownerEmail || prev.ownerEmail,
+          ownerPhone: data.ownerPhone || prev.ownerPhone,
+          ownerApto: data.ownerApto || prev.ownerApto,
+          ownerBloco: data.ownerBloco || prev.ownerBloco,
+          ownerGaragem: data.ownerGaragem || prev.ownerGaragem,
+          syncIntervalMinutes: data.syncIntervalMinutes || prev.syncIntervalMinutes,
+          enableAutoDocumentGeneration: data.enableAutoDocumentGeneration ?? prev.enableAutoDocumentGeneration,
+          enableConflictNotifications: data.enableConflictNotifications ?? prev.enableConflictNotifications,
+        }));
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading settings:', error);
+          showMessage('Erro ao carregar configuracoes', 'error');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const loadSettings = async () => {

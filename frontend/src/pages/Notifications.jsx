@@ -47,11 +47,44 @@ const Notifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          loadSummary(),
+          loadNotifications(1),
+        ]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    loadNotifications(1);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const params = { page: 1, limit: 20 };
+        if (activeFilter !== 'all') {
+          params.type = activeFilter;
+        }
+        const response = await notificationsAPI.getAll(params);
+        if (cancelled) return;
+        const data = response.data;
+
+        setNotifications(data.items);
+        setTotal(data.total);
+        setUnreadCount(data.unread_count);
+        setPage(1);
+      } catch (error) {
+        if (!cancelled) console.error('Error loading notifications:', error);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [activeFilter]);
 
   const loadData = async () => {

@@ -7,6 +7,27 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
+def _validate_password_strength(v: str) -> str:
+    """
+    Valida a força da senha. Regras:
+    - Mínimo 8 caracteres
+    - Pelo menos 1 letra maiúscula
+    - Pelo menos 1 letra minúscula
+    - Pelo menos 1 número
+    """
+    if len(v) < 8:
+        raise ValueError('Senha deve ter no mínimo 8 caracteres')
+
+    has_upper = any(c.isupper() for c in v)
+    has_lower = any(c.islower() for c in v)
+    has_digit = any(c.isdigit() for c in v)
+
+    if not (has_upper and has_lower and has_digit):
+        raise ValueError('Senha deve conter pelo menos: 1 maiúscula, 1 minúscula e 1 número')
+
+    return v
+
+
 # === TOKEN SCHEMAS ===
 
 class Token(BaseModel):
@@ -56,19 +77,7 @@ class UserCreate(UserBase):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Valida força da senha"""
-        if len(v) < 8:
-            raise ValueError('Senha deve ter no mínimo 8 caracteres')
-
-        has_upper = any(c.isupper() for c in v)
-        has_lower = any(c.islower() for c in v)
-        has_digit = any(c.isdigit() for c in v)
-
-        if not (has_upper and has_lower and has_digit):
-            raise ValueError(
-                'Senha deve conter pelo menos: 1 maiúscula, 1 minúscula e 1 número'
-            )
-
-        return v
+        return _validate_password_strength(v)
 
 
 class UserUpdate(BaseModel):
@@ -121,16 +130,9 @@ class ChangePasswordRequest(BaseModel):
     @classmethod
     def validate_new_password(cls, v: str) -> str:
         """Valida nova senha"""
-        if len(v) < 8:
-            raise ValueError('Nova senha deve ter no mínimo 8 caracteres')
+        return _validate_password_strength(v)
 
-        has_upper = any(c.isupper() for c in v)
-        has_lower = any(c.islower() for c in v)
-        has_digit = any(c.isdigit() for c in v)
 
-        if not (has_upper and has_lower and has_digit):
-            raise ValueError(
-                'Nova senha deve conter: 1 maiúscula, 1 minúscula e 1 número'
-            )
-
-        return v
+class DeleteAccountRequest(BaseModel):
+    """Schema para deleção de conta (senha via body, não query param)"""
+    password: str = Field(..., min_length=1, description="Senha para confirmação")

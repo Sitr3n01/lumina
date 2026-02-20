@@ -5,7 +5,7 @@ Cria, gerencia e acompanha ações que o usuário precisa executar manualmente n
 Também executa ações automáticas (como envio de emails e geração de documentos).
 """
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -331,7 +331,7 @@ class SyncActionService:
         for action in pending_actions:
             if action.should_auto_dismiss:
                 action.status = ActionStatus.EXPIRED
-                action.dismissed_at = datetime.utcnow()
+                action.dismissed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 action.user_notes = "Auto-dismissed: expired"
                 dismissed_count += 1
 

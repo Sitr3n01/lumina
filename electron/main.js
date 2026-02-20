@@ -23,8 +23,8 @@ const log = require('electron-log');
 
 const PythonManager = require('./python-manager');
 const { registerIpcHandlers } = require('./ipc-handlers');
-const { createTray } = require('./tray');
-const { setupAutoUpdater, installUpdate } = require('./updater');
+const { createTray, destroyTray } = require('./tray');
+const { setupAutoUpdater, downloadUpdate, installUpdate } = require('./updater');
 
 // === CONFIGURAÇÃO DE LOG ===
 log.transports.file.level = 'info';
@@ -69,6 +69,15 @@ function createSplashWindow() {
 
     splash.loadFile(path.join(__dirname, 'splash.html'));
     splash.center();
+
+    // Injetar versão dinâmica do package.json
+    splash.webContents.on('did-finish-load', () => {
+        const version = app.getVersion();
+        splash.webContents.executeJavaScript(
+            `document.getElementById('appVersion').textContent = 'v${version}';`
+        ).catch(() => {});
+    });
+
     return splash;
 }
 
@@ -93,7 +102,7 @@ function createMainWindow() {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false,
+            sandbox: true,
         },
     });
 
@@ -111,6 +120,39 @@ function createMainWindow() {
     win.once('ready-to-show', () => {
         win.show();
         win.focus();
+    });
+
+    // SECURITY: Interceptar navegação para URLs externas.
+    // Previne que links externos abram dentro do Electron (potencial phishing/MITM).
+    // URLs externas são abertas no browser padrão do sistema via shell.openExternal.
+    const { shell } = require('electron');
+    const ALLOWED_ORIGINS = [
+        'http://localhost:5173',  // Vite dev server
+        'http://127.0.0.1',       // Backend local (qualquer porta)
+        'file://',                 // Arquivos estáticos em produção
+    ];
+
+    const isAllowedUrl = (url) =>
+        ALLOWED_ORIGINS.some(origin => url.startsWith(origin));
+
+    win.webContents.on('will-navigate', (event, url) => {
+        if (!isAllowedUrl(url)) {
+            event.preventDefault();
+            shell.openExternal(url).catch((err) => {
+                log.warn('[Main] Falha ao abrir URL externa:', url, err.message);
+            });
+            log.info('[Main] URL externa redirecionada para browser:', url);
+        }
+    });
+
+    // Interceptar abertura de novas janelas (links com target="_blank")
+    win.webContents.setWindowOpenHandler(({ url }) => {
+        if (!isAllowedUrl(url)) {
+            shell.openExternal(url).catch((err) => {
+                log.warn('[Main] Falha ao abrir nova janela externa:', url, err.message);
+            });
+        }
+        return { action: 'deny' }; // Nunca abrir nova janela Electron
     });
 
     // Interceptar evento de fechar: esconder em vez de fechar (vai para bandeja)
@@ -239,8 +281,9 @@ async function startNormalApp() {
         // 5. Registrar IPC handlers
         registerIpcHandlers(mainWindow, pythonManager);
 
-        // Completar o handler de 'update:install' com a função real
+        // Completar os handlers de update com as funções reais
         ipcMain.removeHandler('update:install'); // Remove placeholder do ipc-handlers.js
+        ipcMain.handle('update:download', () => downloadUpdate());
         ipcMain.handle('update:install', () => installUpdate());
 
         // 6. Criar ícone de bandeja
@@ -321,12 +364,13 @@ function openWizard() {
     wizardWindow.loadFile(path.join(__dirname, 'wizard', 'wizard.html'));
     wizardWindow.center();
 
-    // Registrar handlers do wizard
-    registerWizardHandlers(wizardWindow);
+    // Registrar handlers do wizard (retorna cleanup function)
+    const cleanupWizardHandlers = registerWizardHandlers(wizardWindow);
 
-    // Quando o wizard completar, fechar e iniciar app normal
-    ipcMain.once('wizard:done', async () => {
-        log.info('[Main] Wizard completado - iniciando app normal...');
+    // Quando o wizard completar, limpar handlers e iniciar app normal
+    app.once('wizard-done', async () => {
+        log.info('[Main] Wizard completado - limpando handlers e iniciando app...');
+        cleanupWizardHandlers();
         wizardWindow.close();
         await startNormalApp();
     });
@@ -341,8 +385,16 @@ function openWizard() {
  * @param {BrowserWindow} wizardWindow
  */
 function registerWizardHandlers(wizardWindow) {
+    // Lista de canais para cleanup posterior
+    const handlerChannels = [];
+
+    function registerHandler(channel, handler) {
+        ipcMain.handle(channel, handler);
+        handlerChannels.push(channel);
+    }
+
     /** Retorna configurações padrão para o wizard */
-    ipcMain.handle('wizard:getDefaults', () => ({
+    registerHandler('wizard:getDefaults', () => ({
         CALENDAR_SYNC_INTERVAL_MINUTES: 30,
         EMAIL_PROVIDER: 'gmail',
         EMAIL_SMTP_PORT: 587,
@@ -351,7 +403,7 @@ function registerWizardHandlers(wizardWindow) {
     }));
 
     /** Salva a configuração gerada pelo wizard no .env */
-    ipcMain.handle('wizard:save', async (event, config) => {
+    registerHandler('wizard:save', async (event, config) => {
         try {
             const crypto = require('crypto');
             const secretKey = crypto.randomBytes(32).toString('base64url');
@@ -385,8 +437,22 @@ function registerWizardHandlers(wizardWindow) {
     });
 
     /** Testa se uma URL iCal é válida fazendo GET e verificando conteúdo */
-    ipcMain.handle('wizard:testIcal', async (event, url) => {
+    registerHandler('wizard:testIcal', async (event, url) => {
         try {
+            // SECURITY: Validar URL antes de fazer request (anti-SSRF)
+            let parsed;
+            try {
+                parsed = new URL(url);
+            } catch {
+                return { success: false, error: 'URL inválida' };
+            }
+            if (!['http:', 'https:'].includes(parsed.protocol)) {
+                return { success: false, error: 'Apenas URLs HTTP/HTTPS são permitidas' };
+            }
+            if (isPrivateHostname(parsed.hostname)) {
+                return { success: false, error: 'URLs para endereços locais/privados não são permitidas' };
+            }
+
             const http = url.startsWith('https') ? require('https') : require('http');
             const result = await new Promise((resolve, reject) => {
                 const req = http.get(url, { timeout: 10000 }, (res) => {
@@ -414,11 +480,16 @@ function registerWizardHandlers(wizardWindow) {
     });
 
     /** Testa conexão de email (simplificado via conexão TCP ao SMTP) */
-    ipcMain.handle('wizard:testEmail', async (event, config) => {
+    registerHandler('wizard:testEmail', async (event, config) => {
         try {
             const net = require('net');
             const host = config.EMAIL_SMTP_HOST || getSmtpHost(config.EMAIL_PROVIDER);
             const port = config.EMAIL_SMTP_PORT || 587;
+
+            // SECURITY: Validar host contra SSRF
+            if (isPrivateHostname(host)) {
+                return { success: false, error: 'Endereços locais/privados não são permitidos' };
+            }
 
             const connected = await new Promise((resolve) => {
                 const socket = net.createConnection(port, host);
@@ -437,7 +508,7 @@ function registerWizardHandlers(wizardWindow) {
     });
 
     /** Finaliza o wizard, cria usuário admin e sinaliza para iniciar o app */
-    ipcMain.handle('wizard:complete', async (event) => {
+    registerHandler('wizard:complete', async (event) => {
         try {
             // Iniciar backend Python temporariamente para criar o usuário admin
             const tempManager = new PythonManager({
@@ -454,14 +525,49 @@ function registerWizardHandlers(wizardWindow) {
 
             await tempManager.stop();
 
-            // Sinalizar para o evento 'wizard:done' no app.whenReady
-            ipcMain.emit('wizard:done');
+            // Sinalizar para o evento 'wizard-done' no app
+            app.emit('wizard-done');
             return { success: true };
         } catch (err) {
             log.error('[Wizard] Erro ao completar:', err);
             return { success: false, error: err.message };
         }
     });
+
+    // Retornar função de cleanup para remover todos os handlers
+    return () => {
+        handlerChannels.forEach(channel => {
+            try { ipcMain.removeHandler(channel); } catch (e) { /* já removido */ }
+        });
+        log.info(`[Wizard] ${handlerChannels.length} handlers removidos.`);
+    };
+}
+
+/**
+ * SECURITY: Verifica se URL/hostname aponta para rede privada (anti-SSRF)
+ * @param {string} hostname - Hostname a verificar
+ * @returns {boolean} true se é endereço privado
+ */
+function isPrivateHostname(hostname) {
+    if (!hostname) return true;
+    hostname = hostname.toLowerCase();
+
+    // Bloquear localhost e variantes
+    if (['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]'].includes(hostname)) return true;
+
+    // Bloquear ranges privados IPv4
+    const parts = hostname.split('.');
+    if (parts.length === 4 && parts.every(p => /^\d+$/.test(p))) {
+        const a = parseInt(parts[0]);
+        const b = parseInt(parts[1]);
+        if (a === 10) return true;                          // 10.0.0.0/8
+        if (a === 172 && b >= 16 && b <= 31) return true;  // 172.16.0.0/12
+        if (a === 192 && b === 168) return true;            // 192.168.0.0/16
+        if (a === 169 && b === 254) return true;            // 169.254.0.0/16 (link-local)
+        if (a === 0) return true;                           // 0.0.0.0/8
+    }
+
+    return false;
 }
 
 /**
@@ -482,6 +588,17 @@ function getSmtpHost(provider) {
  * @returns {string} Conteúdo do arquivo .env
  */
 function buildEnvFile(config) {
+    /**
+     * SECURITY: Sanitiza valor antes de interpolar no .env
+     * Remove \n, \r, \0 para prevenir injection de novas variáveis
+     */
+    function escapeEnvValue(value) {
+        if (value == null) return '';
+        return String(value).replace(/[\n\r\0]/g, '').trim();
+    }
+
+    const s = (key) => escapeEnvValue(config[key]);
+
     const lines = [
         '# LUMINA Configuration - Generated by Setup Wizard',
         `# Generated: ${new Date().toISOString()}`,
@@ -489,7 +606,7 @@ function buildEnvFile(config) {
         '# === APLICAÇÃO ===',
         'APP_NAME=Lumina',
         'APP_ENV=desktop',
-        `SECRET_KEY=${config.SECRET_KEY || ''}`,
+        `SECRET_KEY=${s('SECRET_KEY')}`,
         'LOG_LEVEL=INFO',
         'TIMEZONE=America/Sao_Paulo',
         '',
@@ -501,33 +618,33 @@ function buildEnvFile(config) {
         'LUMINA_DESKTOP=true',
         '',
         '# === DADOS DO IMÓVEL ===',
-        `PROPERTY_NAME=${config.PROPERTY_NAME || 'Meu Apartamento'}`,
-        `PROPERTY_ADDRESS=${config.PROPERTY_ADDRESS || ''}`,
-        `CONDO_NAME=${config.CONDO_NAME || ''}`,
-        `CONDO_ADMIN_NAME=${config.CONDO_ADMIN_NAME || ''}`,
-        `CONDO_EMAIL=${config.CONDO_EMAIL || ''}`,
+        `PROPERTY_NAME=${s('PROPERTY_NAME') || 'Meu Apartamento'}`,
+        `PROPERTY_ADDRESS=${s('PROPERTY_ADDRESS')}`,
+        `CONDO_NAME=${s('CONDO_NAME')}`,
+        `CONDO_ADMIN_NAME=${s('CONDO_ADMIN_NAME')}`,
+        `CONDO_EMAIL=${s('CONDO_EMAIL')}`,
         '',
         '# === DADOS DO PROPRIETÁRIO ===',
-        `OWNER_NAME=${config.OWNER_NAME || ''}`,
-        `OWNER_EMAIL=${config.OWNER_EMAIL || ''}`,
-        `OWNER_PHONE=${config.OWNER_PHONE || ''}`,
-        `OWNER_APTO=${config.OWNER_APTO || ''}`,
-        `OWNER_BLOCO=${config.OWNER_BLOCO || ''}`,
-        `OWNER_GARAGEM=${config.OWNER_GARAGEM || ''}`,
+        `OWNER_NAME=${s('OWNER_NAME')}`,
+        `OWNER_EMAIL=${s('OWNER_EMAIL')}`,
+        `OWNER_PHONE=${s('OWNER_PHONE')}`,
+        `OWNER_APTO=${s('OWNER_APTO')}`,
+        `OWNER_BLOCO=${s('OWNER_BLOCO')}`,
+        `OWNER_GARAGEM=${s('OWNER_GARAGEM')}`,
         '',
         '# === CALENDÁRIOS ===',
-        `AIRBNB_ICAL_URL=${config.AIRBNB_ICAL_URL || ''}`,
-        `BOOKING_ICAL_URL=${config.BOOKING_ICAL_URL || ''}`,
-        `CALENDAR_SYNC_INTERVAL_MINUTES=${config.CALENDAR_SYNC_INTERVAL_MINUTES || 30}`,
+        `AIRBNB_ICAL_URL=${s('AIRBNB_ICAL_URL')}`,
+        `BOOKING_ICAL_URL=${s('BOOKING_ICAL_URL')}`,
+        `CALENDAR_SYNC_INTERVAL_MINUTES=${s('CALENDAR_SYNC_INTERVAL_MINUTES') || 30}`,
         '',
         '# === EMAIL ===',
-        `EMAIL_PROVIDER=${config.EMAIL_PROVIDER || 'gmail'}`,
-        `EMAIL_FROM=${config.EMAIL_FROM || ''}`,
-        `EMAIL_PASSWORD=${config.EMAIL_PASSWORD || ''}`,
-        `EMAIL_SMTP_HOST=${config.EMAIL_SMTP_HOST || ''}`,
-        `EMAIL_SMTP_PORT=${config.EMAIL_SMTP_PORT || 587}`,
-        `EMAIL_IMAP_HOST=${config.EMAIL_IMAP_HOST || ''}`,
-        `EMAIL_IMAP_PORT=${config.EMAIL_IMAP_PORT || 993}`,
+        `EMAIL_PROVIDER=${s('EMAIL_PROVIDER') || 'gmail'}`,
+        `EMAIL_FROM=${s('EMAIL_FROM')}`,
+        `EMAIL_PASSWORD=${s('EMAIL_PASSWORD')}`,
+        `EMAIL_SMTP_HOST=${s('EMAIL_SMTP_HOST')}`,
+        `EMAIL_SMTP_PORT=${s('EMAIL_SMTP_PORT') || 587}`,
+        `EMAIL_IMAP_HOST=${s('EMAIL_IMAP_HOST')}`,
+        `EMAIL_IMAP_PORT=${s('EMAIL_IMAP_PORT') || 993}`,
         `EMAIL_USE_TLS=${config.EMAIL_USE_TLS !== false ? 'true' : 'false'}`,
         '',
         '# === CORS ===',
@@ -573,6 +690,9 @@ app.on('before-quit', async () => {
     if (notificationPoller) {
         notificationPoller.stop();
     }
+
+    // Destruir tray e limpar intervalo de status
+    destroyTray();
 
     if (pythonManager && pythonManager.isRunning()) {
         try {

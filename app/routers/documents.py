@@ -175,19 +175,22 @@ def generate_document_from_booking(
 
 @router.get("/list", response_model=DocumentListResponse)
 def list_documents(
-    limit: int = 50,
+    limit: int = 20,
+    page: int = 1,
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Lista documentos gerados recentemente.
+    Lista documentos gerados com paginação.
 
     Args:
-        limit: Número máximo de documentos a retornar (padrão 50)
+        limit: Documentos por página (padrão 20)
+        page: Número da página, iniciando em 1 (padrão 1)
 
     Returns:
         DocumentListResponse com lista de documentos
     """
-    documents = doc_service.list_generated_documents(limit=limit)
+    offset = (page - 1) * limit
+    documents = doc_service.list_generated_documents(limit=limit, offset=offset)
 
     return DocumentListResponse(
         total=len(documents),

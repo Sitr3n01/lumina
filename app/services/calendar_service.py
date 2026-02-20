@@ -2,7 +2,7 @@
 Serviço de gerenciamento de calendários.
 Orquestra o processo completo de sincronização: download, parse, merge e detecção de conflitos.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
@@ -69,7 +69,7 @@ class CalendarService:
         logger.info(f"Starting sync for {calendar_source.platform.value} (ID: {calendar_source.id})")
         logger.info(f"="*60)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Criar log de sincronização
         sync_log = SyncLog(
@@ -92,7 +92,7 @@ class CalendarService:
                 # Erro no download/parse
                 sync_log.status = SyncStatus.ERROR
                 sync_log.error_message = result.get("error", "Unknown error")
-                sync_log.completed_at = datetime.utcnow()
+                sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 sync_log.sync_duration_ms = int(
                     (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
                 )
@@ -198,13 +198,13 @@ class CalendarService:
             sync_log.bookings_updated = stats["updated"]
             sync_log.bookings_cancelled = stats["cancelled"]
             sync_log.conflicts_detected = len(conflicts)
-            sync_log.completed_at = datetime.utcnow()
+            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             sync_log.sync_duration_ms = int(
                 (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
             )
 
             # Atualizar calendar_source
-            calendar_source.last_sync_at = datetime.utcnow()
+            calendar_source.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
             calendar_source.last_sync_status = "success"
 
             self.db.commit()
@@ -238,7 +238,7 @@ class CalendarService:
             # Atualizar log com erro
             sync_log.status = SyncStatus.ERROR
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.utcnow()
+            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             sync_log.sync_duration_ms = int(
                 (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
             )

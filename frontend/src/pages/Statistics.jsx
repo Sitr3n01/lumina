@@ -29,7 +29,53 @@ const Statistics = () => {
   const [period, setPeriod] = useState('6months'); // 6months, year, all
 
   useEffect(() => {
-    loadStatistics();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+
+        const endDate = new Date();
+        const startDate = new Date();
+
+        if (period === '6months') {
+          startDate.setMonth(startDate.getMonth() - 6);
+        } else if (period === 'year') {
+          startDate.setFullYear(startDate.getFullYear() - 1);
+        } else {
+          startDate.setFullYear(startDate.getFullYear() - 3);
+        }
+
+        const params = {
+          property_id: propertyId,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+        };
+
+        const results = await Promise.allSettled([
+          statisticsAPI.getOccupancy(params),
+          statisticsAPI.getRevenue(params),
+          statisticsAPI.getPlatforms(params),
+        ]);
+        if (cancelled) return;
+
+        if (results[0].status === 'fulfilled') {
+          const data = results[0].value.data;
+          setOccupancyData(data?.months || data || []);
+        }
+        if (results[1].status === 'fulfilled') {
+          setRevenueData(results[1].value.data || []);
+        }
+        if (results[2].status === 'fulfilled') {
+          setPlatformData(results[2].value.data || []);
+        }
+      } catch (error) {
+        if (!cancelled) console.error('Error loading statistics:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [period]);
 
   const loadStatistics = async () => {

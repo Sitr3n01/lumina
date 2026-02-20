@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'">
   <title>LUMINA - Iniciando...</title>
   <style>
     * {
@@ -190,8 +192,8 @@
     Iniciando sistema<span class="dots" id="dots"></span>
   </div>
 
-  <!-- Versão -->
-  <div class="version">v1.0.0</div>
+  <!-- Versão (preenchida dinamicamente pelo main process ou vazia) -->
+  <div class="version" id="appVersion"></div>
 
   <script>
     // Animação dos pontinhos

@@ -196,7 +196,7 @@ class DocumentService:
             logger.error(f"Error generating document: {e}")
             return {
                 "success": False,
-                "message": f"Erro ao gerar documento: {str(e)}"
+                "message": "Erro ao gerar documento. Verifique se o template existe e tente novamente."
             }
 
     def _generate_filename(self, guest_name: str) -> str:
@@ -234,15 +234,17 @@ class DocumentService:
         doc.save(str(template_path))
         logger.info(f"Default template created: {template_path}")
 
-    def list_generated_documents(self, limit: int = 50) -> list[Dict[str, Any]]:
-        """Lista os documentos gerados mais recentes."""
+    def list_generated_documents(self, limit: int = 50, offset: int = 0) -> list[Dict[str, Any]]:
+        """Lista os documentos gerados, com suporte a paginação por offset."""
         documents = []
 
-        for file_path in sorted(
+        all_files = sorted(
             self.output_dir.glob("*.docx"),
             key=lambda p: p.stat().st_mtime,
             reverse=True
-        )[:limit]:
+        )
+
+        for file_path in all_files[offset : offset + limit]:
             stat = file_path.stat()
             documents.append({
                 "filename": file_path.name,

@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import aiosmtplib
 import aioimaplib
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import FileSystemLoader, Template
+from jinja2.sandbox import SandboxedEnvironment
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -120,12 +121,15 @@ class EmailService:
 
         return cls(config)
 
-    def _setup_template_engine(self) -> Environment:
-        """Configura Jinja2 para templates de email"""
-        template_dir = Path("app/templates/email")
+    def _setup_template_engine(self) -> SandboxedEnvironment:
+        """Configura Jinja2 Sandboxed para templates de email.
+        SandboxedEnvironment previne acesso a atributos Python internos,
+        chamadas de funções perigosas e escalação de privilégios via templates.
+        """
+        template_dir = Path(settings.TEMPLATE_DIR) / "email"
         template_dir.mkdir(parents=True, exist_ok=True)
 
-        return Environment(
+        return SandboxedEnvironment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=True
         )
@@ -201,7 +205,7 @@ class EmailService:
             logger.error(f"Error sending email: {e}")
             return {
                 "success": False,
-                "message": f"Erro ao enviar email: {str(e)}"
+                "message": "Erro ao enviar email. Verifique as configurações e tente novamente."
             }
 
     async def send_template_email(
@@ -247,7 +251,7 @@ class EmailService:
 
         except Exception as e:
             logger.error(f"Error sending template email: {e}")
-            return {"success": False, "message": f"Erro: {str(e)}"}
+            return {"success": False, "message": "Erro ao renderizar ou enviar template de email."}
 
     async def fetch_emails(
         self,
@@ -311,7 +315,7 @@ class EmailService:
 
         except Exception as e:
             logger.error(f"Error fetching emails: {e}")
-            return {"success": False, "message": str(e), "emails": []}
+            return {"success": False, "message": "Erro ao buscar emails. Verifique as configurações IMAP.", "emails": []}
 
         finally:
             if imap:

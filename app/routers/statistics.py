@@ -248,7 +248,7 @@ def get_revenue_stats(
 
 @router.get("/monthly-report")
 def get_monthly_report(
-    property_id: int = Query(1, description="ID do imóvel"),
+    property_id: int = Query(..., description="ID do imóvel"),
     month: int = Query(..., ge=1, le=12, description="Mês (1-12)"),
     year: int = Query(..., ge=2020, le=2100, description="Ano"),
     send_email: bool = Query(False, description="Enviar relatório por email"),
@@ -303,6 +303,6 @@ def get_monthly_report(
         except Exception as e:
             logger.error(f"Error sending monthly report email: {e}")
             report["email_sent"] = False
-            report["email_error"] = str(e)
+            report["email_error"] = "Erro ao enviar relatório por email."
 
     return report

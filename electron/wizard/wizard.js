@@ -28,6 +28,25 @@ const STEP_NAMES = [
 ];
 
 // ============================================================
+// SECURITY: HTML ESCAPE
+// ============================================================
+
+/**
+ * Escapa caracteres HTML para prevenir XSS ao usar innerHTML
+ * @param {*} str - Valor a escapar
+ * @returns {string} String segura para interpolação em HTML
+ */
+function escapeHtml(str) {
+    if (str == null) return '-';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ============================================================
 // INICIALIZAÇÃO
 // ============================================================
 
@@ -311,21 +330,21 @@ function populateReview() {
         {
             title: '🏠 Imóvel',
             rows: [
-                ['Nome', formData.PROPERTY_NAME],
-                ['Endereço', formData.PROPERTY_ADDRESS],
-                ['Condomínio', formData.CONDO_NAME],
-                ['Admin Condo', formData.CONDO_ADMIN_NAME],
-                ['Email Condo', formData.CONDO_EMAIL],
+                ['Nome', escapeHtml(formData.PROPERTY_NAME)],
+                ['Endereço', escapeHtml(formData.PROPERTY_ADDRESS)],
+                ['Condomínio', escapeHtml(formData.CONDO_NAME)],
+                ['Admin Condo', escapeHtml(formData.CONDO_ADMIN_NAME)],
+                ['Email Condo', escapeHtml(formData.CONDO_EMAIL)],
             ],
         },
         {
             title: '👤 Proprietário',
             rows: [
-                ['Nome', formData.OWNER_NAME],
-                ['Email', formData.OWNER_EMAIL],
-                ['Telefone', formData.OWNER_PHONE],
-                ['Apto', `${formData.OWNER_BLOCO || ''}${formData.OWNER_APTO || ''}`],
-                ['Garagem', formData.OWNER_GARAGEM],
+                ['Nome', escapeHtml(formData.OWNER_NAME)],
+                ['Email', escapeHtml(formData.OWNER_EMAIL)],
+                ['Telefone', escapeHtml(formData.OWNER_PHONE)],
+                ['Apto', escapeHtml(`${formData.OWNER_BLOCO || ''}${formData.OWNER_APTO || ''}`)],
+                ['Garagem', escapeHtml(formData.OWNER_GARAGEM)],
             ],
         },
         {
@@ -333,21 +352,21 @@ function populateReview() {
             rows: [
                 ['Airbnb', formData.AIRBNB_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
                 ['Booking', formData.BOOKING_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
-                ['Intervalo', `${formData.CALENDAR_SYNC_INTERVAL_MINUTES || 30} minutos`],
+                ['Intervalo', `${parseInt(formData.CALENDAR_SYNC_INTERVAL_MINUTES) || 30} minutos`],
             ],
         },
         {
             title: '📧 Email',
             rows: [
-                ['Provedor', formData.EMAIL_PROVIDER || 'gmail'],
-                ['Remetente', formData.EMAIL_FROM || '⚠️ Não configurado'],
+                ['Provedor', escapeHtml(formData.EMAIL_PROVIDER) || 'gmail'],
+                ['Remetente', escapeHtml(formData.EMAIL_FROM) || '⚠️ Não configurado'],
                 ['Senha', formData.EMAIL_PASSWORD ? '••••••••' : '⚠️ Não configurada'],
             ],
         },
         {
             title: '🔐 Admin',
             rows: [
-                ['Email', formData.adminEmail],
+                ['Email', escapeHtml(formData.adminEmail)],
                 ['Senha', formData.adminPassword ? '••••••••' : '⚠️ Não definida'],
             ],
         },
@@ -359,7 +378,7 @@ function populateReview() {
       ${rows.map(([label, value]) => `
         <div class="review-row">
           <span class="label">${label}</span>
-          <span class="value">${value || '-'}</span>
+          <span class="value">${value}</span>
         </div>
       `).join('')}
     </div>
@@ -405,7 +424,7 @@ function showCompletionError(msg) {
     const msgEl = document.getElementById('completionMessage');
     msgEl.innerHTML = `
     <div class="inline-message error" style="margin-top:16px;">
-      ❌ ${msg}
+      ❌ ${escapeHtml(msg)}
     </div>
   `;
 }
@@ -431,9 +450,9 @@ async function testIcal(fieldId, resultId) {
 
     const result = await window.wizardAPI.testIcalUrl(url);
     if (result.success) {
-        resultEl.innerHTML = `<div class="inline-message success">✅ Calendário válido! ${result.events} evento(s) encontrado(s)</div>`;
+        resultEl.innerHTML = `<div class="inline-message success">✅ Calendário válido! ${escapeHtml(result.events)} evento(s) encontrado(s)</div>`;
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${result.error || 'URL inválida'}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'URL inválida')}</div>`;
     }
 }
 
@@ -457,7 +476,7 @@ async function testEmail() {
     if (result.success) {
         resultEl.innerHTML = '<div class="inline-message success">✅ Conexão SMTP estabelecida com sucesso!</div>';
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${result.error || 'Falha na conexão'}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'Falha na conexão')}</div>`;
     }
 }
 

@@ -9,6 +9,7 @@ const { spawn } = require('child_process');
 const net = require('net');
 const path = require('path');
 const http = require('http');
+const log = require('electron-log');
 
 /**
  * Encontra uma porta TCP livre aleatória
@@ -102,7 +103,7 @@ class PythonManager {
      */
     async start() {
         if (this._running) {
-            console.log('[PythonManager] Backend já está rodando na porta', this._port);
+            log.info('[PythonManager] Backend já está rodando na porta', this._port);
             return;
         }
 
@@ -110,7 +111,7 @@ class PythonManager {
         this._port = await findFreePort();
         const url = this.getUrl();
 
-        console.log(`[PythonManager] Iniciando backend na porta ${this._port}...`);
+        log.info(`[PythonManager] Iniciando backend na porta ${this._port}...`);
         this._emitLog(`Iniciando backend na porta ${this._port}...`);
 
         // Montar variáveis de ambiente para o processo Python
@@ -121,9 +122,7 @@ class PythonManager {
             LUMINA_ENV_FILE: path.join(this.userDataPath, '.env'),
             APP_ENV: 'desktop',
             DATABASE_URL: `sqlite:///${path.join(this.userDataPath, 'data', 'lumina.db')}`,
-            TEMPLATE_DIR: this.isDev
-                ? path.join(this.resourcesPath, 'templates')
-                : path.join(this.resourcesPath, 'templates'),
+            TEMPLATE_DIR: path.join(this.resourcesPath, 'templates'),
             OUTPUT_DIR: path.join(this.userDataPath, 'data', 'generated_docs'),
         };
 
@@ -162,7 +161,7 @@ class PythonManager {
         this._process.stdout?.on('data', (data) => {
             const msg = data.toString().trim();
             if (msg) {
-                console.log('[Python]', msg);
+                log.info('[Python]', msg);
                 this._emitLog(msg);
             }
         });
@@ -170,7 +169,7 @@ class PythonManager {
         this._process.stderr?.on('data', (data) => {
             const msg = data.toString().trim();
             if (msg) {
-                console.error('[Python STDERR]', msg);
+                log.error('[Python STDERR]', msg);
                 this._emitLog(`[STDERR] ${msg}`);
             }
         });
@@ -184,14 +183,14 @@ class PythonManager {
             if (!this._stopping && wasRunning) {
                 // Crash inesperado – tentar recuperar
                 const msg = `Backend encerrou inesperadamente (código: ${code}, sinal: ${signal})`;
-                console.error('[PythonManager]', msg);
+                log.error('[PythonManager]', msg);
                 this._emitLog(msg);
                 this._handleCrash();
             }
         });
 
         this._process.on('error', (err) => {
-            console.error('[PythonManager] Erro ao iniciar Python:', err);
+            log.error('[PythonManager] Erro ao iniciar Python:', err);
             this._emitError(err.message);
         });
 
@@ -202,7 +201,7 @@ class PythonManager {
             await waitForHealthy(url, 30000, 500);
             this._running = true;
             this._restartCount = 0; // Reset após startup bem-sucedido
-            console.log(`[PythonManager] Backend pronto em ${url}`);
+            log.info(`[PythonManager] Backend pronto em ${url}`);
             this._emitLog(`Backend pronto em ${url}`);
             this._onReadyCallbacks.forEach(cb => cb());
         } catch (err) {
@@ -220,7 +219,7 @@ class PythonManager {
         this._stopping = true;
         this._running = false;
 
-        console.log('[PythonManager] Encerrando backend...');
+        log.info('[PythonManager] Encerrando backend...');
 
         return new Promise((resolve) => {
             const timeout = setTimeout(() => {
@@ -235,7 +234,7 @@ class PythonManager {
                             process.kill(this._pid, 'SIGKILL');
                         }
                     } catch (e) {
-                        console.error('[PythonManager] Erro ao forçar encerramento:', e);
+                        log.error('[PythonManager] Erro ao forçar encerramento:', e);
                     }
                 }
                 resolve();
@@ -245,7 +244,7 @@ class PythonManager {
                 clearTimeout(timeout);
                 this._process = null;
                 this._pid = null;
-                console.log('[PythonManager] Backend encerrado.');
+                log.info('[PythonManager] Backend encerrado.');
                 resolve();
             });
 
@@ -254,7 +253,7 @@ class PythonManager {
                 this._process.kill('SIGTERM');
             } catch (e) {
                 // No Windows, SIGTERM pode falhar - o taskkill do timeout cuidará disso
-                console.warn('[PythonManager] SIGTERM falhou (esperado no Windows):', e.message);
+                log.warn('[PythonManager] SIGTERM falhou (esperado no Windows):', e.message);
             }
         });
     }
@@ -264,7 +263,7 @@ class PythonManager {
      * @returns {Promise<void>}
      */
     async restart() {
-        console.log('[PythonManager] Reiniciando backend...');
+        log.info('[PythonManager] Reiniciando backend...');
         await this.stop();
         this._port = null;
         await this.start();
@@ -277,20 +276,20 @@ class PythonManager {
     async _handleCrash() {
         if (this._restartCount >= this._maxRestarts) {
             const msg = `Backend crashou ${this._maxRestarts} vezes. Não tentará mais reiniciar.`;
-            console.error('[PythonManager]', msg);
+            log.error('[PythonManager]', msg);
             this._emitError(msg);
             return;
         }
 
         this._restartCount++;
         const delay = Math.pow(2, this._restartCount) * 1000; // 2s, 4s, 8s
-        console.log(`[PythonManager] Tentativa de restart ${this._restartCount}/${this._maxRestarts} em ${delay}ms...`);
+        log.info(`[PythonManager] Tentativa de restart ${this._restartCount}/${this._maxRestarts} em ${delay}ms...`);
 
         setTimeout(async () => {
             try {
                 await this.start();
             } catch (err) {
-                console.error('[PythonManager] Falha no restart:', err);
+                log.error('[PythonManager] Falha no restart:', err);
                 this._emitError(err.message);
             }
         }, delay);

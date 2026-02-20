@@ -21,7 +21,30 @@ const Conflicts = () => {
   };
 
   useEffect(() => {
-    loadConflicts();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const results = await Promise.allSettled([
+          conflictsAPI.getAll({ property_id: propertyId, active_only: true }),
+          conflictsAPI.getSummary(propertyId),
+        ]);
+        if (cancelled) return;
+
+        if (results[0].status === 'fulfilled') {
+          setConflicts(results[0].value.data || []);
+        }
+        if (results[1].status === 'fulfilled') {
+          setSummary(results[1].value.data || {});
+        }
+      } catch (error) {
+        if (!cancelled) console.error('Error loading conflicts:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const loadConflicts = async () => {

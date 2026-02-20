@@ -2,7 +2,7 @@
 Modelo SyncAction - Registra ações de sincronização entre plataformas.
 Usado para rastrear bloqueios que precisam ser aplicados manualmente.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import String, Integer, Date, DateTime, ForeignKey, Text, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
@@ -129,7 +129,7 @@ class SyncAction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         comment="Quando a ação foi criada"
     )
 
@@ -183,7 +183,7 @@ class SyncAction(Base):
         if not self.auto_dismiss_after_hours or self.status != ActionStatus.PENDING:
             return False
 
-        hours_elapsed = (datetime.utcnow() - self.created_at).total_seconds() / 3600
+        hours_elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - self.created_at).total_seconds() / 3600
         return hours_elapsed >= self.auto_dismiss_after_hours
 
     @property
@@ -200,14 +200,14 @@ class SyncAction(Base):
     def mark_completed(self, notes: str = None) -> None:
         """Marca a ação como completada"""
         self.status = ActionStatus.COMPLETED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if notes:
             self.user_notes = notes
 
     def mark_dismissed(self, notes: str = None) -> None:
         """Marca a ação como descartada"""
         self.status = ActionStatus.DISMISSED
-        self.dismissed_at = datetime.utcnow()
+        self.dismissed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if notes:
             self.user_notes = notes
 

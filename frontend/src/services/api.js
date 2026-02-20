@@ -18,6 +18,13 @@ api.interceptors.request.use(async (config) => {
   if (electronBaseUrl) {
     config.baseURL = electronBaseUrl;
   }
+
+  // Injetar token JWT em todos os requests (se disponivel)
+  const token = localStorage.getItem('lumina_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 
@@ -26,9 +33,25 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error.response?.data || error.message);
+
+    // 401 = token expirado ou invalido — forcar logout via evento global
+    if (error.response?.status === 401) {
+      localStorage.removeItem('lumina_token');
+      window.dispatchEvent(new Event('auth:logout'));
+    }
+
     return Promise.reject(error);
   }
 );
+
+// ========== AUTH ==========
+export const authAPI = {
+  login: (data) => api.post('/v1/auth/login', data).then((r) => r.data),
+  logout: () => api.post('/v1/auth/logout').then((r) => r.data),
+  getMe: () => api.get('/v1/auth/me').then((r) => r.data),
+  register: (data) => api.post('/v1/auth/register', data).then((r) => r.data),
+  checkSetup: () => api.get('/v1/auth/setup-status').then((r) => r.data),
+};
 
 // ========== BOOKINGS ==========
 export const bookingsAPI = {

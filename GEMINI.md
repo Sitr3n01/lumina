@@ -1,219 +1,175 @@
 # GEMINI.md - Instrucoes para Agentes Gemini
 
-> Este arquivo fornece contexto para agentes Gemini trabalhando neste projeto.
-> Para o plano completo e contexto compartilhado, leia `docs/PLANO_UNIVERSAL.md`.
+> Este arquivo e lido automaticamente por agentes Gemini ao abrir o projeto.
+> Para instrucoes Claude: `CLAUDE.md`. Para estado completo: `docs/LUMINA_PROJECT_STATE.md`.
+
+---
 
 ## Projeto
 
-**LUMINA v3.0.0** - Sistema de Gestao de Apartamentos para Airbnb/Booking.com
-Migracao em andamento: Web App → Electron Desktop (Windows)
+**LUMINA v3.0.0** - Sistema Desktop de Gestao de Apartamentos (Airbnb/Booking.com)
+Stack: Electron + FastAPI (Python) + React 18
 
-## Stack
+---
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite (gerenciado pelo agente Claude)
-- **Frontend:** React 18.3.1, Vite 5.1.4, Axios 1.6.7, Recharts 3.7.0, Lucide-react 0.344.0
-- **Desktop:** Electron + electron-builder (Windows NSIS installer)
-- **Estilo:** CSS puro com glassmorphism dark theme, CSS variables, sem Tailwind
+## Estado Atual (Fevereiro 2026)
 
-## Estrutura do Frontend
+### O que ja foi implementado (NAO refazer):
 
-```
-frontend/
-  index.html                    # Entry point HTML
-  package.json                  # Dependencias NPM
-  vite.config.js                # Config Vite (ARQUIVO CRITICO)
-  src/
-    main.jsx                    # React entry point
-    App.jsx                     # App principal, routing state-based (switch/case)
-    App.css                     # Estilos globais do app
-    components/
-      Calendar.jsx + .css       # Widget de calendario customizado
-      Sidebar.jsx               # Navegacao lateral (8 itens, collapse)
-      EventModal.jsx + .css     # Modal de detalhes de reserva
-      ErrorBoundary.jsx         # Error boundary React
-    pages/
-      Dashboard.jsx             # KPIs, notificacoes, reservas proximas
-      Calendar.jsx              # Pagina de calendario com sync
-      Conflicts.jsx             # Deteccao e resolucao de conflitos
-      Statistics.jsx            # Analytics com Recharts
-      Documents.jsx             # Geracao/gestao de documentos (ARQUIVO CRITICO)
-      Emails.jsx                # Envio de emails
-      Notifications.jsx         # Central de notificacoes
-      Settings.jsx              # Configuracoes (tabs Easy/Advanced)
-    contexts/
-      PropertyContext.jsx        # Context para property_id (multi-property ready)
-    services/
-      api.js                    # Axios instance + todos os endpoints (ARQUIVO CRITICO)
-    styles/
-      global.css                # CSS variables, animacoes, tema base
-    utils/
-      formatters.js             # Formatacao de data, moeda, hora
-```
+**MVP1 - Core**
+- Sincronizacao de calendarios iCal (Airbnb + Booking.com)
+- Gestao de reservas (CRUD completo)
+- Deteccao de conflitos de datas
+- Dashboard de estatisticas e graficos
 
-## Arquivos Criticos para a Migracao
+**MVP2 - Automacao**
+- Geracao de documentos DOCX (autorizacao de condominio)
+- Sistema de emails (SMTP/IMAP, templates Jinja2)
+- Bot Telegram para notificacoes
+- Central de notificacoes persistente
 
-### `frontend/src/services/api.js`
-- Instancia Axios com `baseURL: '/api'`
-- Precisa suportar URL dinamica para Electron: `http://127.0.0.1:{porta}/api`
-- Pattern: usar request interceptor para resolver base URL
-- Deteccao Electron: `window.electronAPI` (exposto pelo preload.js)
+**Electron Desktop**
+- PythonManager com crash recovery e backoff exponencial
+- Wizard de configuracao inicial
+- Auto-update via GitHub Releases
+- Icone na bandeja do sistema
+- Modo desktop com rate limits desabilitados
 
-### `frontend/src/pages/Documents.jsx`
-- Linha 72-82: Download via `window.URL.createObjectURL` + link click
-- Linha 90: `window.confirm()` para exclusao
-- Ambos precisam fallback para dialogos nativos Electron via IPC
+**Seguranca (Auditoria Completa ~9.0/10)**
+- JWT auth com token blacklist + account lockout
+- CSRF protection, rate limiting, security headers
+- Path traversal + SSTI + IMAP injection protection
+- Jinja2 SandboxedEnvironment para templates de email
+- Electron: sandbox, contextIsolation, will-navigate handlers
+- Register invite-only (so permite primeiro usuario)
 
-### `frontend/vite.config.js`
-- Atualmente: proxy `/api` → `http://127.0.0.1:8000`
-- Precisa: `base: './'` para que assets funcionem em `file://` protocol do Electron
-- Cuidado: `base: './'` nao deve quebrar o dev mode web
+**Frontend Auth**
+- `AuthContext.jsx`: AuthProvider com login/logout/register
+- `Login.jsx`: tela de login + primeiro setup automatico
+- `api.js`: Bearer token interceptor + 401 auto-logout
+- Sidebar: exibe username + botao de logout
 
-### `frontend/src/pages/Dashboard.jsx`
-- Usa `alert()` (linhas 149, 153) - substituir por `showMessage()` ou notificacao nativa
+**Testes**
+- `tests/conftest.py`: fixtures pytest (SQLite in-memory)
+- `tests/test_auth_endpoints.py`: 16 testes de endpoints auth
+- `tests/test_auth_middleware.py`: 8 testes de middleware JWT
 
-## Design System
+---
 
-### CSS Variables (definidas em `styles/global.css`)
-```css
-/* Cores */
---primary: #6366f1
---bg-app: gradiente escuro
---glass-1/2/3: glassmorphism com backdrop-filter: blur
+## Proximas Tarefas — MVP3
 
-/* Tipografia */
-Font: Inter (weight 300-700)
+### Alta Prioridade
 
-/* Espacamento */
---radius-sm: 8px
---radius-md: 12px
---radius-lg: 24px
+#### A1. Sugestoes de preco com AI
+**Escopo:** Analisar historico de reservas + sazonalidade e sugerir precos otimos por periodo.
+**Tecnologia sugerida:** Claude API (claude-haiku-4-5) para analise de dados + sugestao
+**Arquivos a criar:** `app/services/ai_pricing_service.py`, `app/routers/ai.py`
+**Frontend:** Nova pagina `frontend/src/pages/AISuggestions.jsx`
+**Endpoint:** `POST /api/v1/ai/price-suggestions` (requer auth admin)
+**Input:** historico de ocupacao dos ultimos 12 meses
+**Output:** sugestoes de preco para proximos 90 dias com justificativa
 
-/* Animacoes */
-fadeInUp, fadeIn, slideInLeft, scaleIn, spin
-```
+#### A2. Gmail API Integration
+**Escopo:** Alternativa ao SMTP/IMAP manual — autenticar com Google OAuth2 e usar Gmail API.
+**Arquivo a modificar:** `app/services/email_service.py` — adicionar GmailProvider
+**Novo arquivo:** `app/services/gmail_service.py`
+**Configuracao:** adicionar `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` ao `app/config.py`
+**Wizard:** adicionar passo de autorizacao Gmail no `electron/wizard/wizard.js`
+**Nota importante:** O email_service.py usa Jinja2 SandboxedEnvironment. Manter isso.
 
-### Tema
-- Dark mode com glassmorphism (backdrop-filter: blur)
-- Responsivo em 768px breakpoint
-- Cores de status: success (verde), danger (vermelho), warning (amarelo), info (azul)
+#### A3. Relatorio automatico semanal
+**Escopo:** Email automatico toda segunda-feira com resumo da semana anterior.
+**Arquivo a modificar:** `app/main.py` — adicionar task `weekly_report_task()`
+**Usa:** `emailsAPI.send_template()` + template `app/templates/email/weekly_report.html`
+**Configuracao:** `ENABLE_WEEKLY_REPORT: bool = False` em `app/config.py`
 
-## Padroes de Codigo
+### Media Prioridade
 
-### React
-- Functional components com hooks (`useState`, `useEffect`, `useContext`)
-- Sem React Router - routing via state em `App.jsx`:
-  ```jsx
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  switch (currentPage) {
-    case 'dashboard': return <Dashboard />;
-    // ...
-  }
-  ```
-- Cada pagina gerencia seu proprio state local
-- Context API para dados globais (`PropertyContext`)
-- Error boundaries para graceful error handling
+#### B1. Expandir cobertura de testes
+**Escopo:** Adicionar testes para routers de bookings, conflitos e documentos.
+**Padrao ja estabelecido em:** `tests/conftest.py`, `tests/test_auth_endpoints.py`
+**Fixtures ja disponiveis:** `client`, `db_session`, `admin_user`, `auth_headers`
+**Arquivos a criar:**
+- `tests/test_bookings.py` (CRUD + validacoes de data)
+- `tests/test_conflicts.py` (deteccao, resolucao)
+- `tests/test_documents.py` (geracao + download)
 
-### CSS
-- Um arquivo .css por componente
-- BEM-like naming (`.documents-page`, `.document-card`, `.btn-primary`)
-- Nao usar CSS-in-JS, styled-components, ou Tailwind
-- Manter consistencia com o tema glassmorphism existente
+#### B2. Multi-property support
+**Escopo:** O sistema ja tem `PropertyContext` no frontend e `property_id` no backend,
+mas a maioria dos endpoints assume uma unica propriedade (`property_id=1` como default).
+**O que fazer:** Garantir que todos os endpoints exigem `property_id` explicito,
+e o frontend usa o `propertyId` do PropertyContext em todas as chamadas API.
+**Arquivo critico:** `frontend/src/contexts/PropertyContext.jsx`
 
-### API Calls
-- Sempre via funcoes exportadas em `api.js` (ex: `documentsAPI.list()`)
-- Axios interceptor global para log de erros
-- Blob responses para downloads de arquivos
+#### B3. Export de dados (CSV/Excel)
+**Escopo:** Exportar reservas, estatisticas e relatorios em CSV/Excel.
+**Novo endpoint:** `GET /api/v1/export/bookings?format=csv&property_id=1`
+**Biblioteca:** `openpyxl` para Excel (adicionar ao requirements.txt)
 
-## Responsabilidades do Agente Gemini na Migracao
+---
 
-### Fase 3: Adaptacao do Frontend
-- [ ] Modificar `api.js` para base URL dinamica (deteccao `window.electronAPI`)
-- [ ] Modificar `Documents.jsx` para downloads nativos via IPC
-- [ ] Modificar `Documents.jsx` para confirm dialog via IPC
-- [ ] Modificar `Dashboard.jsx` para substituir `alert()`
-- [ ] Modificar `vite.config.js` para `base: './'`
-- [ ] Garantir que todas as mudancas mantenham compatibilidade web
+## Padroes de Codigo (OBRIGATORIO seguir)
 
-### Fase 6: Instalador e Distribuicao
-- [ ] Configurar `electron-builder.yml` completo
-- [ ] Configurar NSIS (atalhos, auto-start, desinstalacao)
-- [ ] Otimizar tamanho do pacote (tree-shaking, UPX, exclusoes)
+### Python Backend
+- Datas: `datetime.now(timezone.utc).replace(tzinfo=None)` — NUNCA `datetime.utcnow()`
+- Erros ao cliente: mensagens genericas, NUNCA `str(e)` no response
+- Logger: `from app.utils.logger import get_logger; logger = get_logger(__name__)`
+- Validacao: Pydantic schemas com `extra="forbid"` para prevenir mass assignment
+- Novos endpoints de auth: adicionar em `app/api/v1/auth.py`
+- Novos routers de features: adicionar em `app/routers/`
 
-### Fase 7: Experiencia de Desenvolvimento
-- [ ] Configurar scripts `dev` com `concurrently` no `package.json` raiz
-- [ ] Configurar `wait-on` para sincronizar startup dos 3 processos
-- [ ] Documentar workflow de desenvolvimento
+### React Frontend
+- Auth: `import { useAuth } from '../contexts/AuthContext'` — sempre verificar isAuthenticated
+- API calls: sempre usar as funcoes exportadas de `frontend/src/services/api.js`
+- Para novos grupos de endpoints: adicionar objeto `nomeAPI` em `api.js`
+- Routing: adicionar novo case no switch em `frontend/src/App.jsx` (AppContent.renderPage)
+- Sidebar: adicionar item no array `menuItems` em `frontend/src/components/Sidebar.jsx`
+- CSS: usar classes globais de `frontend/src/styles/global.css` — nao reinventar
 
-## Pattern de Deteccao Electron
+### Seguranca (nao regredir)
+- Nenhum endpoint novo deve vazar detalhes de excecao
+- Endpoints que retornam dados sensiveis devem ter `Depends(get_current_active_user)`
+- Endpoints admin devem ter `Depends(get_current_admin_user)`
+- Templates email: sempre usar `SandboxedEnvironment` (ja configurado no `email_service.py`)
 
-Use este pattern em TODO lugar que precisar diferenciar web vs desktop:
+---
 
-```javascript
-// Electron disponivel?
-if (window.electronAPI) {
-  // Modo desktop - usar IPC
-  const result = await window.electronAPI.someMethod(args);
-} else {
-  // Modo web - comportamento existente
-  // ... codigo original ...
-}
+## Como Rodar para Testar
+
+```bash
+# Instalar dependencias Python
+pip install -r requirements.txt
+
+# Rodar backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Rodar testes (em outro terminal)
+python -m pytest tests/ -v
+
+# Rodar frontend
+cd frontend && npm install && npm run dev
+
+# Primeiro acesso: acessar http://localhost:5173
+# A tela de login detecta automaticamente se e primeiro setup
+# Criar conta admin via UI ou: python scripts/create_default_admin.py
 ```
 
-**API disponivel no `window.electronAPI`** (exposta pelo preload.js):
-- `getBackendUrl()` → retorna `http://127.0.0.1:{porta}`
-- `saveFile({ defaultPath, filters, data })` → dialogo salvar + escreve arquivo
-- `showConfirmDialog({ title, message, buttons })` → dialogo confirmacao nativo
-- `showNotification(title, body)` → notificacao OS
-- `getAppVersion()` → versao do app
-- `restartBackend()` → reiniciar processo Python
-- `minimize()` → minimizar para bandeja
-- `close()` → fechar (esconde, nao sai)
+---
 
-## Regras de Commits
+## Arquivos que NAO Devem Ser Modificados Sem Necessidade
+
+- `electron/preload.js` — context bridge seguro, qualquer mudanca afeta seguranca
+- `app/middleware/auth.py` — middleware JWT critico
+- `app/middleware/csrf.py` — protecao CSRF
+- `app/core/validators.py` — validators de seguranca (XSS, path traversal, SSTI)
+- `app/core/security.py` — criacao/verificacao de tokens JWT
+
+---
+
+## Regras de Commit
 
 - Branch: `feature/electron-migration`
-- Prefixos: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
+- Prefixos: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`
 - Mensagens em ingles
 - Um commit por mudanca logica
 - Nunca commitar: `.env`, `data/`, `python-dist/`, `release/`, `node_modules/`
-
-## Comandos Uteis
-
-```bash
-# Frontend dev server
-cd frontend && npm run dev
-
-# Build frontend para producao
-cd frontend && npm run build
-
-# Preview build de producao
-cd frontend && npm run preview
-
-# Dev mode completo (quando Electron estiver configurado)
-npm run dev  # concurrently: python + vite + electron
-```
-
-## Ambiente
-
-- OS: Windows 11
-- Node.js: 20+
-- Repo: `C:\Users\zegil\Documents\GitHub\AP_Controller`
-- Frontend em: `frontend/`
-
-## Como Executar Tarefas
-
-1. Abra `docs/PLANO_IMPLEMENTACAO.md`
-2. Encontre suas tarefas (marcadas `[GEMINI]`)
-3. Execute na ordem (respeitar `[BLOQUEIO]` e `[PARALELO]`)
-4. Cada tarefa tem: arquivo(s), o que fazer, e criterio de aceite
-5. Commit apos cada tarefa completada (nao acumular)
-
-**IMPORTANTE:** Suas tarefas da Fase 3 dependem do Claude completar a Fase 1 (T1.2 preload.js define a API `window.electronAPI`). Verifique que o preload.js existe antes de comecar.
-
-## Referencias
-
-- Plano de implementacao: `docs/PLANO_IMPLEMENTACAO.md`
-- Plano completo: `docs/PLANO_UNIVERSAL.md`
-- Instrucoes Claude: `CLAUDE.md`
-- API docs: `docs/architecture/API_DOCUMENTATION.md`
-- Arquitetura geral: `docs/architecture/ARQUITETURA_GERAL.md`

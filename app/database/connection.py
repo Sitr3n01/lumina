@@ -27,7 +27,7 @@ def create_db_engine():
     Returns:
         Engine configurado do SQLAlchemy
     """
-    logger.info(f"Creating database engine: {settings.DATABASE_URL}")
+    logger.info("Creating database engine...")
 
     engine = create_engine(
         settings.DATABASE_URL,

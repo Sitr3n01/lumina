@@ -38,11 +38,9 @@ templates/*.pdf
 nul
 
 # === BANCO DE DADOS ===
-data/lumina.db
 data/sentinel.db
 data/lumina.db
-data/sentinel.db-*
-*.db
+data/*.db
 *.db-journal
 *.db-shm
 *.db-wal
@@ -102,6 +100,15 @@ logs/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# === CLAUDE CODE ===
+.claude/settings.json
+.claude/worktrees/
+
+# === TESTES (arquivos gerados) ===
+test.db
+tests/*.db
+tests/.pytest_cache/
+
 # === OUTROS ===
 .mypy_cache/
 .dmypy.json
@@ -123,10 +130,10 @@ cython_debug/
 .docker/
 docker-compose.override.yml
 
-# SSL certificates (development only)
-deployment/nginx/ssl/*.pem
-deployment/nginx/ssl/*.key
-deployment/nginx/ssl/*.crt
+# SSL certificates
+legacy/web-deployment/configs/nginx/ssl/*.pem
+legacy/web-deployment/configs/nginx/ssl/*.key
+legacy/web-deployment/configs/nginx/ssl/*.crt
 
 # Backup data
 *.db.gz

@@ -1,7 +1,7 @@
 """
 Modelo SyncLog - Registra histórico de sincronizações de calendários.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
@@ -106,7 +106,7 @@ class SyncLog(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         comment="Início da sincronização"
     )
 

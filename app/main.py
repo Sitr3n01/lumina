@@ -12,6 +12,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.version import __version__
 from app.utils.logger import setup_logger, get_logger
 from app.routers import bookings, conflicts, statistics, sync_actions, calendar, documents, emails
 from app.routers import settings as settings_router_mod
@@ -19,6 +20,8 @@ from app.routers import notifications as notifications_router_mod
 from app.api.v1 import auth, health
 from app.middleware.security_headers import add_security_headers
 from app.middleware.csrf import CSRFProtectionMiddleware
+from app.middleware.auth import get_current_active_user, get_current_admin_user
+from app.models.user import User
 
 # Configurar logging
 setup_logger(log_level=settings.LOG_LEVEL, app_name=settings.APP_NAME)
@@ -62,6 +65,9 @@ async def sync_calendar_periodically():
                     else:
                         logger.error(f"Scheduled sync failed")
 
+        except asyncio.CancelledError:
+            logger.info("Periodic calendar sync task cancelled — shutting down gracefully")
+            raise  # Repassar para o loop asyncio encerrar a task corretamente
         except Exception as e:
             logger.error(f"Error in periodic sync task: {e}")
             await asyncio.sleep(60)  # Espera 1 minuto em caso de erro
@@ -147,7 +153,7 @@ async def lifespan(app: FastAPI):
     try:
         await sync_task
     except asyncio.CancelledError:
-        pass
+        logger.info("Calendar sync task stopped")
 
     # Parar task de backup
     if backup_task:
@@ -155,7 +161,7 @@ async def lifespan(app: FastAPI):
         try:
             await backup_task
         except asyncio.CancelledError:
-            pass
+            logger.info("Backup task stopped")
 
     logger.info("Shutdown complete")
 
@@ -164,7 +170,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="LUMINA API",
     description="API para gerenciamento automatizado de apartamento no Airbnb e Booking.com",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan
 )
 
@@ -206,9 +212,9 @@ app.include_router(notifications_router_mod.router)  # Central de notificações
 
 # === ENDPOINT DE SHUTDOWN (apenas modo desktop) ===
 @app.post("/api/v1/shutdown")
-async def shutdown_server():
+async def shutdown_server(current_user: User = Depends(get_current_active_user)):
     """Shutdown gracioso do servidor (apenas modo desktop).
-    Chamado pelo Electron antes de encerrar o processo.
+    Requer autenticacao para prevenir encerramento nao autorizado.
     """
     if not settings.LUMINA_DESKTOP:
         return JSONResponse(
@@ -229,7 +235,7 @@ def root():
     """Rota raiz"""
     return {
         "name": settings.APP_NAME,
-        "version": "1.0.0",
+        "version": __version__,
         "status": "online",
         "environment": settings.APP_ENV
     }
@@ -245,8 +251,8 @@ def health_check():
 
 
 @app.get("/api/info")
-def api_info():
-    """Informações da API"""
+def api_info(current_user: User = Depends(get_current_active_user)):
+    """Informações da API (requer autenticação para proteger PII)"""
     return {
         "app_name": settings.APP_NAME,
         "property_name": settings.PROPERTY_NAME,

@@ -89,6 +89,15 @@ class FetchEmailsRequest(BaseModel):
     limit: int = Field(default=10, ge=1, le=100, description="Número máximo de emails")
     unread_only: bool = Field(default=False, description="Apenas emails não lidos")
 
+    @field_validator('folder')
+    @classmethod
+    def validate_folder_name(cls, v: str) -> str:
+        """SECURITY: Prevenir IMAP injection via nome de pasta malicioso"""
+        import re
+        if not re.match(r'^[A-Za-z0-9_./ -]{1,64}$', v):
+            raise ValueError('Nome de pasta IMAP inválido')
+        return v
+
 
 class EmailResponse(BaseModel):
     """Response genérico para operações de email"""

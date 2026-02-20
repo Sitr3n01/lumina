@@ -56,8 +56,12 @@ function setupAutoUpdater(mainWindow) {
 
     autoUpdater.on('update-downloaded', (info) => {
         log.info('[Updater] Atualização baixada:', info.version);
-        // Instalar e reiniciar
-        autoUpdater.quitAndInstall(false, true);
+        // Notificar renderer para que o usuário escolha quando instalar
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('update:downloaded', {
+                version: info.version,
+            });
+        }
     });
 
     // Verificar atualizações 30 segundos após o startup
@@ -74,12 +78,21 @@ function setupAutoUpdater(mainWindow) {
 
 /**
  * Inicia o download da atualização disponível
- * Chamado via IPC quando o usuário aceita a atualização
+ * Chamado via IPC quando o usuário aceita baixar a atualização
  */
-function installUpdate() {
+function downloadUpdate() {
     autoUpdater.downloadUpdate().catch((err) => {
         log.error('[Updater] Erro ao baixar atualização:', err);
     });
 }
 
-module.exports = { setupAutoUpdater, installUpdate };
+/**
+ * Instala a atualização já baixada e reinicia o app
+ * Chamado via IPC quando o usuário consente a instalação
+ */
+function installUpdate() {
+    log.info('[Updater] Usuário aceitou instalar - reiniciando...');
+    autoUpdater.quitAndInstall(false, true);
+}
+
+module.exports = { setupAutoUpdater, downloadUpdate, installUpdate };
