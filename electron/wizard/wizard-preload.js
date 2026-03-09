@@ -39,4 +39,11 @@ contextBridge.exposeInMainWorld('wizardAPI', {
      * @returns {Promise<{ success: boolean, error?: string }>}
      */
     complete: () => ipcRenderer.invoke('wizard:complete'),
+
+    /**
+     * Salva o PDF do template de autorização em userData para análise posterior
+     * @param {ArrayBuffer} pdfArrayBuffer - Conteúdo binário do PDF
+     * @returns {Promise<{ success: boolean, error?: string }>}
+     */
+    savePdfTemplate: (pdfArrayBuffer) => ipcRenderer.invoke('wizard:savePdf', pdfArrayBuffer),
 });

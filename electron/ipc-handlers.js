@@ -1,13 +1,13 @@
 /**
  * IPC Handlers - LUMINA Desktop
  * Registra todos os handlers do main process para comunicação com o renderer.
- * Expõe os canais definidos no contrato IPC de docs/PLANO_UNIVERSAL.md.
  */
 'use strict';
 
 const { ipcMain, dialog, Notification, app } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const log = require('electron-log');
 
 /**
  * Registra todos os handlers IPC
@@ -42,6 +42,20 @@ function registerIpcHandlers(mainWindow, pythonManager) {
 
     /** Abre diálogo nativo "Salvar como" e grava o arquivo */
     ipcMain.handle('dialog:saveFile', async (event, options) => {
+        // SECURITY: Validar input do renderer
+        if (!options || !options.data) {
+            return { success: false, error: 'Dados inválidos' };
+        }
+        // Limitar tamanho (50MB max)
+        const MAX_SIZE = 50 * 1024 * 1024;
+        if (options.data.length > MAX_SIZE) {
+            return { success: false, error: 'Arquivo muito grande (limite: 50MB)' };
+        }
+        // Validar defaultPath
+        if (options.defaultPath && typeof options.defaultPath !== 'string') {
+            return { success: false, error: 'Caminho inválido' };
+        }
+
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             defaultPath: options.defaultPath,
             filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
@@ -52,7 +66,7 @@ function registerIpcHandlers(mainWindow, pythonManager) {
                 fs.writeFileSync(filePath, Buffer.from(options.data));
                 return { success: true, path: filePath };
             } catch (err) {
-                console.error('[IPC] Erro ao salvar arquivo:', err);
+                log.error('[IPC] Erro ao salvar arquivo:', err);
                 return { success: false, error: err.message };
             }
         }
@@ -106,16 +120,53 @@ function registerIpcHandlers(mainWindow, pythonManager) {
         }
     });
 
-    // === UPDATES (placeholder - implementação completa em updater.js) ===
-
-    /** Inicia o download e instalação da atualização */
-    ipcMain.handle('update:install', () => {
-        // Implementação completa delega para updater.js
-        // Por enquanto, noop - será preenchido ao integrar o updater
-        console.log('[IPC] update:install chamado');
+    /** Encerra o aplicativo completamente (usado pelo 3-dot menu → Sair) */
+    ipcMain.on('app:quit', () => {
+        log.info('[IPC] app:quit recebido — encerrando LUMINA.');
+        app.quit();
     });
 
-    console.log('[IPC] Todos os handlers registrados.');
+    // === UPDATES ===
+
+    /** Verifica se há atualizações disponíveis */
+    ipcMain.on('update:check', () => {
+        log.info('[IPC] update:check recebido — verificando atualizações.');
+        try {
+            const { autoUpdater } = require('electron-updater');
+            autoUpdater.checkForUpdates().catch((err) => {
+                log.warn('[IPC] Verificação de atualização falhou:', err.message);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('update:not-available');
+                }
+            });
+        } catch (err) {
+            log.warn('[IPC] electron-updater não disponível:', err.message);
+        }
+    });
+
+    /** Inicia o download da atualização disponível */
+    ipcMain.handle('update:download', () => {
+        log.info('[IPC] update:download recebido — iniciando download.');
+        try {
+            const { downloadUpdate } = require('./updater');
+            downloadUpdate();
+        } catch (err) {
+            log.error('[IPC] Erro ao iniciar download:', err.message);
+        }
+    });
+
+    /** Instala a atualização já baixada e reinicia o app */
+    ipcMain.handle('update:install', () => {
+        log.info('[IPC] update:install recebido — instalando e reiniciando.');
+        try {
+            const { installUpdate } = require('./updater');
+            installUpdate();
+        } catch (err) {
+            log.error('[IPC] Erro ao instalar atualização:', err.message);
+        }
+    });
+
+    log.info('[IPC] Todos os handlers registrados.');
 }
 
 module.exports = { registerIpcHandlers };

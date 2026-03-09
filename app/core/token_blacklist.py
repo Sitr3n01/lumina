@@ -7,7 +7,7 @@ Suporta Redis (produção) com fallback para in-memory (desenvolvimento).
 """
 import time
 from typing import Optional, Set, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.utils.logger import get_logger
 from app.config import settings
 
@@ -24,7 +24,7 @@ class TokenBlacklist:
 
     Uso:
         blacklist = TokenBlacklist()
-        blacklist.revoke_token("token_jwt", expires_at=datetime.utcnow() + timedelta(minutes=30))
+        blacklist.revoke_token("token_jwt", expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30))
         if blacklist.is_revoked("token_jwt"):
             raise HTTPException(401, "Token revogado")
     """
@@ -86,7 +86,7 @@ class TokenBlacklist:
             True se adicionado com sucesso
         """
         # Calcular TTL (tempo até expiração)
-        ttl_seconds = int((expires_at - datetime.utcnow()).total_seconds())
+        ttl_seconds = int((expires_at - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds())
 
         if ttl_seconds <= 0:
             # Token já expirou naturalmente, não precisa blacklist
@@ -161,7 +161,7 @@ class TokenBlacklist:
             True se marcado para revogação
         """
         key = f"user_revoked:{user_id}"
-        ttl_seconds = int((current_token_exp - datetime.utcnow()).total_seconds())
+        ttl_seconds = int((current_token_exp - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds())
 
         if ttl_seconds <= 0:
             return True

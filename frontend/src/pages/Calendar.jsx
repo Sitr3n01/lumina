@@ -21,14 +21,38 @@ const Calendar = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
+
+        const response = await calendarAPI.getEvents({
+          property_id: propertyId,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+        });
+
+        if (!cancelled) setEvents(response.data || []);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading events:', error);
+          setEvents([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
     loadEvents();
+    return () => { cancelled = true; };
   }, [currentDate]);
 
   const loadEvents = async () => {
     try {
       setLoading(true);
-
-      // Calcular range do mês atual +/- 1 mês
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
 

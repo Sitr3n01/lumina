@@ -2,7 +2,7 @@
 Serviço de gerenciamento de calendários.
 Orquestra o processo completo de sincronização: download, parse, merge e detecção de conflitos.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
@@ -69,7 +69,7 @@ class CalendarService:
         logger.info(f"Starting sync for {calendar_source.platform.value} (ID: {calendar_source.id})")
         logger.info(f"="*60)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Criar log de sincronização
         sync_log = SyncLog(
@@ -92,13 +92,13 @@ class CalendarService:
                 # Erro no download/parse
                 sync_log.status = SyncStatus.ERROR
                 sync_log.error_message = result.get("error", "Unknown error")
-                sync_log.completed_at = datetime.utcnow()
+                sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 sync_log.sync_duration_ms = int(
                     (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
                 )
                 self.db.commit()
 
-                logger.error(f"❌ Sync failed: {result['error']}")
+                logger.error(f"[FAIL] Sync failed: {result['error']}")
                 return {
                     "success": False,
                     "error": result["error"],
@@ -128,13 +128,13 @@ class CalendarService:
                 if action == "created":
                     stats["added"] += 1
                     new_bookings.append(booking)
-                    logger.info(f"  🆕 Added: {booking.guest_name} ({booking.check_in_date})")
+                    logger.info(f"  [NEW] Added: {booking.guest_name} ({booking.check_in_date})")
                 elif action == "updated":
                     stats["updated"] += 1
-                    logger.info(f"  🔄 Updated: {booking.guest_name} ({booking.check_in_date})")
+                    logger.info(f"  [UPD] Updated: {booking.guest_name} ({booking.check_in_date})")
                 elif action == "cancelled":
                     stats["cancelled"] += 1
-                    logger.info(f"  🚫 Cancelled: {booking.guest_name} ({booking.check_in_date})")
+                    logger.info(f"  [DEL] Cancelled: {booking.guest_name} ({booking.check_in_date})")
                 else:
                     stats["unchanged"] += 1
 
@@ -144,9 +144,9 @@ class CalendarService:
                     notification_service = NotificationService(self.db)
                     for booking in new_bookings:
                         notification_service.notify_new_booking(booking)
-                    logger.info(f"  📱 Notified {len(new_bookings)} new booking(s)")
+                    logger.info(f"  [NOTIF] Notified {len(new_bookings)} new booking(s)")
                 except Exception as e:
-                    logger.error(f"  ❌ Error sending notifications: {e}")
+                    logger.error(f"  [ERR] Error sending notifications: {e}")
 
             # Notificar cancelamentos
             if stats.get("cancelled", 0) > 0:
@@ -158,7 +158,7 @@ class CalendarService:
                         message=f"Detectado durante sincronização de {calendar_source.platform.value}",
                     )
                 except Exception as e:
-                    logger.error(f"  ❌ Error creating cancel notification: {e}")
+                    logger.error(f"  [ERR] Error creating cancel notification: {e}")
 
             # Marcar reservas passadas como completadas
             completed_count = self.booking_service.mark_completed_bookings(
@@ -190,7 +190,7 @@ class CalendarService:
                         message=f"Verifique a página de conflitos para resolver.",
                     )
                 except Exception as e:
-                    logger.error(f"  ❌ Error creating conflict notification: {e}")
+                    logger.error(f"  [ERR] Error creating conflict notification: {e}")
 
             # Atualizar log de sincronização
             sync_log.status = SyncStatus.SUCCESS
@@ -198,19 +198,19 @@ class CalendarService:
             sync_log.bookings_updated = stats["updated"]
             sync_log.bookings_cancelled = stats["cancelled"]
             sync_log.conflicts_detected = len(conflicts)
-            sync_log.completed_at = datetime.utcnow()
+            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             sync_log.sync_duration_ms = int(
                 (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
             )
 
             # Atualizar calendar_source
-            calendar_source.last_sync_at = datetime.utcnow()
+            calendar_source.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
             calendar_source.last_sync_status = "success"
 
             self.db.commit()
 
             logger.info(f"")
-            logger.info(f"✅ Sync completed successfully!")
+            logger.info(f"[OK] Sync completed successfully!")
             logger.info(f"   Added: {stats['added']}")
             logger.info(f"   Updated: {stats['updated']}")
             logger.info(f"   Cancelled: {stats['cancelled']}")
@@ -220,7 +220,7 @@ class CalendarService:
             if auto_resolved > 0:
                 logger.info(f"   Auto-resolved: {auto_resolved}")
             if conflicts_created > 0:
-                logger.info(f"   ⚠️ Actions created: {conflicts_created}")
+                logger.info(f"   [WARN] Actions created: {conflicts_created}")
             logger.info(f"   Duration: {sync_log.sync_duration_ms}ms")
             logger.info(f"="*60)
 
@@ -232,13 +232,13 @@ class CalendarService:
             }
 
         except Exception as e:
-            logger.error(f"❌ Unexpected error during sync: {e}")
+            logger.error(f"[FAIL] Unexpected error during sync: {e}")
             logger.exception(e)
 
             # Atualizar log com erro
             sync_log.status = SyncStatus.ERROR
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.utcnow()
+            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             sync_log.sync_duration_ms = int(
                 (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
             )
@@ -306,10 +306,10 @@ class CalendarService:
         logger.info(f"FULL SYNC COMPLETED")
         logger.info(f"{'='*60}")
         logger.info(f"Total Changes:")
-        logger.info(f"  🆕 Added: {total_stats['added']}")
-        logger.info(f"  🔄 Updated: {total_stats['updated']}")
-        logger.info(f"  🚫 Cancelled: {total_stats['cancelled']}")
-        logger.info(f"  ✅ Unchanged: {total_stats['unchanged']}")
+        logger.info(f"  [NEW] Added: {total_stats['added']}")
+        logger.info(f"  [UPD] Updated: {total_stats['updated']}")
+        logger.info(f"  [DEL] Cancelled: {total_stats['cancelled']}")
+        logger.info(f"  [--] Unchanged: {total_stats['unchanged']}")
         logger.info(f"{'='*60}\n")
 
         return {
@@ -385,7 +385,7 @@ class CalendarService:
             )
 
             actions_created += 1
-            logger.warning(f"⚠️ Created sync action for conflict {conflict.id}")
+            logger.warning(f"[WARN] Created sync action for conflict {conflict.id}")
 
         return actions_created
 

@@ -45,6 +45,7 @@ safety>=3.7.0  # Dependency vulnerability scanner
 python-docx>=1.1.2
 docxtpl>=0.18.0  # Template engine for DOCX
 Pillow>=10.0.0  # Image handling
+PyMuPDF>=1.23.0  # PDF parsing e análise de templates (analyze-template endpoint)
 
 # =====================================================
 # MVP2 Dependencies (Telegram Bot)
@@ -60,8 +61,17 @@ email-validator>=2.0.0
 jinja2>=3.1.0  # Email templates
 
 # =====================================================
-# Testing (Optional - uncomment to run tests)
+# Testing
 # =====================================================
-# pytest>=8.3.0
-# pytest-asyncio>=0.24.0
-# faker>=33.0.0
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+faker>=33.0.0
+
+# =====================================================
+# MVP3 Dependencies
+# =====================================================
+anthropic>=0.30.0
+openpyxl>=3.1.0
+google-api-python-client>=2.90.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0

@@ -89,56 +89,54 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      setLoading(true);
+      try {
+        const results = await Promise.allSettled([
+          statisticsAPI.getMonthlyReport(propertyId, new Date().getMonth() + 1, new Date().getFullYear()),
+          bookingsAPI.getUpcoming({ limit: 5 }),
+          conflictsAPI.getSummary(propertyId),
+          notificationsAPI.getAll({ limit: 5 }),
+        ]);
+
+        if (cancelled) return;
+
+        if (results[0].status === 'fulfilled') {
+          const data = results[0].value.data;
+          setStats(prev => ({
+            ...prev,
+            occupancyRate: data.occupancy_rate || 0,
+            totalRevenue: data.total_revenue || 0,
+            activeBookings: data.total_bookings || 0,
+          }));
+        }
+        if (results[1].status === 'fulfilled') {
+          const data = results[1].value.data;
+          setUpcomingBookings(Array.isArray(data) ? data.slice(0, 5) : (data.items || []).slice(0, 5));
+        }
+        if (results[2].status === 'fulfilled') {
+          const data = results[2].value.data;
+          setStats(prev => ({
+            ...prev,
+            conflicts: data.active_conflicts ?? data.total ?? 0,
+          }));
+        }
+        if (results[3].status === 'fulfilled') {
+          const data = results[3].value.data;
+          setRecentActivity((data.items || []).slice(0, 5));
+        }
+      } catch (err) {
+        if (!cancelled) console.error('Dashboard load error:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
     loadDashboard();
+    return () => { cancelled = true; };
   }, []);
-
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const results = await Promise.allSettled([
-        statisticsAPI.getMonthlyReport(propertyId, new Date().getMonth() + 1, new Date().getFullYear()), // Usar monthly-report para dados precisos
-        bookingsAPI.getUpcoming({ limit: 5 }),
-        conflictsAPI.getSummary(propertyId),
-        notificationsAPI.getAll({ limit: 5 }),
-      ]);
-
-      // Statistics (Monthly Report)
-      if (results[0].status === 'fulfilled') {
-        const data = results[0].value.data;
-        setStats(prev => ({
-          ...prev,
-          occupancyRate: data.occupancy_rate || 0,
-          totalRevenue: data.total_revenue || 0,
-          activeBookings: data.total_bookings || 0, // Usar total_bookings do mes
-        }));
-      }
-
-      // Upcoming bookings
-      if (results[1].status === 'fulfilled') {
-        const data = results[1].value.data;
-        setUpcomingBookings(Array.isArray(data) ? data.slice(0, 5) : (data.items || []).slice(0, 5));
-      }
-
-      // Conflicts
-      if (results[2].status === 'fulfilled') {
-        const data = results[2].value.data;
-        setStats(prev => ({
-          ...prev,
-          conflicts: data.active_conflicts ?? data.total ?? 0,
-        }));
-      }
-
-      // Recent notifications for activity feed
-      if (results[3].status === 'fulfilled') {
-        const data = results[3].value.data;
-        setRecentActivity((data.items || []).slice(0, 5));
-      }
-    } catch (err) {
-      console.error('Dashboard load error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // formatDate → usando formatDateShort de ../utils/formatters
 

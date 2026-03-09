@@ -6,14 +6,16 @@ Usado por load balancers e ferramentas de monitoramento.
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 import psutil
 import os
 
 from app.database.session import get_db
 from app.config import settings
+from app.version import __version__
 from app.models.user import User
+from app.middleware.auth import get_current_admin_user
 
 router = APIRouter(prefix="/health", tags=["Health Check"])
 
@@ -29,7 +31,7 @@ def health_check_basic() -> Dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "service": settings.APP_NAME,
         "environment": settings.APP_ENV,
     }
@@ -57,7 +59,7 @@ def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
         db.execute(text("SELECT 1"))
         checks["database"] = {"status": "healthy", "message": "Database connection OK"}
     except Exception as e:
-        checks["database"] = {"status": "unhealthy", "message": f"Database error: {str(e)}"}
+        checks["database"] = {"status": "unhealthy", "message": "Database connection failed"}
 
     # Verificar se diretórios críticos existem
     critical_dirs = ["data", "data/logs", "data/generated_docs"]
@@ -72,7 +74,7 @@ def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
     return {
         "status": "ready" if all_healthy else "not_ready",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "checks": checks,
     }
 
@@ -88,18 +90,22 @@ def liveness_check() -> Dict[str, str]:
     """
     return {
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }
 
 
 @router.get("/metrics", status_code=status.HTTP_200_OK)
-def system_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
+def system_metrics(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user)
+) -> Dict[str, Any]:
     """
     Métricas detalhadas do sistema (CPU, memória, disco, etc).
-    Requer autenticação em produção - adicione Depends(get_current_admin_user) se necessário.
+    Requer autenticação de administrador.
 
     Args:
         db: Sessão do banco de dados
+        admin: Usuário admin autenticado
 
     Returns:
         Dict com métricas do sistema
@@ -136,11 +142,12 @@ def system_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
     # Tamanho do banco de dados
     db_size_bytes = 0
-    if os.path.exists("data/sentinel.db"):
-        db_size_bytes = os.path.getsize("data/sentinel.db")
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    if db_path and os.path.exists(db_path):
+        db_size_bytes = os.path.getsize(db_path)
 
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "system": {
             "cpu": {
                 "count": cpu_count,
@@ -168,7 +175,7 @@ def application_version() -> Dict[str, str]:
     """
     return {
         "service": settings.APP_NAME,
-        "version": "1.0.0",  # Atualize conforme necessário
+        "version": __version__,
         "environment": settings.APP_ENV,
         "python_version": os.sys.version.split()[0],
     }

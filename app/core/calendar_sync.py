@@ -71,7 +71,7 @@ class CalendarSyncEngine:
             filename = self.download_dir / f"{platform}_{timestamp}.ics"
             filename.write_text(content, encoding="utf-8")
 
-            logger.info(f"✅ iCal downloaded successfully from {platform} ({len(content)} bytes)")
+            logger.info(f"[OK] iCal downloaded successfully from {platform} ({len(content)} bytes)")
             return content
 
         except httpx.HTTPError as e:
@@ -106,7 +106,7 @@ class CalendarSyncEngine:
                 if event_data:
                     events.append(event_data)
 
-            logger.info(f"✅ Parsed {len(events)} events from {platform}")
+            logger.info(f"[OK] Parsed {len(events)} events from {platform}")
             return events
 
         except Exception as e:

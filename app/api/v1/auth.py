@@ -2,7 +2,7 @@
 """
 Endpoints de autenticação: login, registro, mudança de senha.
 """
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -19,13 +19,14 @@ from app.schemas.auth import (
     UserCreate,
     UserResponse,
     ChangePasswordRequest,
+    DeleteAccountRequest,
     Token
 )
 from app.middleware.auth import get_current_user, get_current_active_user, get_current_admin_user
 from app.core.token_blacklist import get_token_blacklist
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=not (settings.LUMINA_DESKTOP or settings.APP_ENV == "test"))
 security = HTTPBearer()
 
 
@@ -39,7 +40,11 @@ def register(
     """
     Registra novo usuário no sistema.
 
+    Só é permitido se nenhum usuário existir (primeiro setup).
+    Após o primeiro usuário ser criado, o registro é fechado.
+
     Validações:
+    - Sistema sem usuários (primeiro setup)
     - Email único
     - Username único
     - Senha forte (mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número)
@@ -47,6 +52,14 @@ def register(
     Returns:
         UserResponse: Dados do usuário criado (sem senha)
     """
+    # Verificar se já existe algum usuário no sistema (invite-only após primeiro setup)
+    user_count = db.query(User).count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registro de novos usuários não permitido. Sistema já configurado."
+        )
+
     # Verificar se email já existe
     existing_email = db.query(User).filter(User.email == user_data.email).first()
     if existing_email:
@@ -75,7 +88,7 @@ def register(
         full_name=user_data.full_name,
         # CRITICAL: Sempre definir explicitamente campos de privilégio
         is_active=True,
-        is_admin=False,  # Primeiro usuário pode ser tornado admin manualmente no DB
+        is_admin=True,  # Primeiro (e único) usuário é automaticamente admin
         # CRITICAL: Garantir que failed_login_attempts inicia em 0
         failed_login_attempts=0,
         locked_until=None
@@ -86,6 +99,16 @@ def register(
     db.refresh(new_user)
 
     return new_user
+
+
+@router.get("/setup-status")
+def setup_status(db: Session = Depends(get_db)):
+    """
+    Verifica se o sistema precisa de configuração inicial (sem autenticação).
+    Retorna true se não há nenhum usuário cadastrado ainda.
+    """
+    needs_setup = db.query(User).count() == 0
+    return {"needs_setup": needs_setup}
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -115,9 +138,9 @@ def login(
     # PROTEÇÃO CONTRA ACCOUNT LOCKOUT:
     # Verificar se conta está bloqueada (antes da verificação de senha)
     if user and user.locked_until:
-        if datetime.utcnow() < user.locked_until:
+        if datetime.now(timezone.utc).replace(tzinfo=None) < user.locked_until:
             # Conta ainda está bloqueada
-            remaining = (user.locked_until - datetime.utcnow()).total_seconds() / 60
+            remaining = (user.locked_until - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds() / 60
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Conta bloqueada temporariamente. Tente novamente em {int(remaining)} minutos."
@@ -131,7 +154,7 @@ def login(
     # PROTEÇÃO CONTRA TIMING ATTACK:
     # Sempre executa hash verification, mesmo se usuário não existir
     # Isso garante tempo de resposta constante
-    dummy_hash = "$2b$12$dummyhashfordummyhashfordummyhashfordummyhashfordummyha"
+    dummy_hash = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGgZOK5y"
     password_hash = user.hashed_password if user else dummy_hash
 
     # Verifica senha
@@ -148,7 +171,7 @@ def login(
             LOCKOUT_MINUTES = 15
 
             if user.failed_login_attempts >= MAX_ATTEMPTS:
-                user.locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=LOCKOUT_MINUTES)
                 db.commit()
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -175,7 +198,7 @@ def login(
     user.locked_until = None
 
     # Atualizar last_login
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
     # Criar token JWT - APENAS ID DO USUÁRIO
@@ -251,7 +274,7 @@ def change_password(
     # REVOGAR TODOS os tokens do usuário (segurança)
     # Usuário precisará fazer login novamente com nova senha
     blacklist = get_token_blacklist()
-    token_exp = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_exp = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     blacklist.revoke_all_user_tokens(current_user.id, token_exp)
 
     return {
@@ -277,23 +300,25 @@ def logout(
 
     # Adicionar token à blacklist
     blacklist = get_token_blacklist()
-    token_exp = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_exp = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     blacklist.revoke_token(token, token_exp)
 
     return {"message": "Logout realizado com sucesso. Token invalidado."}
 
 
+from fastapi import Body
+
 @router.delete("/delete-account", status_code=status.HTTP_200_OK)
 def delete_account(
-    password: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_data: DeleteAccountRequest = Body(...)
 ):
     """
     Deleta conta do usuário autenticado (IRREVERSÍVEL).
 
     Args:
-        password: Senha do usuário para confirmação
+        request_data: Body com senha para confirmação
 
     Returns:
         dict: Mensagem de sucesso
@@ -302,7 +327,7 @@ def delete_account(
         HTTPException 400: Se senha incorreta
     """
     # Verificar senha
-    if not verify_password(password, current_user.hashed_password):
+    if not verify_password(request_data.password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Senha incorreta"

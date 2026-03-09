@@ -17,10 +17,11 @@ from telegram.ext import (
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import get_db
+from app.database.session import get_db
 from app.database.session import get_db_context
-from app.models import Booking, BookingConflict, Property
-from app.core.calendar_sync import CalendarSync
+from app.models.booking import Booking
+from app.models.booking_conflict import BookingConflict
+from app.models.property import Property
 from app.core.conflict_detector import ConflictDetector
 from app.services.document_service import DocumentService
 from app.services.email_service import get_email_service
@@ -42,11 +43,11 @@ class TelegramBot:
     async def start(self):
         """Inicia o bot"""
         if not self.token or self.token == "":
-            print("⚠️  TELEGRAM_BOT_TOKEN não configurado. Bot não será iniciado.")
+            print("[WARN] TELEGRAM_BOT_TOKEN nao configurado. Bot nao sera iniciado.")
             return
 
         if not self.admin_ids:
-            print("⚠️  TELEGRAM_ADMIN_USER_IDS não configurado. Bot não será iniciado.")
+            print("[WARN] TELEGRAM_ADMIN_USER_IDS nao configurado. Bot nao sera iniciado.")
             return
 
         # Criar aplicação
@@ -56,22 +57,22 @@ class TelegramBot:
         self._register_handlers()
 
         # Iniciar bot
-        print("🤖 Iniciando bot do Telegram...")
+        print("[BOT] Iniciando bot do Telegram...")
         await self.application.initialize()
         await self.application.start()
         await self.application.updater.start_polling()
         self._running = True
-        print("✅ Bot do Telegram iniciado com sucesso!")
+        print("[OK] Bot do Telegram iniciado com sucesso!")
 
     async def stop(self):
         """Para o bot"""
         if self.application and self._running:
-            print("🛑 Parando bot do Telegram...")
+            print("[BOT] Parando bot do Telegram...")
             await self.application.updater.stop()
             await self.application.stop()
             await self.application.shutdown()
             self._running = False
-            print("✅ Bot do Telegram parado!")
+            print("[OK] Bot do Telegram parado!")
 
     def _register_handlers(self):
         """Registra todos os handlers de comandos"""
@@ -373,13 +374,24 @@ class TelegramBot:
 
         db: Session = next(get_db())
         try:
+            from app.services.calendar_service import CalendarService
             # Sincronizar
-            sync = CalendarSync(db)
-            results = await sync.sync_all_properties()
-
-            # Detectar conflitos
+            sync = CalendarService(db)
+            properties = db.query(Property).all()
+            results = []
+            conflicts = []
             detector = ConflictDetector(db)
-            conflicts = detector.detect_all_conflicts()
+            
+            for prop in properties:
+                res = await sync.sync_all_sources(prop.id)
+                if res.get("success"):
+                    results.append({
+                        "new_bookings": res.get("total_stats", {}).get("bookings_added", 0),
+                        "updated_bookings": res.get("total_stats", {}).get("bookings_updated", 0)
+                    })
+                # Detectar conflitos
+                prop_conflicts = detector.detect_all_conflicts(prop.id)
+                conflicts.extend(prop_conflicts)
 
             # Montar resposta
             total_new = sum(r["new_bookings"] for r in results)

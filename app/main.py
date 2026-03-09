@@ -4,7 +4,7 @@ Sistema de Gestão Automatizada de Apartamento
 """
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -12,22 +12,38 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.version import __version__
 from app.utils.logger import setup_logger, get_logger
-from app.routers import bookings, conflicts, statistics, sync_actions, calendar, documents, emails
-from app.routers import settings as settings_router_mod
-from app.routers import notifications as notifications_router_mod
+
+# Guardar modo de execução antes de qualquer configuração
+import sys as _sys
+from app.routers import (
+    bookings, conflicts, statistics, sync_actions, calendar, documents, emails,
+    settings as settings_router_mod, notifications as notifications_router_mod,
+    ai
+)
 from app.api.v1 import auth, health
 from app.middleware.security_headers import add_security_headers
 from app.middleware.csrf import CSRFProtectionMiddleware
+from app.middleware.auth import get_current_active_user, get_current_admin_user
+from app.models.user import User
 
 # Configurar logging
 setup_logger(log_level=settings.LOG_LEVEL, app_name=settings.APP_NAME)
 logger = get_logger(__name__)
 
+# Bloquear execução em modo web legado — apenas Electron Desktop é suportado
+if not settings.LUMINA_DESKTOP and settings.APP_ENV != "test":
+    logger.critical(
+        "LUMINA requer execução via Electron Desktop (LUMINA_DESKTOP=true). "
+        "Modo web legado desabilitado. Use 'npm run dev' para desenvolvimento."
+    )
+    _sys.exit(1)
+
 # Configurar rate limiter GLOBAL
 # Proteção contra DoS: limites aplicados a TODOS os endpoints
 # No modo desktop (localhost), rate limiting é desabilitado
-if settings.LUMINA_DESKTOP:
+if settings.LUMINA_DESKTOP or settings.APP_ENV == "test":
     limiter = Limiter(key_func=get_remote_address, default_limits=[])
 else:
     limiter = Limiter(
@@ -62,6 +78,9 @@ async def sync_calendar_periodically():
                     else:
                         logger.error(f"Scheduled sync failed")
 
+        except asyncio.CancelledError:
+            logger.info("Periodic calendar sync task cancelled — shutting down gracefully")
+            raise  # Repassar para o loop asyncio encerrar a task corretamente
         except Exception as e:
             logger.error(f"Error in periodic sync task: {e}")
             await asyncio.sleep(60)  # Espera 1 minuto em caso de erro
@@ -82,7 +101,7 @@ def validate_security_settings():
 
         # Avisar se CORS está aberto
         if hasattr(settings, 'cors_origins_list') and "*" in settings.cors_origins_list:
-            logger.warning("⚠️  SECURITY: CORS está aberto para todas as origins!")
+            logger.warning("[WARN] SECURITY: CORS esta aberto para todas as origins!")
 
     if errors:
         logger.error("=" * 70)
@@ -92,7 +111,7 @@ def validate_security_settings():
         logger.error("=" * 70)
         raise ValueError(f"Security validation failed: {'; '.join(errors)}")
 
-    logger.info("✅ Security settings validated")
+    logger.info("Security settings validated [OK]")
 
 
 @asynccontextmanager
@@ -105,6 +124,13 @@ async def lifespan(app: FastAPI):
 
     # Garantir que diretórios existem
     settings.ensure_directories()
+
+    # Criar tabelas no banco de dados (se não existirem)
+    from app.database.session import create_all_tables
+    create_all_tables()
+
+    # Admin criado via Wizard (pending-admin.json) ou via Login.jsx (setup mode).
+    # Para dev manual: python scripts/create_default_admin.py
 
     # Iniciar bot do Telegram (se configurado)
     telegram_bot = None
@@ -147,7 +173,7 @@ async def lifespan(app: FastAPI):
     try:
         await sync_task
     except asyncio.CancelledError:
-        pass
+        logger.info("Calendar sync task stopped")
 
     # Parar task de backup
     if backup_task:
@@ -155,7 +181,7 @@ async def lifespan(app: FastAPI):
         try:
             await backup_task
         except asyncio.CancelledError:
-            pass
+            logger.info("Backup task stopped")
 
     logger.info("Shutdown complete")
 
@@ -164,7 +190,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="LUMINA API",
     description="API para gerenciamento automatizado de apartamento no Airbnb e Booking.com",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan
 )
 
@@ -202,13 +228,12 @@ app.include_router(sync_actions.router)
 app.include_router(calendar.router)
 app.include_router(settings_router_mod.router)  # Configurações persistentes
 app.include_router(notifications_router_mod.router)  # Central de notificações
-
-
+app.include_router(ai.router)  # Sugestões de preço por I.A.
 # === ENDPOINT DE SHUTDOWN (apenas modo desktop) ===
 @app.post("/api/v1/shutdown")
-async def shutdown_server():
+async def shutdown_server(current_user: User = Depends(get_current_admin_user)):
     """Shutdown gracioso do servidor (apenas modo desktop).
-    Chamado pelo Electron antes de encerrar o processo.
+    Requer autenticacao para prevenir encerramento nao autorizado.
     """
     if not settings.LUMINA_DESKTOP:
         return JSONResponse(
@@ -229,39 +254,29 @@ def root():
     """Rota raiz"""
     return {
         "name": settings.APP_NAME,
-        "version": "1.0.0",
+        "version": __version__,
         "status": "online",
         "environment": settings.APP_ENV
     }
 
 
 @app.get("/health")
+@app.head("/health")
 def health_check():
     """Health check para monitoramento"""
+    from datetime import datetime, timezone
     return {
         "status": "healthy",
-        "timestamp": asyncio.get_event_loop().time()
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     }
 
 
 @app.get("/api/info")
-def api_info():
-    """Informações da API"""
+def api_info(current_user: User = Depends(get_current_active_user)):
+    """Informações da API (requer autenticação para proteger PII)"""
     return {
         "app_name": settings.APP_NAME,
         "property_name": settings.PROPERTY_NAME,
-        "property_address": settings.PROPERTY_ADDRESS,
-        "condo_name": settings.CONDO_NAME,
-        "condo_admin_name": settings.CONDO_ADMIN_NAME,
-        "owner_name": settings.OWNER_NAME,
-        "owner_email": settings.OWNER_EMAIL,
-        "owner_phone": settings.OWNER_PHONE,
-        "owner_apto": settings.OWNER_APTO,
-        "owner_bloco": settings.OWNER_BLOCO,
-        "owner_garagem": settings.OWNER_GARAGEM,
-        "condo_email": settings.CONDO_EMAIL,
-        "contact_phone": settings.CONTACT_PHONE,
-        "contact_email": settings.CONTACT_EMAIL,
         "timezone": settings.TIMEZONE,
         "sync_interval_minutes": settings.CALENDAR_SYNC_INTERVAL_MINUTES,
         "features": {

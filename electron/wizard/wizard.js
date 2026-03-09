@@ -8,8 +8,8 @@
 // ESTADO DO WIZARD
 // ============================================================
 
-const TOTAL_STEPS = 7;
-const SKIPPABLE_STEPS = [4, 5]; // Calendários e Email podem ser pulados
+const TOTAL_STEPS = 8;
+const SKIPPABLE_STEPS = [4, 5, 7]; // Calendários, Email e Template podem ser pulados
 
 let currentStep = 1;
 let formData = {};
@@ -24,8 +24,28 @@ const STEP_NAMES = [
     'Calendários',
     'Email',
     'Admin',
+    'Template',
     'Revisão',
 ];
+
+// ============================================================
+// SECURITY: HTML ESCAPE
+// ============================================================
+
+/**
+ * Escapa caracteres HTML para prevenir XSS ao usar innerHTML
+ * @param {*} str - Valor a escapar
+ * @returns {string} String segura para interpolação em HTML
+ */
+function escapeHtml(str) {
+    if (str == null) return '-';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 // ============================================================
 // INICIALIZAÇÃO
@@ -79,34 +99,44 @@ function renderStepsIndicator() {
     container.innerHTML = '';
 
     for (let i = 1; i <= TOTAL_STEPS; i++) {
-        // Círculo do step
-        const circle = document.createElement('div');
-        circle.className = 'step-item';
+        const item = document.createElement('div');
+        item.className = 'step-item';
+
+        // Row: circle + name label (horizontal)
+        const row = document.createElement('div');
+        row.className = 'step-indicator-row';
 
         const stepEl = document.createElement('div');
         stepEl.className = 'step-circle' +
             (i < currentStep ? ' completed' : '') +
             (i === currentStep ? ' active' : '');
         stepEl.id = `stepCircle_${i}`;
-        stepEl.title = STEP_NAMES[i];
 
         if (i < currentStep) {
-            stepEl.innerHTML = ''; // A classe CSS cuida do ✓
+            stepEl.textContent = '✓';
         } else {
             stepEl.innerHTML = `<span class="step-num">${i}</span>`;
         }
 
-        circle.appendChild(stepEl);
+        const nameEl = document.createElement('span');
+        nameEl.className = 'step-name' +
+            (i === currentStep ? ' active' : '') +
+            (i < currentStep ? ' completed' : '');
+        nameEl.textContent = STEP_NAMES[i];
 
-        // Linha conectora (exceto após o último)
+        row.appendChild(stepEl);
+        row.appendChild(nameEl);
+        item.appendChild(row);
+
+        // Vertical connector line (except after last step)
         if (i < TOTAL_STEPS) {
             const line = document.createElement('div');
             line.className = 'step-line' + (i < currentStep ? ' completed' : '');
             line.id = `stepLine_${i}`;
-            circle.appendChild(line);
+            item.appendChild(line);
         }
 
-        container.appendChild(circle);
+        container.appendChild(item);
     }
 }
 
@@ -142,6 +172,11 @@ function updateNavigation() {
     document.querySelectorAll('.wizard-step').forEach((el) => {
         el.classList.toggle('active', parseInt(el.dataset.step) === currentStep);
     });
+
+    // Preencher template no step 7
+    if (currentStep === 7) {
+        populateTemplate();
+    }
 
     // Preencher review no último step
     if (currentStep === TOTAL_STEPS) {
@@ -213,7 +248,29 @@ function collectStepData(step) {
     // Coletar campos de admin separadamente (step 6)
     if (step === 6) {
         formData.adminEmail = document.getElementById('adminEmail')?.value || '';
+        formData.adminUsername = document.getElementById('adminUsername')?.value?.trim() || '';
         formData.adminPassword = document.getElementById('adminPassword')?.value || '';
+    }
+}
+
+// ============================================================
+// SUGESTÃO AUTOMÁTICA DE USERNAME
+// ============================================================
+
+/**
+ * Ao digitar o email, sugere automaticamente um username
+ * baseado na parte antes do @, apenas se o campo estiver vazio.
+ */
+function suggestUsername() {
+    const emailVal = document.getElementById('adminEmail')?.value || '';
+    const usernameEl = document.getElementById('adminUsername');
+    if (!usernameEl || usernameEl.value.trim()) return; // Não sobrescrever se já preenchido
+
+    const local = emailVal.split('@')[0] || '';
+    // Sanitizar: manter apenas letras, números e underscore
+    const suggested = local.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '').slice(0, 30);
+    if (suggested.length >= 3) {
+        usernameEl.value = suggested;
     }
 }
 
@@ -261,9 +318,20 @@ function validateStep(step) {
                 errors.push({ field: 'adminEmail', msg: 'Email inválido' });
             }
 
+            const adminUsername = document.getElementById('adminUsername')?.value?.trim();
+            if (!adminUsername) {
+                errors.push({ field: 'adminUsername', msg: 'Nome de usuário é obrigatório' });
+            } else if (adminUsername.length < 3) {
+                errors.push({ field: 'adminUsername', msg: 'Mínimo 3 caracteres' });
+            } else if (!/^[a-zA-Z0-9_]+$/.test(adminUsername)) {
+                errors.push({ field: 'adminUsername', msg: 'Apenas letras, números e underscore' });
+            }
+
             const pwd = document.getElementById('adminPassword')?.value || '';
             if (pwd.length < 8) {
                 errors.push({ field: 'adminPassword', msg: 'Senha deve ter pelo menos 8 caracteres' });
+            } else if (!/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+                errors.push({ field: 'adminPassword', msg: 'Senha deve ter maiúscula, minúscula e número' });
             }
 
             const pwdConfirm = document.getElementById('adminPasswordConfirm')?.value || '';
@@ -300,7 +368,213 @@ function isValidUrl(url) {
 }
 
 // ============================================================
-// TELA DE REVISÃO (Step 7)
+// UPLOAD DE PDF TEMPLATE (Step 7)
+// ============================================================
+
+/** PDF selecionado pelo usuário (ArrayBuffer), para incluir no formData */
+let pendingPdfBuffer = null;
+
+/**
+ * Chamado quando o usuário seleciona um arquivo via input file
+ * @param {HTMLInputElement} input
+ */
+function handlePdfFileSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+    processPdfFile(file);
+}
+
+/**
+ * Chamado quando o usuário arrasta um arquivo para o drop zone
+ * @param {DragEvent} event
+ */
+function handlePdfDrop(event) {
+    event.preventDefault();
+    document.getElementById('pdfDropZone')?.classList.remove('drag-over');
+    const file = event.dataTransfer?.files[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showPdfError('Apenas arquivos PDF são aceitos.');
+        return;
+    }
+    processPdfFile(file);
+}
+
+/**
+ * Lê o arquivo PDF e envia para o main process via IPC para salvar em userData
+ * @param {File} file
+ */
+async function processPdfFile(file) {
+    const maxSize = 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showPdfError('Arquivo muito grande. Máximo: 20MB');
+        return;
+    }
+
+    // Mostrar área de status e esconder drop zone
+    const dropZone = document.getElementById('pdfDropZone');
+    const statusArea = document.getElementById('pdfStatusArea');
+    if (dropZone) dropZone.style.display = 'none';
+    if (statusArea) statusArea.style.display = 'block';
+
+    // Preencher info do arquivo
+    const fileNameEl = document.getElementById('pdfFileName');
+    const fileSizeEl = document.getElementById('pdfFileSize');
+    if (fileNameEl) fileNameEl.textContent = file.name;
+    if (fileSizeEl) fileSizeEl.textContent = `(${(file.size / 1024).toFixed(0)} KB)`;
+
+    // Mostrar progress
+    const progressEl = document.getElementById('pdfProgress');
+    const progressBarEl = document.getElementById('pdfProgressBar');
+    const progressTextEl = document.getElementById('pdfProgressText');
+    if (progressEl) progressEl.style.display = 'flex';
+
+    const setProgress = (pct, text) => {
+        if (progressBarEl) progressBarEl.style.width = `${pct}%`;
+        if (progressTextEl) progressTextEl.textContent = text;
+    };
+
+    setProgress(20, 'Lendo arquivo...');
+
+    try {
+        // Ler arquivo como ArrayBuffer
+        const arrayBuffer = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
+            reader.readAsArrayBuffer(file);
+        });
+
+        setProgress(60, 'Salvando template...');
+
+        // Enviar para main process via IPC
+        const result = await window.wizardAPI.savePdfTemplate(arrayBuffer);
+
+        if (!result.success) {
+            throw new Error(result.error || 'Falha ao salvar o arquivo');
+        }
+
+        pendingPdfBuffer = arrayBuffer;
+        setProgress(100, 'Template salvo!');
+
+        // Esconder progress e mostrar resultado de sucesso
+        setTimeout(() => {
+            if (progressEl) progressEl.style.display = 'none';
+            showPdfSuccess(file.name);
+        }, 500);
+
+    } catch (err) {
+        if (progressEl) progressEl.style.display = 'none';
+        showPdfError(err.message || 'Erro ao processar o arquivo.');
+    }
+}
+
+/**
+ * Exibe resultado de sucesso no upload do PDF
+ * @param {string} filename
+ */
+function showPdfSuccess(filename) {
+    const resultEl = document.getElementById('pdfAnalysisResult');
+    const iconEl = document.getElementById('pdfAnalysisIcon');
+    const titleEl = document.getElementById('pdfAnalysisTitle');
+    const fieldsGridEl = document.getElementById('pdfFieldsGrid');
+
+    if (iconEl) iconEl.textContent = '✅';
+    if (titleEl) titleEl.textContent = 'Template salvo! Será analisado ao iniciar o sistema.';
+    if (fieldsGridEl) {
+        fieldsGridEl.innerHTML = `
+            <div class="pdf-field-tag">📄 ${escapeHtml(filename)}</div>
+            <div class="pdf-field-tag">🔍 Análise automática na inicialização</div>
+        `;
+    }
+    if (resultEl) resultEl.style.display = 'block';
+}
+
+/**
+ * Exibe mensagem de erro no upload do PDF
+ * @param {string} message
+ */
+function showPdfError(message) {
+    // Esconder progress, mostrar resultado de erro
+    const progressEl = document.getElementById('pdfProgress');
+    if (progressEl) progressEl.style.display = 'none';
+
+    const resultEl = document.getElementById('pdfAnalysisResult');
+    const iconEl = document.getElementById('pdfAnalysisIcon');
+    const titleEl = document.getElementById('pdfAnalysisTitle');
+    const fieldsGridEl = document.getElementById('pdfFieldsGrid');
+
+    if (iconEl) iconEl.textContent = '❌';
+    if (titleEl) titleEl.textContent = 'Erro ao processar o arquivo';
+    if (fieldsGridEl) fieldsGridEl.innerHTML = `<div class="pdf-field-tag error">${escapeHtml(message)}</div>`;
+    if (resultEl) resultEl.style.display = 'block';
+
+    pendingPdfBuffer = null;
+}
+
+/**
+ * Limpa a seleção de PDF e volta ao estado inicial
+ */
+function clearPdfSelection() {
+    pendingPdfBuffer = null;
+
+    const input = document.getElementById('templatePdf');
+    if (input) input.value = '';
+
+    const dropZone = document.getElementById('pdfDropZone');
+    const statusArea = document.getElementById('pdfStatusArea');
+    const resultEl = document.getElementById('pdfAnalysisResult');
+    const progressEl = document.getElementById('pdfProgress');
+
+    if (dropZone) dropZone.style.display = 'flex';
+    if (statusArea) statusArea.style.display = 'none';
+    if (resultEl) resultEl.style.display = 'none';
+    if (progressEl) progressEl.style.display = 'none';
+}
+
+// ============================================================
+// TEMPLATE DE CONDOMÍNIO (Step 7)
+// ============================================================
+
+/**
+ * Preenche o preview do template de autorização com dados já coletados no wizard
+ */
+function populateTemplate() {
+    // Coletar dados dos steps anteriores para preencher o template
+    for (let i = 1; i <= 6; i++) {
+        collectStepData(i);
+    }
+
+    const setEl = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || el.textContent;
+    };
+
+    // Preencher campos do template com dados do wizard
+    if (formData.CONDO_NAME) {
+        setEl('tplCondoName', `CONDOMÍNIO: ${escapeHtml(formData.CONDO_NAME)}`);
+        setEl('tplCondoNameInline', escapeHtml(formData.CONDO_NAME));
+    }
+    if (formData.OWNER_NAME) {
+        setEl('tplOwnerName', escapeHtml(formData.OWNER_NAME));
+    }
+    if (formData.OWNER_APTO) {
+        setEl('tplOwnerApto', escapeHtml(formData.OWNER_APTO));
+    }
+    if (formData.OWNER_BLOCO) {
+        setEl('tplOwnerBloco', escapeHtml(formData.OWNER_BLOCO));
+    }
+    if (formData.PROPERTY_ADDRESS) {
+        setEl('tplAddress', escapeHtml(formData.PROPERTY_ADDRESS));
+    }
+    if (formData.OWNER_APTO || formData.OWNER_BLOCO) {
+        setEl('tplSigDetail',
+            `Unidade: ${escapeHtml(formData.OWNER_APTO || '________')} / Bloco: ${escapeHtml(formData.OWNER_BLOCO || '________')}`);
+    }
+}
+
+// ============================================================
+// TELA DE REVISÃO (Step 8)
 // ============================================================
 
 function populateReview() {
@@ -311,21 +585,21 @@ function populateReview() {
         {
             title: '🏠 Imóvel',
             rows: [
-                ['Nome', formData.PROPERTY_NAME],
-                ['Endereço', formData.PROPERTY_ADDRESS],
-                ['Condomínio', formData.CONDO_NAME],
-                ['Admin Condo', formData.CONDO_ADMIN_NAME],
-                ['Email Condo', formData.CONDO_EMAIL],
+                ['Nome', escapeHtml(formData.PROPERTY_NAME)],
+                ['Endereço', escapeHtml(formData.PROPERTY_ADDRESS)],
+                ['Condomínio', escapeHtml(formData.CONDO_NAME)],
+                ['Admin Condo', escapeHtml(formData.CONDO_ADMIN_NAME)],
+                ['Email Condo', escapeHtml(formData.CONDO_EMAIL)],
             ],
         },
         {
             title: '👤 Proprietário',
             rows: [
-                ['Nome', formData.OWNER_NAME],
-                ['Email', formData.OWNER_EMAIL],
-                ['Telefone', formData.OWNER_PHONE],
-                ['Apto', `${formData.OWNER_BLOCO || ''}${formData.OWNER_APTO || ''}`],
-                ['Garagem', formData.OWNER_GARAGEM],
+                ['Nome', escapeHtml(formData.OWNER_NAME)],
+                ['Email', escapeHtml(formData.OWNER_EMAIL)],
+                ['Telefone', escapeHtml(formData.OWNER_PHONE)],
+                ['Apto', escapeHtml(`${formData.OWNER_BLOCO || ''}${formData.OWNER_APTO || ''}`)],
+                ['Garagem', escapeHtml(formData.OWNER_GARAGEM)],
             ],
         },
         {
@@ -333,21 +607,22 @@ function populateReview() {
             rows: [
                 ['Airbnb', formData.AIRBNB_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
                 ['Booking', formData.BOOKING_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
-                ['Intervalo', `${formData.CALENDAR_SYNC_INTERVAL_MINUTES || 30} minutos`],
+                ['Intervalo', `${parseInt(formData.CALENDAR_SYNC_INTERVAL_MINUTES) || 30} minutos`],
             ],
         },
         {
             title: '📧 Email',
             rows: [
-                ['Provedor', formData.EMAIL_PROVIDER || 'gmail'],
-                ['Remetente', formData.EMAIL_FROM || '⚠️ Não configurado'],
+                ['Provedor', escapeHtml(formData.EMAIL_PROVIDER) || 'gmail'],
+                ['Remetente', escapeHtml(formData.EMAIL_FROM) || '⚠️ Não configurado'],
                 ['Senha', formData.EMAIL_PASSWORD ? '••••••••' : '⚠️ Não configurada'],
             ],
         },
         {
             title: '🔐 Admin',
             rows: [
-                ['Email', formData.adminEmail],
+                ['Email', escapeHtml(formData.adminEmail)],
+                ['Usuário', escapeHtml(formData.adminUsername) || '⚠️ Não definido'],
                 ['Senha', formData.adminPassword ? '••••••••' : '⚠️ Não definida'],
             ],
         },
@@ -359,11 +634,73 @@ function populateReview() {
       ${rows.map(([label, value]) => `
         <div class="review-row">
           <span class="label">${label}</span>
-          <span class="value">${value || '-'}</span>
+          <span class="value">${value}</span>
         </div>
       `).join('')}
     </div>
   `).join('');
+
+    // Exibir credenciais de acesso para o usuário guardar
+    showCredentialsSummary();
+}
+
+// ============================================================
+// CREDENCIAIS DE ACESSO — EXIBIÇÃO NO STEP 8
+// ============================================================
+
+function showCredentialsSummary() {
+    const card = document.getElementById('credentialsSummary');
+    const usernameEl = document.getElementById('credUsername');
+    const passwordEl = document.getElementById('credPassword');
+
+    if (!card || !formData.adminUsername || !formData.adminPassword) return;
+
+    usernameEl.textContent = formData.adminUsername;
+    // Senha inicialmente mascarada
+    passwordEl.dataset.actual = formData.adminPassword;
+    passwordEl.dataset.visible = 'false';
+    passwordEl.textContent = '•'.repeat(formData.adminPassword.length);
+    passwordEl.classList.add('masked');
+
+    card.style.display = '';
+}
+
+function toggleCredPassword(btn) {
+    const passwordEl = document.getElementById('credPassword');
+    if (!passwordEl) return;
+    const isVisible = passwordEl.dataset.visible === 'true';
+    if (isVisible) {
+        passwordEl.textContent = '•'.repeat(passwordEl.dataset.actual.length);
+        passwordEl.classList.add('masked');
+        passwordEl.dataset.visible = 'false';
+        btn.textContent = '👁';
+        btn.title = 'Mostrar senha';
+    } else {
+        passwordEl.textContent = passwordEl.dataset.actual;
+        passwordEl.classList.remove('masked');
+        passwordEl.dataset.visible = 'true';
+        btn.textContent = '🙈';
+        btn.title = 'Ocultar senha';
+    }
+}
+
+function copyCredential(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    // Copiar valor real (não o mascarado)
+    const valueToCopy = el.dataset.actual || el.textContent;
+    navigator.clipboard.writeText(valueToCopy).then(() => {
+        const original = btn.textContent;
+        btn.textContent = '✅ Copiado';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(() => {
+        btn.textContent = '❌ Erro';
+        setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+    });
 }
 
 // ============================================================
@@ -405,7 +742,7 @@ function showCompletionError(msg) {
     const msgEl = document.getElementById('completionMessage');
     msgEl.innerHTML = `
     <div class="inline-message error" style="margin-top:16px;">
-      ❌ ${msg}
+      ❌ ${escapeHtml(msg)}
     </div>
   `;
 }
@@ -431,9 +768,9 @@ async function testIcal(fieldId, resultId) {
 
     const result = await window.wizardAPI.testIcalUrl(url);
     if (result.success) {
-        resultEl.innerHTML = `<div class="inline-message success">✅ Calendário válido! ${result.events} evento(s) encontrado(s)</div>`;
+        resultEl.innerHTML = `<div class="inline-message success">✅ Calendário válido! ${escapeHtml(result.events)} evento(s) encontrado(s)</div>`;
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${result.error || 'URL inválida'}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'URL inválida')}</div>`;
     }
 }
 
@@ -457,7 +794,7 @@ async function testEmail() {
     if (result.success) {
         resultEl.innerHTML = '<div class="inline-message success">✅ Conexão SMTP estabelecida com sucesso!</div>';
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${result.error || 'Falha na conexão'}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'Falha na conexão')}</div>`;
     }
 }
 

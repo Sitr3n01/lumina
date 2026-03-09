@@ -155,7 +155,7 @@ class BookingService:
         self.db.commit()
         self.db.refresh(booking)
 
-        logger.info(f"✅ Booking created: ID={booking.id}")
+        logger.info(f"[OK] Booking created: ID={booking.id}")
         return booking
 
     def update_booking(self, booking: Booking, update_data: Dict[str, Any]) -> Booking:
@@ -178,7 +178,7 @@ class BookingService:
         self.db.commit()
         self.db.refresh(booking)
 
-        logger.info(f"✅ Booking updated: ID={booking.id}")
+        logger.info(f"[OK] Booking updated: ID={booking.id}")
         return booking
 
     def cancel_booking(self, booking: Booking) -> Booking:
@@ -197,7 +197,7 @@ class BookingService:
         self.db.commit()
         self.db.refresh(booking)
 
-        logger.info(f"✅ Booking cancelled: ID={booking.id}")
+        logger.info(f"[DEL] Booking cancelled: ID={booking.id}")
         return booking
 
     def get_bookings_paginated(

@@ -2,7 +2,7 @@
 Serviço para persistência de notificações no banco de dados.
 Permite criar, listar, marcar como lida e obter resumos.
 """
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy import func, and_
 from sqlalchemy.orm import Session
@@ -118,7 +118,7 @@ class NotificationDBService:
 
         if notification and not notification.is_read:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = datetime.now(timezone.utc).replace(tzinfo=None)
             self.db.commit()
             logger.info(f"Notification {notification_id} marked as read")
 
@@ -126,7 +126,7 @@ class NotificationDBService:
 
     def mark_all_as_read(self) -> int:
         """Marca todas as notificações como lidas. Retorna quantidade atualizada."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         count = self.db.query(Notification).filter(
             Notification.is_read == False
         ).update({

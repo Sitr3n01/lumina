@@ -6,8 +6,10 @@
 
 const { Tray, Menu, app } = require('electron');
 const path = require('path');
+const log = require('electron-log');
 
 let trayInstance = null;
+let trayUpdateInterval = null;
 
 /**
  * Cria o ícone de bandeja do sistema
@@ -55,7 +57,7 @@ function createTray(mainWindow, pythonManager) {
                         // Atualizar menu após restart
                         trayInstance.setContextMenu(buildContextMenu());
                     } catch (err) {
-                        console.error('[Tray] Erro ao reiniciar backend:', err);
+                        log.error('[Tray] Erro ao reiniciar backend:', err);
                     }
                 },
             },
@@ -84,7 +86,7 @@ function createTray(mainWindow, pythonManager) {
     });
 
     // Atualizar status do backend no menu periodicamente
-    setInterval(() => {
+    trayUpdateInterval = setInterval(() => {
         if (trayInstance && !trayInstance.isDestroyed()) {
             trayInstance.setContextMenu(buildContextMenu());
         }
@@ -94,9 +96,13 @@ function createTray(mainWindow, pythonManager) {
 }
 
 /**
- * Destrói o ícone de bandeja
+ * Destrói o ícone de bandeja e limpa intervalo
  */
 function destroyTray() {
+    if (trayUpdateInterval) {
+        clearInterval(trayUpdateInterval);
+        trayUpdateInterval = null;
+    }
     if (trayInstance && !trayInstance.isDestroyed()) {
         trayInstance.destroy();
         trayInstance = null;

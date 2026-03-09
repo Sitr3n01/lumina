@@ -57,10 +57,20 @@ class Settings(BaseSettings):
     OLLAMA_TIMEOUT_SECONDS: int = 30
     OLLAMA_TEMPERATURE: float = 0.1
 
+    # === AI UNIFICADO (MVP3) ===
+    # Provider configurável: "anthropic" | "openai" | "compatible"
+    AI_PROVIDER: str = Field(default="anthropic", description="Provider de IA: anthropic, openai, compatible")
+    AI_API_KEY: str = Field(default="", description="API Key unificada para o provider de IA")
+    AI_MODEL: str = Field(default="", description="Nome do modelo (ex: claude-3-5-haiku-latest, gpt-4o)")
+    AI_BASE_URL: str = Field(default="", description="Base URL para providers compatíveis (Ollama, Groq, etc.)")
+
+    # Alias legado (compatibilidade)
+    ANTHROPIC_API_KEY: str = Field(default="", description="[Legado] Token da API do Anthropic — use AI_API_KEY")
+
     # === DOCUMENTOS ===
     TEMPLATE_DIR: str = "./templates"
     OUTPUT_DIR: str = "./data/generated_docs"
-    DEFAULT_TEMPLATE: str = "autorizacao_condominio.docx"
+    DEFAULT_TEMPLATE: str = "AUTORIZAÇÃO DE HOSPEDAGE5.docx"
 
     # === DADOS DO IMÓVEL (configure no .env) ===
     PROPERTY_NAME: str = "Meu Apartamento"
@@ -178,6 +188,23 @@ class Settings(BaseSettings):
         # Remove o prefixo sqlite:///
         path_str = self.DATABASE_URL.replace("sqlite:///", "")
         return Path(path_str)
+
+    @property
+    def effective_ai_key(self) -> str:
+        """Retorna a AI_API_KEY, fazendo fallback para ANTHROPIC_API_KEY legada."""
+        return self.AI_API_KEY or self.ANTHROPIC_API_KEY
+
+    @property
+    def effective_ai_model(self) -> str:
+        """Retorna o modelo configurado, com defaults razoáveis por provider."""
+        if self.AI_MODEL:
+            return self.AI_MODEL
+        defaults = {
+            "anthropic": "claude-3-5-haiku-latest",
+            "openai": "gpt-4o-mini",
+            "compatible": "llama3",
+        }
+        return defaults.get(self.AI_PROVIDER, "claude-3-5-haiku-latest")
 
     @property
     def template_path(self) -> Path:

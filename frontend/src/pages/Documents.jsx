@@ -49,7 +49,21 @@ const Documents = () => {
   const [companions, setCompanions] = useState([]);
 
   useEffect(() => {
-    loadDocuments();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const response = await documentsAPI.list();
+        if (cancelled) return;
+        setDocuments(response.data?.documents || response.data || []);
+      } catch (error) {
+        if (!cancelled) console.error('Error loading documents:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const loadDocuments = async () => {

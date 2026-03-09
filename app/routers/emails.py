@@ -15,7 +15,7 @@ from app.models.user import User
 from app.models.booking import Booking
 from app.models.property import Property
 from app.models.guest import Guest
-from app.middleware.auth import get_current_active_user
+from app.middleware.auth import get_current_active_user, get_current_admin_user
 from app.services.email_service import EmailService
 from app.schemas.email import (
     SendEmailRequest,
@@ -94,9 +94,10 @@ async def send_email(
         )
 
         if not result["success"]:
+            logger.error(f"Email send specific error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Erro ao enviar email. Tente novamente mais tarde ou verifique os logs."
             )
 
         return EmailResponse(
@@ -109,7 +110,7 @@ async def send_email(
         logger.error(f"Error sending email: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao enviar email: {str(e)}"
+            detail="Erro ao enviar email. Verifique as configurações."
         )
 
 
@@ -141,9 +142,10 @@ async def send_template_email(
         )
 
         if not result["success"]:
+            logger.error(f"Email template send specific error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Erro ao enviar o template de email. Tente novamente mais tarde."
             )
 
         return EmailResponse(
@@ -156,7 +158,7 @@ async def send_template_email(
         logger.error(f"Error sending template email: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao enviar email: {str(e)}"
+            detail="Erro ao enviar email. Verifique as configurações."
         )
 
 
@@ -369,10 +371,11 @@ async def send_bulk_checkin_reminders(
     batch_size: int = Query(100, ge=1, le=500, description="Tamanho do batch (max 500)"),
     db: Session = Depends(get_db),
     email_service: EmailService = Depends(get_email_service),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
     """
     Envia lembretes de check-in em massa para reservas futuras.
+    Requer autenticação de administrador.
 
     Busca todas as reservas com check-in em X dias e envia lembretes.
     Útil para automação via cron/scheduler.
@@ -501,16 +504,19 @@ async def fetch_emails(
         EmailListResponse com lista de emails
     """
     try:
+        safe_folder = "".join(c for c in request.folder if c.isalnum() or c in " _-./")
+        
         result = await email_service.fetch_emails(
-            folder=request.folder,
+            folder=safe_folder,
             limit=request.limit,
             unread_only=request.unread_only
         )
 
         if not result["success"]:
+            logger.error(f"IMAP Fetch error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Falha ao buscar e-mails via conexão IMAP. Verifique as configurações."
             )
 
         emails = result.get("emails", [])
@@ -525,7 +531,7 @@ async def fetch_emails(
         logger.error(f"Error fetching emails: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar emails: {str(e)}"
+            detail="Erro ao buscar emails. Verifique as configurações."
         )
 
 
@@ -548,18 +554,23 @@ async def test_email_connection(
         "message": ""
     }
 
-    # Testar SMTP
+    # Testar SMTP (apenas conexão + login, sem enviar email real)
     try:
-        test_result = await email_service.send_email(
-            to=[settings.EMAIL_FROM],
-            subject="Test Email",
-            body="This is a test email from LUMINA system.",
-            html=False
+        import aiosmtplib
+        smtp_client = aiosmtplib.SMTP(
+            hostname=email_service.config.smtp_host,
+            port=email_service.config.smtp_port,
+            use_tls=email_service.config.use_tls,
+            timeout=15
         )
-        results["smtp"] = test_result["success"]
+        await smtp_client.connect()
+        if email_service.config.username and email_service.config.password:
+            await smtp_client.login(email_service.config.username, email_service.config.password)
+        await smtp_client.quit()
+        results["smtp"] = True
     except Exception as e:
         logger.error(f"SMTP test failed: {e}")
-        results["message"] += f"SMTP Error: {str(e)}. "
+        results["message"] += "Erro na conexão SMTP. "
 
     # Testar IMAP
     try:
@@ -567,7 +578,7 @@ async def test_email_connection(
         results["imap"] = fetch_result["success"]
     except Exception as e:
         logger.error(f"IMAP test failed: {e}")
-        results["message"] += f"IMAP Error: {str(e)}."
+        results["message"] += "Erro na conexão IMAP."
 
     if results["smtp"] and results["imap"]:
         results["message"] = "Conexão SMTP e IMAP OK"

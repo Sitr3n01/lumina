@@ -5,12 +5,15 @@ GET /api/v1/notifications/summary - Resumo para cards bento
 PUT /api/v1/notifications/{id}/read - Marcar como lida
 PUT /api/v1/notifications/read-all - Marcar todas como lidas
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.database.session import get_db
+from app.config import settings
 from app.models.user import User
-from app.middleware.auth import get_current_active_user
+from app.middleware.auth import get_current_active_user, get_current_user
 from app.services.notification_db_service import NotificationDBService
 from app.schemas.notification import (
     NotificationResponse,
@@ -20,13 +23,30 @@ from app.schemas.notification import (
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notifications"])
 
+# Bearer opcional - nao retorna 401 automatico se ausente
+_optional_bearer = HTTPBearer(auto_error=False)
+
 
 @router.get("/summary", response_model=NotificationSummaryResponse)
 def get_summary(
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(_optional_bearer),
 ):
-    """Resumo de notificações para os cards bento. Requer autenticação."""
+    """Resumo de notificações para os cards bento.
+    Em modo desktop, aceita requests de localhost sem auth (usado pelo Electron tray poller).
+    Fora do modo desktop, exige Bearer token.
+    """
+    is_desktop_localhost = False
+    if settings.LUMINA_DESKTOP:
+        client_host = request.client.host if request.client else None
+        is_desktop_localhost = client_host in ("127.0.0.1", "::1")
+
+    if not is_desktop_localhost:
+        if not credentials:
+            raise HTTPException(status_code=401, detail="Token de autenticação necessário")
+        get_current_user(credentials=credentials, db=db)
+
     service = NotificationDBService(db)
     return NotificationSummaryResponse(**service.get_summary())
 

@@ -1,7 +1,7 @@
 """
 Modelo BookingConflict - Registra conflitos/sobreposições entre reservas.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import String, Integer, Boolean, Date, DateTime, ForeignKey, Text, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
@@ -90,7 +90,7 @@ class BookingConflict(Base):
     detected_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         comment="Quando o conflito foi detectado"
     )
 
@@ -142,6 +142,6 @@ class BookingConflict(Base):
     def mark_as_resolved(self, notes: str = None) -> None:
         """Marca o conflito como resolvido"""
         self.resolved = True
-        self.resolved_at = datetime.utcnow()
+        self.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if notes:
             self.resolution_notes = notes
