@@ -144,4 +144,13 @@ export const notificationsAPI = {
   markAllAsRead: () => api.put('/v1/notifications/read-all'),
 };
 
+// ========== AI (MVP3) ==========
+export const aiAPI = {
+  getPriceSuggestions: (propertyId) => api.post(`/v1/ai/price-suggestions?property_id=${propertyId}`),
+  chat: (data) => api.post('/v1/ai/chat', data),
+  testConnection: (data) => api.post('/v1/ai/test', data),
+  getSettings: () => api.get('/v1/ai/settings'),
+  updateSettings: (data) => api.put('/v1/ai/settings', data),
+};
+
 export default api;

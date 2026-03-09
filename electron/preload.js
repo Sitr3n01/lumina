@@ -8,6 +8,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
     // === BACKEND ===
     /**
+     * Retorna o token de auto-login gerado pelo setup wizard, se existir.
+     * @returns {Promise<string|null>}
+     */
+    getAutoLoginToken: () => ipcRenderer.invoke('auth:getAutoLoginToken'),
+
+    /**
      * Retorna a URL base do backend (ex: "http://127.0.0.1:8742")
      * @returns {Promise<string>}
      */
@@ -73,6 +79,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     close: () => ipcRenderer.send('window:close'),
 
+    /**
+     * Encerra o aplicativo completamente
+     */
+    quit: () => ipcRenderer.send('app:quit'),
+
     // === EVENTS (main → renderer) ===
     /**
      * Registra callback para quando o backend estiver pronto
@@ -107,8 +118,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // === UPDATES ===
     /**
-     * Inicia o download e instalação da atualização disponível
+     * Verifica manualmente se há atualizações disponíveis no GitHub Releases
+     */
+    checkForUpdates: () => ipcRenderer.send('update:check'),
+
+    /**
+     * Inicia o download da atualização disponível
+     * @returns {Promise<void>}
+     */
+    downloadUpdate: () => ipcRenderer.invoke('update:download'),
+
+    /**
+     * Instala a atualização já baixada e reinicia o app
      * @returns {Promise<void>}
      */
     installUpdate: () => ipcRenderer.invoke('update:install'),
+
+    /**
+     * Registra callback para quando o download da atualização terminar
+     * @param {(info: {version: string}) => void} callback
+     */
+    onUpdateDownloaded: (callback) => {
+        const handler = (_event, info) => callback(info);
+        ipcRenderer.on('update:downloaded', handler);
+        return () => ipcRenderer.removeListener('update:downloaded', handler);
+    },
+
+    /**
+     * Registra callback para quando não houver atualização disponível
+     * @param {() => void} callback
+     */
+    onUpdateNotAvailable: (callback) => {
+        const handler = (_event) => callback();
+        ipcRenderer.on('update:not-available', handler);
+        return () => ipcRenderer.removeListener('update:not-available', handler);
+    },
 });

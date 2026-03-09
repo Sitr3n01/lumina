@@ -59,6 +59,8 @@ class BookingUpdate(BaseModel):
     status: Optional[str] = None
 
 
+from datetime import date, datetime
+
 class BookingResponse(BookingBase):
     """Schema de resposta de Booking"""
     id: int
@@ -66,8 +68,8 @@ class BookingResponse(BookingBase):
     calendar_source_id: Optional[int]
     guest_id: Optional[int]
     external_id: Optional[str]
-    created_at: date
-    updated_at: date
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

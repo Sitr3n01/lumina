@@ -27,7 +27,16 @@ def create_db_engine():
     Returns:
         Engine configurado do SQLAlchemy
     """
-    logger.info("Creating database engine...")
+    masked_url = str(settings.DATABASE_URL)
+    if "://" in masked_url and "@" in masked_url:
+        protocol, rest = masked_url.split("://", 1)
+        credentials, host_info = rest.split("@", 1)
+        if ":" in credentials:
+            user, password = credentials.split(":", 1)
+            masked_url = f"{protocol}://{user}:***@{host_info}"
+        else:
+            masked_url = f"{protocol}://***@{host_info}"
+    logger.info(f"Creating database engine with URL: {masked_url}")
 
     engine = create_engine(
         settings.DATABASE_URL,

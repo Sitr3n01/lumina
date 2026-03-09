@@ -94,9 +94,10 @@ async def send_email(
         )
 
         if not result["success"]:
+            logger.error(f"Email send specific error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Erro ao enviar email. Tente novamente mais tarde ou verifique os logs."
             )
 
         return EmailResponse(
@@ -141,9 +142,10 @@ async def send_template_email(
         )
 
         if not result["success"]:
+            logger.error(f"Email template send specific error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Erro ao enviar o template de email. Tente novamente mais tarde."
             )
 
         return EmailResponse(
@@ -502,16 +504,19 @@ async def fetch_emails(
         EmailListResponse com lista de emails
     """
     try:
+        safe_folder = "".join(c for c in request.folder if c.isalnum() or c in " _-./")
+        
         result = await email_service.fetch_emails(
-            folder=request.folder,
+            folder=safe_folder,
             limit=request.limit,
             unread_only=request.unread_only
         )
 
         if not result["success"]:
+            logger.error(f"IMAP Fetch error: {result['message']}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result["message"]
+                detail="Falha ao buscar e-mails via conexão IMAP. Verifique as configurações."
             )
 
         emails = result.get("emails", [])

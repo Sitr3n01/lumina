@@ -2,7 +2,7 @@
 """
 Router para geração e gerenciamento de documentos.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 import io
@@ -390,3 +390,87 @@ async def generate_and_download(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{safe_filename_encoded}'}
     )
+
+
+@router.post("/analyze-template", status_code=status.HTTP_200_OK)
+async def analyze_template(
+    file: UploadFile = File(..., description="Arquivo PDF do template de autorização"),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Analisa um PDF template para detectar automaticamente campos de dados.
+
+    Usa PyMuPDF para extrair blocos de texto e identifica por pattern matching
+    rótulos como 'Hóspede:', 'CPF:', 'Check-in:', etc.
+
+    O mapeamento detectado é salvo como template_map.json no diretório de templates
+    e passa a ser usado como referência para geração de documentos.
+
+    Requer: Autenticação (qualquer usuário ativo)
+    Aceita: PDF (application/pdf, .pdf)
+
+    Returns:
+        dict com campos detectados, total de páginas e timestamp
+    """
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apenas arquivos PDF são aceitos (.pdf)"
+        )
+
+    if file.content_type and file.content_type not in ('application/pdf', 'application/octet-stream'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Content-Type inválido. Envie um arquivo PDF."
+        )
+
+    pdf_bytes = await file.read()
+
+    if len(pdf_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo PDF vazio"
+        )
+
+    if len(pdf_bytes) > 20 * 1024 * 1024:  # Limite: 20MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo PDF muito grande. Limite: 20MB"
+        )
+
+    result = doc_service.analyze_pdf_template(pdf_bytes)
+
+    if "error" in result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result["error"]
+        )
+
+    logger.info(f"[analyze-template] PDF analisado por {current_user.username}: {result.get('fields_detected', 0)} campos detectados")
+
+    return {
+        "success": True,
+        "message": f"{result.get('fields_detected', 0)} campos detectados no template",
+        "fields": result.get("fields", {}),
+        "total_pages": result.get("total_pages", 0),
+        "created_at": result.get("created_at"),
+    }
+
+
+@router.get("/template-map", status_code=status.HTTP_200_OK)
+def get_template_map(
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Retorna o mapeamento de campos do template personalizado, se existir.
+
+    Útil para o wizard verificar se já há um template configurado.
+
+    Returns:
+        dict com o mapeamento ou null se não houver template configurado
+    """
+    template_map = doc_service.get_template_map()
+    return {
+        "has_custom_template": template_map is not None,
+        "template_map": template_map,
+    }

@@ -144,10 +144,10 @@ class ConflictDetector:
         # Determinar tipo de conflito
         if self._is_duplicate(booking1, booking2):
             conflict_type = ConflictType.DUPLICATE
-            logger.warning(f"🚨 DUPLICATE booking detected: {booking1.id} and {booking2.id}")
+            logger.warning(f"[DUP] DUPLICATE booking detected: {booking1.id} and {booking2.id}")
         else:
             conflict_type = ConflictType.OVERLAP
-            logger.warning(f"⚠️ OVERLAP detected: {booking1.id} and {booking2.id}")
+            logger.warning(f"[OVERLAP] OVERLAP detected: {booking1.id} and {booking2.id}")
 
         # Criar registro de conflito
         conflict = BookingConflict(
@@ -363,7 +363,7 @@ class ConflictDetector:
         self.db.commit()
         self.db.refresh(conflict)
 
-        logger.info(f"✅ Conflict {conflict_id} resolved: {resolution_notes}")
+        logger.info(f"[OK] Conflict {conflict_id} resolved: {resolution_notes}")
         return conflict
 
     def get_conflict_summary(self, property_id: int) -> Dict[str, Any]:

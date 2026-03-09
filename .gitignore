@@ -108,6 +108,11 @@ pip-delete-this-directory.txt
 test.db
 tests/*.db
 tests/.pytest_cache/
+test_results*.txt
+test_output*.txt
+test_err*.txt
+pytest_output*.txt
+out.txt
 
 # === OUTROS ===
 .mypy_cache/

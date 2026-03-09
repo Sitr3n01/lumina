@@ -6,6 +6,7 @@
 'use strict';
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const http = require('http');
@@ -108,6 +109,30 @@ class PythonManager {
         }
 
         this._stopping = false;
+
+        // Dev mode: se LUMINA_DEV_BACKEND_PORT estiver definido, conectar ao backend
+        // já iniciado externamente (ex: pelo npm run dev:python) sem spawn de novo processo.
+        const devPort = process.env.LUMINA_DEV_BACKEND_PORT
+            ? parseInt(process.env.LUMINA_DEV_BACKEND_PORT, 10)
+            : null;
+
+        if (devPort && this.isDev) {
+            log.info(`[PythonManager] Dev mode: conectando ao backend externo na porta ${devPort}`);
+            this._emitLog(`Dev mode: conectando ao backend na porta ${devPort}...`);
+            this._port = devPort;
+            try {
+                await waitForHealthy(this.getUrl(), 10000, 500);
+                this._running = true;
+                this._restartCount = 0;
+                log.info(`[PythonManager] Backend dev confirmado em ${this.getUrl()}`);
+                this._emitLog(`Backend dev pronto em ${this.getUrl()}`);
+                this._onReadyCallbacks.forEach(cb => cb());
+            } catch (err) {
+                throw new Error(`Backend dev na porta ${devPort} não respondeu: ${err.message}`);
+            }
+            return;
+        }
+
         this._port = await findFreePort();
         const url = this.getUrl();
 
@@ -124,34 +149,42 @@ class PythonManager {
             DATABASE_URL: `sqlite:///${path.join(this.userDataPath, 'data', 'lumina.db')}`,
             TEMPLATE_DIR: path.join(this.resourcesPath, 'templates'),
             OUTPUT_DIR: path.join(this.userDataPath, 'data', 'generated_docs'),
+            // Forçar UTF-8 no Python para evitar UnicodeEncodeError com emojis no Windows
+            PYTHONUTF8: '1',
+            PYTHONIOENCODING: 'utf-8',
         };
 
         let cmd, args;
 
-        if (this.isDev) {
-            // Modo desenvolvimento: usar Python do sistema
-            const projectRoot = path.join(__dirname, '..');
-            cmd = process.platform === 'win32' ? 'python' : 'python3';
-            args = ['run_backend.py', String(this._port), '127.0.0.1'];
+        // Modo produção: usar executável PyInstaller bundled (se existir)
+        const exeName = process.platform === 'win32'
+            ? 'lumina-backend.exe'
+            : 'lumina-backend';
+        const exePath = path.join(
+            this.resourcesPath,
+            'python-dist',
+            'lumina-backend',
+            exeName
+        );
+        const hasBundledExe = !this.isDev && fs.existsSync(exePath);
+
+        if (hasBundledExe) {
+            // Produção: usar executável PyInstaller bundled
+            log.info(`[PythonManager] Modo produção: ${exePath}`);
+            cmd = exePath;
+            args = [String(this._port), '127.0.0.1'];
             this._process = spawn(cmd, args, {
-                cwd: projectRoot,
                 env,
                 windowsHide: true,
             });
         } else {
-            // Modo produção: usar executável PyInstaller bundled
-            const exeName = process.platform === 'win32'
-                ? 'lumina-backend.exe'
-                : 'lumina-backend';
-            const exePath = path.join(
-                this.resourcesPath,
-                'python-dist',
-                'lumina-backend',
-                exeName
-            );
-            cmd = exePath;
-            args = [String(this._port), '127.0.0.1'];
+            // Desenvolvimento: usar Python do sistema via run_backend.py
+            const projectRoot = path.join(__dirname, '..');
+            cmd = process.platform === 'win32' ? 'python' : 'python3';
+            args = ['run_backend.py', String(this._port), '127.0.0.1'];
+            log.info(`[PythonManager] Modo dev: ${cmd} ${args.join(' ')} (cwd: ${projectRoot})`);
             this._process = spawn(cmd, args, {
+                cwd: projectRoot,
                 env,
                 windowsHide: true,
             });

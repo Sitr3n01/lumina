@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PropertyProvider } from './contexts/PropertyContext';
-import Sidebar from './components/Sidebar';
+import TopNav from './components/Sidebar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,24 +12,18 @@ import Documents from './pages/Documents';
 import Emails from './pages/Emails';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import AISuggestions from './pages/AISuggestions';
+import CondoTemplate from './pages/CondoTemplate';
 import { RefreshCw } from 'lucide-react';
 import './App.css';
 
 function AppContent() {
   const { isAuthenticated, loading, logout } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // Escutar evento de logout forcado (401 no interceptor do api.js)
-  useEffect(() => {
-    const handleForcedLogout = () => logout();
-    window.addEventListener('auth:logout', handleForcedLogout);
-    return () => window.removeEventListener('auth:logout', handleForcedLogout);
-  }, [logout]);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#101922' }}>
         <RefreshCw size={32} className="spin" style={{ color: 'var(--primary)' }} />
       </div>
     );
@@ -55,6 +49,10 @@ function AppContent() {
         return <Emails />;
       case 'notifications':
         return <Notifications />;
+      case 'ai-pricing':
+        return <AISuggestions onPageChange={setCurrentPage} />;
+      case 'condo-template':
+        return <CondoTemplate onBack={() => setCurrentPage('dashboard')} />;
       case 'settings':
         return <Settings />;
       default:
@@ -65,14 +63,12 @@ function AppContent() {
   return (
     <PropertyProvider>
       <div className="app">
-        <Sidebar
+        <TopNav
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           onLogout={logout}
         />
-        <main className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <main className="main-content">
           <ErrorBoundary key={currentPage}>
             {renderPage()}
           </ErrorBoundary>

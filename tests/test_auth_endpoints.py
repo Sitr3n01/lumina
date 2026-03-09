@@ -28,14 +28,14 @@ def test_setup_status_with_user(client, admin_user):
 def test_register_first_user(client):
     """Primeiro usuario e registrado com sucesso e automaticamente admin."""
     response = client.post("/api/v1/auth/register", json={
-        "email": "first@lumina.test",
+        "email": "first@lumina.com",
         "username": "firstuser",
         "password": "First123",
         "full_name": "First User",
     })
     assert response.status_code == 201
     data = response.json()
-    assert data["email"] == "first@lumina.test"
+    assert data["email"] == "first@lumina.com"
     assert data["username"] == "firstuser"
     assert data["is_admin"] is True
     assert "hashed_password" not in data
@@ -45,7 +45,7 @@ def test_register_first_user(client):
 def test_register_blocked_after_first_user(client, admin_user):
     """Registro e bloqueado se ja existe usuario no sistema."""
     response = client.post("/api/v1/auth/register", json={
-        "email": "second@lumina.test",
+        "email": "second@lumina.com",
         "username": "seconduser",
         "password": "Second123",
     })
@@ -55,7 +55,7 @@ def test_register_blocked_after_first_user(client, admin_user):
 def test_register_weak_password(client):
     """Senha fraca e rejeitada com 422."""
     response = client.post("/api/v1/auth/register", json={
-        "email": "weak@lumina.test",
+        "email": "weak@lumina.com",
         "username": "weakuser",
         "password": "123456",  # Sem maiuscula e muito curta
     })
@@ -65,7 +65,7 @@ def test_register_weak_password(client):
 def test_register_invalid_username(client):
     """Username com caracteres especiais e rejeitado."""
     response = client.post("/api/v1/auth/register", json={
-        "email": "test@lumina.test",
+        "email": "test@lumina.com",
         "username": "user name!",  # Espaco e ! invalidos
         "password": "Valid123",
     })
@@ -92,7 +92,7 @@ def test_login_success(client, admin_user):
 def test_login_with_email(client, admin_user):
     """Login com email tambem funciona."""
     response = client.post("/api/v1/auth/login", json={
-        "username": "admin@lumina.test",
+        "username": "admin@lumina.com",
         "password": "Admin123",
     })
     assert response.status_code == 200
@@ -125,7 +125,7 @@ def test_get_me_authenticated(client, admin_user, auth_headers):
     assert response.status_code == 200
     data = response.json()
     assert data["username"] == "admin"
-    assert data["email"] == "admin@lumina.test"
+    assert data["email"] == "admin@lumina.com"
     assert "hashed_password" not in data
 
 

@@ -57,11 +57,14 @@ const Login = () => {
     }
   };
 
-  // Tela de carregamento inicial (verificando setup-status)
+  // Skeleton de carregamento: card com spinner (sem flash de tela vazia)
   if (mode === null) {
     return (
       <div className="login-screen">
-        <RefreshCw size={28} className="spin" style={{ color: 'var(--primary)' }} />
+        <div className="login-card glass-card" style={{ textAlign: 'center', padding: '48px 32px' }}>
+          <div className="login-title">LUMINA</div>
+          <RefreshCw size={24} className="spin" style={{ color: 'var(--primary)', marginTop: 24 }} />
+        </div>
       </div>
     );
   }
@@ -174,6 +177,7 @@ const Login = () => {
                 : <><LogIn size={16} /> Entrar</>
             }
           </button>
+
         </form>
       </div>
 
@@ -183,7 +187,7 @@ const Login = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--background, #f8fafc);
+          background: #101922;
           padding: 24px;
         }
         .login-card {

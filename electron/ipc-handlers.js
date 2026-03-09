@@ -120,12 +120,50 @@ function registerIpcHandlers(mainWindow, pythonManager) {
         }
     });
 
-    // === UPDATES (placeholder - implementação completa em updater.js) ===
+    /** Encerra o aplicativo completamente (usado pelo 3-dot menu → Sair) */
+    ipcMain.on('app:quit', () => {
+        log.info('[IPC] app:quit recebido — encerrando LUMINA.');
+        app.quit();
+    });
 
-    /** Inicia o download e instalação da atualização */
+    // === UPDATES ===
+
+    /** Verifica se há atualizações disponíveis */
+    ipcMain.on('update:check', () => {
+        log.info('[IPC] update:check recebido — verificando atualizações.');
+        try {
+            const { autoUpdater } = require('electron-updater');
+            autoUpdater.checkForUpdates().catch((err) => {
+                log.warn('[IPC] Verificação de atualização falhou:', err.message);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('update:not-available');
+                }
+            });
+        } catch (err) {
+            log.warn('[IPC] electron-updater não disponível:', err.message);
+        }
+    });
+
+    /** Inicia o download da atualização disponível */
+    ipcMain.handle('update:download', () => {
+        log.info('[IPC] update:download recebido — iniciando download.');
+        try {
+            const { downloadUpdate } = require('./updater');
+            downloadUpdate();
+        } catch (err) {
+            log.error('[IPC] Erro ao iniciar download:', err.message);
+        }
+    });
+
+    /** Instala a atualização já baixada e reinicia o app */
     ipcMain.handle('update:install', () => {
-        // Implementação completa delega para updater.js
-        log.info('[IPC] update:install chamado');
+        log.info('[IPC] update:install recebido — instalando e reiniciando.');
+        try {
+            const { installUpdate } = require('./updater');
+            installUpdate();
+        } catch (err) {
+            log.error('[IPC] Erro ao instalar atualização:', err.message);
+        }
     });
 
     log.info('[IPC] Todos os handlers registrados.');

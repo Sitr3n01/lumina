@@ -19,6 +19,13 @@ EDITABLE_FIELDS = {
     "syncIntervalMinutes": "sync_interval_minutes",
     "enableAutoDocumentGeneration": "enable_auto_document_generation",
     "enableConflictNotifications": "enable_conflict_notifications",
+    # AI Settings
+    "aiProvider": "ai_provider",
+    "aiApiKey": "ai_api_key",
+    "aiModel": "ai_model",
+    "aiBaseUrl": "ai_base_url",
+    # Document / branding
+    "condoLogoUrl": "condo_logo_url",
 }
 
 # Mapa: chave_db -> tipo Python
@@ -27,6 +34,11 @@ FIELD_TYPES = {
     "sync_interval_minutes": int,
     "enable_auto_document_generation": bool,
     "enable_conflict_notifications": bool,
+    "ai_provider": str,
+    "ai_api_key": str,
+    "ai_model": str,
+    "ai_base_url": str,
+    "condo_logo_url": str,
 }
 
 
@@ -63,6 +75,14 @@ class SettingsService:
             "syncIntervalMinutes": app_settings.CALENDAR_SYNC_INTERVAL_MINUTES,
             "enableAutoDocumentGeneration": app_settings.ENABLE_AUTO_DOCUMENT_GENERATION,
             "enableConflictNotifications": app_settings.ENABLE_CONFLICT_NOTIFICATIONS,
+            # AI Settings (defaults do .env, substituídos pelo DB)
+            "aiProvider": app_settings.AI_PROVIDER,
+            "aiApiKey": "",  # nunca retornar a chave completa
+            "aiApiKeySet": bool(app_settings.effective_ai_key),
+            "aiModel": app_settings.effective_ai_model,
+            "aiBaseUrl": app_settings.AI_BASE_URL or "",
+            # Document / branding (DB only, default empty)
+            "condoLogoUrl": "",
         }
 
         # Sobrescrever com valores do DB

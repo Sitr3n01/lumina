@@ -26,7 +26,7 @@ from app.middleware.auth import get_current_user, get_current_active_user, get_c
 from app.core.token_blacklist import get_token_blacklist
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=not (settings.LUMINA_DESKTOP or settings.APP_ENV == "test"))
 security = HTTPBearer()
 
 
@@ -154,7 +154,7 @@ def login(
     # PROTEÇÃO CONTRA TIMING ATTACK:
     # Sempre executa hash verification, mesmo se usuário não existir
     # Isso garante tempo de resposta constante
-    dummy_hash = "$2b$12$dummyhashfordummyhashfordummyhashfordummyhashfordummyha"
+    dummy_hash = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGgZOK5y"
     password_hash = user.hashed_password if user else dummy_hash
 
     # Verifica senha
@@ -306,11 +306,13 @@ def logout(
     return {"message": "Logout realizado com sucesso. Token invalidado."}
 
 
+from fastapi import Body
+
 @router.delete("/delete-account", status_code=status.HTTP_200_OK)
 def delete_account(
-    request_data: DeleteAccountRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request_data: DeleteAccountRequest = Body(...)
 ):
     """
     Deleta conta do usuário autenticado (IRREVERSÍVEL).

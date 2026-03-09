@@ -77,6 +77,7 @@ def create_all_tables():
     )
     from app.models.app_settings import AppSetting
     from app.models.notification import Notification
+    from app.models.user import User
 
     logger.info("Creating all database tables...")
     Base.metadata.create_all(bind=engine)

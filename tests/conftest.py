@@ -10,9 +10,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Garantir que estamos em modo de test antes de importar o app
-os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("LUMINA_DESKTOP", "true")  # Desabilitar rate limits
-os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only-not-for-production")
+os.environ["APP_ENV"] = "test"
+os.environ["LUMINA_DESKTOP"] = "true"  # Desabilitar rate limits
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["SECRET_KEY"] = "test-secret-key-for-pytest-only-not-for-production"
+
+@pytest.fixture(autouse=True)
+def disable_limiter():
+    from app.main import app
+    app.state.limiter.enabled = False
+    yield
 
 from app.main import app
 from app.database.session import get_db
@@ -27,10 +34,21 @@ SQLALCHEMY_TEST_URL = "sqlite://"
 @pytest.fixture(scope="session")
 def db_engine():
     """Engine SQLite em memoria compartilhado por toda a sessao de testes."""
+    from sqlalchemy.pool import StaticPool
     engine = create_engine(
         SQLALCHEMY_TEST_URL,
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
+    from app.models.app_settings import AppSetting
+    from app.models.booking import Booking
+    from app.models.booking_conflict import BookingConflict
+    from app.models.calendar_source import CalendarSource
+    from app.models.guest import Guest
+    from app.models.notification import Notification
+    from app.models.property import Property
+    from app.models.sync_action import SyncAction
+    from app.models.sync_log import SyncLog
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
@@ -46,9 +64,18 @@ def db_session(db_engine):
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
     session = TestingSessionLocal()
 
+
     yield session
 
+    from app.core.token_blacklist import get_token_blacklist
+    blacklist = get_token_blacklist()
+    if hasattr(blacklist, 'blacklisted_tokens'):
+        blacklist.blacklisted_tokens.clear()
+    elif hasattr(blacklist, '_tokens'):
+        blacklist._tokens.clear()
+
     session.rollback()
+
     # Limpar tabelas na ordem correta (respeitar FK constraints)
     for table in reversed(Base.metadata.sorted_tables):
         try:
@@ -83,7 +110,7 @@ def client(db_session):
 def admin_user(db_session):
     """Cria usuario admin no banco de teste."""
     user = User(
-        email="admin@lumina.test",
+        email="admin@lumina.com",
         username="admin",
         hashed_password=get_password_hash("Admin123"),
         full_name="Admin Teste",

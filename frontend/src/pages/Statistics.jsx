@@ -63,10 +63,13 @@ const Statistics = () => {
           setOccupancyData(data?.months || data || []);
         }
         if (results[1].status === 'fulfilled') {
-          setRevenueData(results[1].value.data || []);
+          // /revenue agora retorna array diretamente (não objeto de resumo)
+          const rev = results[1].value.data;
+          setRevenueData(Array.isArray(rev) ? rev : []);
         }
         if (results[2].status === 'fulfilled') {
-          setPlatformData(results[2].value.data || []);
+          const plat = results[2].value.data;
+          setPlatformData(Array.isArray(plat) ? plat : []);
         }
       } catch (error) {
         if (!cancelled) console.error('Error loading statistics:', error);
@@ -110,10 +113,12 @@ const Statistics = () => {
         setOccupancyData(data?.months || data || []);
       }
       if (results[1].status === 'fulfilled') {
-        setRevenueData(results[1].value.data || []);
+        const rev = results[1].value.data;
+        setRevenueData(Array.isArray(rev) ? rev : []);
       }
       if (results[2].status === 'fulfilled') {
-        setPlatformData(results[2].value.data || []);
+        const plat = results[2].value.data;
+        setPlatformData(Array.isArray(plat) ? plat : []);
       }
     } catch (error) {
       console.error('Error loading statistics:', error);
@@ -180,7 +185,7 @@ const Statistics = () => {
       {/* Cards de resumo */}
       <div className="stats-summary">
         <div className="summary-card">
-          <div className="summary-icon" style={{ background: '#dbeafe', color: '#2563eb' }}>
+          <div className="summary-icon" style={{ background: 'rgba(19, 127, 236, 0.15)', color: '#60a5fa' }}>
             <Calendar size={24} />
           </div>
           <div className="summary-content">
@@ -190,7 +195,7 @@ const Statistics = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
+          <div className="summary-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80' }}>
             <DollarSign size={24} />
           </div>
           <div className="summary-content">
@@ -200,7 +205,7 @@ const Statistics = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon" style={{ background: '#fef3c7', color: '#f59e0b' }}>
+          <div className="summary-icon" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24' }}>
             <Percent size={24} />
           </div>
           <div className="summary-content">
@@ -210,7 +215,7 @@ const Statistics = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon" style={{ background: '#e0e7ff', color: '#6366f1' }}>
+          <div className="summary-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc' }}>
             <TrendingUp size={24} />
           </div>
           <div className="summary-content">
@@ -232,22 +237,23 @@ const Statistics = () => {
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={occupancyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis
                 dataKey="month"
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: '#94a3b8', fontSize: 12 }}
                 tickFormatter={(value) => formatMonth(value)}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: '#94a3b8', fontSize: 12 }}
                 domain={[0, 100]}
                 tickFormatter={(value) => `${value}%`}
               />
               <Tooltip
                 contentStyle={{
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
+                  background: '#1a2535',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
+                  color: '#e2e8f0',
                 }}
                 formatter={(value) => [`${value}%`, 'Ocupação']}
                 labelFormatter={(label) => formatMonth(label)}
@@ -274,21 +280,22 @@ const Statistics = () => {
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis
                 dataKey="month"
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: '#94a3b8', fontSize: 12 }}
                 tickFormatter={(value) => formatMonth(value)}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: '#94a3b8', fontSize: 12 }}
                 tickFormatter={(value) => formatCurrencyShort(value)}
               />
               <Tooltip
                 contentStyle={{
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
+                  background: '#1a2535',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
+                  color: '#e2e8f0',
                 }}
                 formatter={(value) => [formatCurrency(value), 'Receita']}
                 labelFormatter={(label) => formatMonth(label)}
@@ -369,18 +376,19 @@ const Statistics = () => {
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={occupancyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis
                 dataKey="month"
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: '#94a3b8', fontSize: 12 }}
                 tickFormatter={(value) => formatMonth(value)}
               />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
               <Tooltip
                 contentStyle={{
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
+                  background: '#1a2535',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
+                  color: '#e2e8f0',
                 }}
                 formatter={(value) => [value, 'Noites']}
                 labelFormatter={(label) => formatMonth(label)}

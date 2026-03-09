@@ -57,6 +57,14 @@ def setup_logger(log_level: str = "INFO", app_name: str = "Lumina") -> None:
         log_level: Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         app_name: Nome da aplicação para o arquivo de log
     """
+    # Garantir encoding UTF-8 no stdout para evitar UnicodeEncodeError no Windows (CP1252)
+    # Usa errors='replace' como fallback: caracteres incodificáveis viram '?' em vez de crash
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
     # Remove handlers padrão do loguru
     logger.remove()
 

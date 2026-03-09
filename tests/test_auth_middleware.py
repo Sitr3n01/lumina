@@ -90,14 +90,17 @@ def test_account_lockout_after_failed_attempts(client, admin_user):
             "username": "admin",
             "password": f"senhaerrada{i}",
         })
-        assert resp.status_code == 401
+        if i < 4:
+            assert resp.status_code == 401
+        else:
+            assert resp.status_code == 403
 
     # 6a tentativa — conta deve estar bloqueada
     resp = client.post("/api/v1/auth/login", json={
         "username": "admin",
         "password": "Admin123",  # Senha correta, mas conta bloqueada
     })
-    assert resp.status_code == 401
+    assert resp.status_code == 403
     # Mensagem deve mencionar bloqueio (sem vazar detalhes sensiveis)
     detail = resp.json().get("detail", "")
     assert "bloqueada" in detail.lower() or "locked" in detail.lower() or "tentativa" in detail.lower()
@@ -125,4 +128,4 @@ def test_inactive_user_cannot_login(client, db_session):
         "username": "inactiveuser",
         "password": "Active123",
     })
-    assert response.status_code == 401
+    assert response.status_code == 403

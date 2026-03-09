@@ -2,6 +2,7 @@
 """
 Serviço de geração automática de documentos.
 Usa python-docx para preencher diretamente as tabelas do template do condomínio.
+Suporta análise inteligente de PDF para mapeamento automático de campos.
 """
 from pathlib import Path
 from datetime import datetime
@@ -9,6 +10,8 @@ from typing import Dict, Any, Optional, List
 from docx import Document
 import shutil
 import io
+import re
+import json
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -233,6 +236,115 @@ class DocumentService:
 
         doc.save(str(template_path))
         logger.info(f"Default template created: {template_path}")
+
+    def analyze_pdf_template(self, pdf_bytes: bytes) -> Dict[str, Any]:
+        """
+        Analisa um PDF template e detecta automaticamente campos de dados via pattern matching.
+
+        Usa PyMuPDF para extrair blocos de texto com posições (bounding boxes).
+        Para cada linha de texto, verifica se corresponde a um rótulo de campo conhecido.
+
+        Campos detectados: guest_name, cpf, check_in, check_out, phone, celular,
+                           address, bairro, cidade, estado, cep, vehicle, plate,
+                           companion_1..5
+
+        Salva o mapeamento em template_map.json no diretório de templates.
+
+        Args:
+            pdf_bytes: Conteúdo binário do arquivo PDF
+
+        Returns:
+            dict com 'fields' (mapeamento detectado), 'total_pages', 'created_at'
+        """
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            logger.error("PyMuPDF não instalado. Execute: pip install PyMuPDF")
+            return {"fields": {}, "total_pages": 0, "created_at": datetime.now().isoformat(), "error": "PyMuPDF não instalado"}
+
+        # Padrões de rótulos para cada campo lógico (case-insensitive)
+        FIELD_PATTERNS: Dict[str, List[str]] = {
+            "guest_name":  [r"h[oó]spede\s*[:\-]?", r"nome\s+completo\s*[:\-]?", r"nome\s*[:\-]"],
+            "cpf":         [r"c\.?p\.?f\.?\s*[:\-]?", r"cpf\s*[:\-]"],
+            "check_in":    [r"check[\s\-]?in\s*[:\-]?", r"entrada\s*[:\-]?", r"chegada\s*[:\-]?"],
+            "check_out":   [r"check[\s\-]?out\s*[:\-]?", r"sa[ií]da\s*[:\-]?", r"partida\s*[:\-]?"],
+            "phone":       [r"telefone\s*[:\-]?", r"fone\s*[:\-]?", r"tel\.?\s*[:\-]?"],
+            "celular":     [r"celular\s*[:\-]?", r"cel\.?\s*[:\-]?", r"whatsapp\s*[:\-]?"],
+            "address":     [r"endere[cç]o\s*[:\-]?", r"rua\s*[:\-]?", r"av\.?\s*[:\-]?"],
+            "bairro":      [r"bairro\s*[:\-]?"],
+            "cidade":      [r"cidade\s*[:\-]?", r"munic[ií]pio\s*[:\-]?"],
+            "estado":      [r"estado\s*[:\-]?", r"uf\s*[:\-]?"],
+            "cep":         [r"c\.?e\.?p\.?\s*[:\-]?", r"cep\s*[:\-]?"],
+            "vehicle":     [r"ve[ií]culo\s*[:\-]?", r"modelo\s*[:\-]?", r"carro\s*[:\-]?"],
+            "plate":       [r"placa\s*[:\-]?"],
+        }
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        fields: Dict[str, Any] = {}
+
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            page_dict = page.get_text("dict")
+
+            for block in page_dict.get("blocks", []):
+                if block.get("type") != 0:  # Apenas blocos de texto
+                    continue
+
+                for line in block.get("lines", []):
+                    # Concatenar todos os spans da linha em um texto único
+                    line_text = " ".join(span.get("text", "") for span in line.get("spans", []))
+                    line_lower = line_text.lower().strip()
+
+                    if not line_lower:
+                        continue
+
+                    # Verificar cada campo
+                    for field_name, patterns in FIELD_PATTERNS.items():
+                        if field_name in fields:
+                            continue  # Já detectado
+
+                        for pattern in patterns:
+                            if re.search(pattern, line_lower):
+                                fields[field_name] = {
+                                    "page": page_num,
+                                    "bbox": list(line["bbox"]),  # [x0, y0, x1, y1]
+                                    "detected_text": line_text.strip(),
+                                }
+                                logger.info(f"[PDF Analysis] Campo '{field_name}' detectado na página {page_num}: '{line_text.strip()}'")
+                                break
+
+        doc.close()
+
+        # Montar resultado e salvar como template_map.json
+        template_map = {
+            "source": "pdf_analysis",
+            "fields": fields,
+            "total_pages": len(doc),
+            "fields_detected": len(fields),
+            "created_at": datetime.now().isoformat(),
+        }
+
+        map_path = self.template_dir / "template_map.json"
+        map_path.write_text(json.dumps(template_map, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.info(f"[PDF Analysis] Mapeamento salvo em {map_path}. Campos detectados: {list(fields.keys())}")
+
+        return template_map
+
+    def get_template_map(self) -> Optional[Dict[str, Any]]:
+        """
+        Retorna o mapeamento de campos do template personalizado, se existir.
+
+        Returns:
+            dict do template_map.json ou None se não houver mapeamento
+        """
+        map_path = self.template_dir / "template_map.json"
+        if not map_path.exists():
+            return None
+        try:
+            return json.loads(map_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.error(f"Erro ao ler template_map.json: {e}")
+            return None
 
     def list_generated_documents(self, limit: int = 50, offset: int = 0) -> list[Dict[str, Any]]:
         """Lista os documentos gerados, com suporte a paginação por offset."""

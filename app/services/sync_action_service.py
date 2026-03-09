@@ -64,7 +64,7 @@ class SyncActionService:
         self.db.commit()
         self.db.refresh(action)
 
-        logger.info(f"✅ Block action created: ID={action.id}")
+        logger.info(f"[OK] Block action created: ID={action.id}")
         return action
 
     def create_cancel_action(
@@ -101,7 +101,7 @@ class SyncActionService:
         self.db.commit()
         self.db.refresh(action)
 
-        logger.info(f"✅ Cancel action created: ID={action.id}")
+        logger.info(f"[OK] Cancel action created: ID={action.id}")
         return action
 
     def get_pending_actions(self, property_id: int) -> List[SyncAction]:
@@ -156,7 +156,7 @@ class SyncActionService:
         self.db.commit()
         self.db.refresh(action)
 
-        logger.info(f"✅ Action {action_id} marked as completed")
+        logger.info(f"[OK] Action {action_id} marked as completed")
         return action
 
     def _execute_action_side_effects(self, action: SyncAction):
@@ -284,11 +284,11 @@ class SyncActionService:
                     attachments=[attachment]
                 )
                 if result.get("success"):
-                    logger.info(f"✅ Email sent to concierge: {concierge_email}")
+                    logger.info(f"[OK] Email sent to concierge: {concierge_email}")
                 else:
-                    logger.error(f"❌ Failed to send email to concierge: {result.get('message')}")
+                    logger.error(f"[FAIL] Failed to send email to concierge: {result.get('message')}")
             except Exception as e:
-                logger.error(f"❌ Exception sending email to concierge: {e}")
+                logger.error(f"[ERR] Exception sending email to concierge: {e}")
 
         try:
             loop = asyncio.get_running_loop()

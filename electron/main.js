@@ -16,7 +16,7 @@
  */
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const log = require('electron-log');
@@ -32,53 +32,49 @@ log.transports.console.level = 'debug';
 log.info('[Main] LUMINA iniciando...');
 
 // Detectar modo de desenvolvimento
-const isDev = process.env.ELECTRON_DEV === 'true';
+// app.isPackaged é false quando roda do código-fonte (npm run dev / electron .)
+// ELECTRON_DEV é redundância para garantir em cenários edge
+const isDev = !app.isPackaged || process.env.ELECTRON_DEV === 'true';
+
+// === ACELERAÇÃO DE HARDWARE ===
+// Habilitar GPU rasterization e backend DirectX para UI mais fluida no Windows
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+if (process.platform === 'win32') {
+    app.commandLine.appendSwitch('use-angle', 'd3d11');
+}
 
 // Flag para distinguir "fechar app de verdade" de "minimizar para tray"
 app.isQuitting = false;
 
 // Instâncias globais
 let mainWindow = null;
-let splashWindow = null;
 let pythonManager = null;
 let notificationPoller = null;
 
 // ============================================================
-// SPLASH SCREEN
+// SPLASH HELPERS
 // ============================================================
 
 /**
- * Cria e mostra a splash screen enquanto o backend inicia
- * @returns {BrowserWindow}
+ * Atualiza o texto e barra de progresso da tela de loading na janela principal.
+ * Chamado do main process — injeta JS via executeJavaScript.
+ * Silenciosamente ignorado se a janela navegar para o React antes da atualização.
+ * @param {string} text - Mensagem de status
+ * @param {number} progress - Percentual 0-100
  */
-function createSplashWindow() {
-    const splash = new BrowserWindow({
-        width: 400,
-        height: 300,
-        transparent: false,
-        frame: false,
-        alwaysOnTop: true,
-        resizable: false,
-        skipTaskbar: true,
-        backgroundColor: '#0f0f1a',
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-        },
-    });
-
-    splash.loadFile(path.join(__dirname, 'splash.html'));
-    splash.center();
-
-    // Injetar versão dinâmica do package.json
-    splash.webContents.on('did-finish-load', () => {
-        const version = app.getVersion();
-        splash.webContents.executeJavaScript(
-            `document.getElementById('appVersion').textContent = 'v${version}';`
-        ).catch(() => {});
-    });
-
-    return splash;
+function updateSplash(text, progress) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const escaped = String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    mainWindow.webContents.executeJavaScript(
+        `(function(){` +
+        `  var t = document.getElementById('statusText');` +
+        `  var p = document.getElementById('progressBar');` +
+        `  if (t) t.textContent = '${escaped}';` +
+        `  if (p) p.style.width = '${Math.min(100, Math.round(progress))}%';` +
+        `})()`
+    ).catch(() => { });
 }
 
 // ============================================================
@@ -86,17 +82,20 @@ function createSplashWindow() {
 // ============================================================
 
 /**
- * Cria a janela principal do aplicativo
+ * Cria a janela principal do aplicativo.
+ * Carrega splash.html como conteúdo inicial (experiência unificada).
+ * Quando o backend estiver pronto, startNormalApp() navega para o React via loadURL/loadFile.
  * @returns {BrowserWindow}
  */
 function createMainWindow() {
     const win = new BrowserWindow({
-        width: 1280,
-        height: 800,
+        width: 1440,
+        height: 900,
         minWidth: 1024,
-        minHeight: 700,
+        minHeight: 720,
         title: 'LUMINA',
-        backgroundColor: '#0f0f1a',
+        backgroundColor: '#101922',
+        autoHideMenuBar: true,
         show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -106,18 +105,17 @@ function createMainWindow() {
         },
     });
 
-    // Carregar URL do frontend
-    if (isDev) {
-        win.loadURL('http://localhost:5173');
-        win.webContents.openDevTools();
-    } else {
-        win.loadFile(
-            path.join(__dirname, '..', 'frontend', 'dist', 'index.html')
-        );
-    }
+    win.center();
 
-    // Mostrar janela quando pronto (evita flash branco)
+    // Carregar tela de loading inicial (evita janela branca enquanto backend inicia)
+    win.loadFile(path.join(__dirname, 'splash.html'));
+
+    // Mostrar janela quando o splash carregar (rápido, sem flash)
     win.once('ready-to-show', () => {
+        const version = app.getVersion();
+        win.webContents.executeJavaScript(
+            `(function(){var v=document.getElementById('appVersion');if(v)v.textContent='v${version}';})()`
+        ).catch(() => { });
         win.show();
         win.focus();
     });
@@ -230,18 +228,118 @@ function startNotificationPoller(pythonMgr) {
 }
 
 // ============================================================
+// HTTP HELPER
+// ============================================================
+
+/**
+ * POST JSON para o backend local. Retorna { status, body }.
+ */
+function httpPost(port, urlPath, data, timeout = 8000) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify(data);
+        const req = require('http').request({
+            hostname: '127.0.0.1',
+            port,
+            path: urlPath,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(body),
+            },
+            timeout,
+        }, (res) => {
+            let responseData = '';
+            res.on('data', chunk => { responseData += chunk; });
+            res.on('end', () => {
+                let parsed = {};
+                try { parsed = JSON.parse(responseData); } catch (_) { }
+                resolve({ status: res.statusCode, body: parsed });
+            });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        req.write(body);
+        req.end();
+    });
+}
+
+/**
+ * Envia um PDF para o endpoint de análise de template do backend.
+ * Usa multipart/form-data para compatibilidade com FastAPI UploadFile.
+ * @param {number} port
+ * @param {Buffer} pdfBuffer
+ * @param {string|null} authToken - JWT token para autenticação (obrigatório pelo endpoint)
+ * @returns {Promise<{status: number}>}
+ */
+function uploadPdfTemplateToBackend(port, pdfBuffer, authToken) {
+    return new Promise((resolve, reject) => {
+        const boundary = `----FormBoundary${Date.now()}`;
+        const CRLF = '\r\n';
+
+        const headerPart = [
+            `--${boundary}`,
+            'Content-Disposition: form-data; name="file"; filename="template.pdf"',
+            'Content-Type: application/pdf',
+            '',
+            '',
+        ].join(CRLF);
+
+        const footerPart = `${CRLF}--${boundary}--${CRLF}`;
+
+        const headerBuf = Buffer.from(headerPart, 'utf-8');
+        const footerBuf = Buffer.from(footerPart, 'utf-8');
+        const body = Buffer.concat([headerBuf, pdfBuffer, footerBuf]);
+
+        const headers = {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': body.length,
+        };
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        const req = require('http').request({
+            hostname: '127.0.0.1',
+            port,
+            path: '/api/v1/documents/analyze-template',
+            method: 'POST',
+            headers,
+            timeout: 30000,
+        }, (res) => {
+            let responseData = '';
+            res.on('data', chunk => { responseData += chunk; });
+            res.on('end', () => {
+                if (res.statusCode === 200 || res.statusCode === 201) {
+                    resolve({ status: res.statusCode });
+                } else {
+                    reject(new Error(`Backend retornou ${res.statusCode}: ${responseData}`));
+                }
+            });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        req.write(body);
+        req.end();
+    });
+}
+
+// ============================================================
 // FLUXO NORMAL DO APP (após wizard ou em execuções subsequentes)
 // ============================================================
 
 /**
  * Inicia o aplicativo normalmente:
- * splash → Python backend → janela principal → tray + IPC + updater
+ * janela principal (splash) → Python backend → navega para React → tray + IPC + updater
+ *
+ * Experiência unificada: uma única janela do início ao fim.
+ * O splash.html é carregado inicialmente; quando o backend está pronto,
+ * a janela navega para o frontend React via loadURL/loadFile.
  */
 async function startNormalApp() {
     log.info('[Main] Iniciando app normal...');
 
-    // 1. Mostrar splash screen
-    splashWindow = createSplashWindow();
+    // 1. Criar janela principal imediatamente — exibe splash.html como loading screen
+    mainWindow = createMainWindow();
 
     // 2. Inicializar Python Manager
     pythonManager = new PythonManager({
@@ -254,47 +352,137 @@ async function startNormalApp() {
     pythonManager.onLog((msg) => log.info('[Python]', msg));
     pythonManager.onError((err) => {
         log.error('[Python] Erro:', err);
-        // Mostrar diálogo de erro se a janela principal já existir
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('backend:error', err);
         }
     });
 
     try {
         // 3. Iniciar backend Python
+        updateSplash('Iniciando backend Python...', 20);
         await pythonManager.start();
         log.info('[Main] Backend Python pronto em', pythonManager.getUrl());
+        updateSplash('Backend pronto!', 50);
 
-        // 4. Fechar splash e criar janela principal
-        if (splashWindow && !splashWindow.isDestroyed()) {
-            splashWindow.close();
-            splashWindow = null;
+        // 4. Criar conta admin + auto-login se houver pending-admin.json (pós-wizard)
+        const pendingAdminPath = path.join(app.getPath('userData'), 'pending-admin.json');
+        let autoLoginToken = null;
+
+        if (fs.existsSync(pendingAdminPath)) {
+            updateSplash('Configurando usuário administrador...', 60);
+            try {
+                const adminData = JSON.parse(fs.readFileSync(pendingAdminPath, 'utf-8'));
+                const port = pythonManager.getPort();
+
+                // A) Registrar admin (timeout aumentado para 15s — backend pode estar aquecendo)
+                const regResult = await httpPost(port, '/api/v1/auth/register', {
+                    email: adminData.email,
+                    username: adminData.username,
+                    password: adminData.password,
+                    full_name: adminData.full_name || 'Administrador',
+                }, 15000);
+
+                if (regResult.status === 201) {
+                    log.info('[Main] Usuário admin criado com sucesso.');
+                    updateSplash('Autenticando...', 70);
+
+                    // B) Auto-login para obter token JWT
+                    const loginResult = await httpPost(port, '/api/v1/auth/login', {
+                        username: adminData.username,
+                        password: adminData.password,
+                    }, 10000);
+
+                    if (loginResult.status === 200 && loginResult.body.access_token) {
+                        autoLoginToken = loginResult.body.access_token;
+                        log.info('[Main] Auto-login token obtido.');
+                        // Só deletar após sucesso completo (registro + login)
+                        try { fs.unlinkSync(pendingAdminPath); } catch (_) { }
+                        log.info('[Main] pending-admin.json removido após setup completo.');
+                    } else {
+                        log.warn(`[Main] Login pós-registro falhou: ${loginResult.status}. pending-admin.json mantido para retry.`);
+                    }
+                } else if (regResult.status === 403) {
+                    // Usuário já existe — pending-admin.json nunca conseguirá registrar um novo.
+                    // Limpar o arquivo para evitar loop eterno; usuário deve logar com credenciais originais.
+                    try { fs.unlinkSync(pendingAdminPath); } catch (_) { }
+                    log.warn('[Main] Sistema já configurado (403). pending-admin.json removido. Login manual necessário.');
+                } else {
+                    // Falha transitória (500, rede, etc.) — manter para retry na próxima abertura.
+                    log.warn(`[Main] Registro admin falhou: ${regResult.status} — ${JSON.stringify(regResult.body)}. pending-admin.json mantido para retry.`);
+                }
+            } catch (err) {
+                log.error('[Main] Erro ao processar pending-admin.json:', err.message);
+                // Não deletar: manter para próxima tentativa ao reiniciar o app
+            }
         }
 
-        mainWindow = createMainWindow();
+        // 4.5 Processar template PDF pendente do wizard (se houver)
+        const pendingPdfPath = path.join(app.getPath('userData'), 'pending-template.pdf');
+        if (fs.existsSync(pendingPdfPath)) {
+            if (!autoLoginToken) {
+                // Sem token de auth: arquivo ficou de uma execução anterior sem conta admin válida.
+                // Não é possível fazer upload sem autenticação — remover para não poluir logs.
+                try { fs.unlinkSync(pendingPdfPath); } catch (_) { }
+                log.warn('[Main] pending-template.pdf removido: sem token de auth disponível para upload.');
+            } else {
+                updateSplash('Processando template de documento...', 75);
+                try {
+                    const pdfBytes = fs.readFileSync(pendingPdfPath);
+                    await uploadPdfTemplateToBackend(pythonManager.getPort(), pdfBytes, autoLoginToken);
+                    fs.unlinkSync(pendingPdfPath);
+                    log.info('[Main] Template PDF analisado e configurado com sucesso.');
+                } catch (err) {
+                    log.warn('[Main] Falha ao processar template PDF:', err.message);
+                    // Não crítico — manter arquivo para próxima tentativa com token válido
+                }
+            }
+        }
 
-        // Notificar renderer que backend está pronto (após a janela carregar)
-        mainWindow.webContents.once('did-finish-load', () => {
-            mainWindow.webContents.send('backend:ready');
+        // 5. Registrar manipulador IPC para o token de auto-login (antes de navegar para o React)
+        // Remover handler anterior antes de registrar — previne duplicata em caso de retry
+        try { ipcMain.removeHandler('auth:getAutoLoginToken'); } catch (_) { }
+        ipcMain.handle('auth:getAutoLoginToken', () => {
+            const token = autoLoginToken;
+            autoLoginToken = null; // Consume: one-shot, próxima chamada retorna null
+            if (token) log.info('[Main] Token auto-login enviado ao React (IPC).');
+            return token;
         });
 
-        // 5. Registrar IPC handlers
+        // 6. Navegar para o frontend React (mesma janela, sem abrir nova)
+        updateSplash('Carregando interface...', 90);
+
+        // Notificar renderer que backend está pronto após a interface carregar
+        mainWindow.webContents.once('did-finish-load', () => {
+            mainWindow.webContents.send('backend:ready');
+            log.info('[Main] backend:ready enviado ao renderer.');
+        });
+
+        if (isDev) {
+            mainWindow.loadURL('http://localhost:5173');
+        } else {
+            mainWindow.loadFile(
+                path.join(__dirname, '..', 'frontend', 'dist', 'index.html')
+            );
+        }
+
+        // 7. Registrar IPC handlers
         registerIpcHandlers(mainWindow, pythonManager);
 
         // Completar os handlers de update com as funções reais
-        ipcMain.removeHandler('update:install'); // Remove placeholder do ipc-handlers.js
+        try { ipcMain.removeHandler('update:install'); } catch (e) { /* não existia */ }
+        try { ipcMain.removeHandler('update:download'); } catch (e) { /* não existia */ }
         ipcMain.handle('update:download', () => downloadUpdate());
         ipcMain.handle('update:install', () => installUpdate());
 
-        // 6. Criar ícone de bandeja
+        // 8. Criar ícone de bandeja
         createTray(mainWindow, pythonManager);
 
-        // 7. Configurar auto-updater (apenas em produção)
+        // 9. Configurar auto-updater (apenas em produção)
         if (!isDev) {
             setupAutoUpdater(mainWindow);
         }
 
-        // 8. Iniciar polling de notificações
+        // 10. Iniciar polling de notificações
         notificationPoller = startNotificationPoller(pythonManager);
 
         log.info('[Main] App iniciado com sucesso!');
@@ -302,9 +490,10 @@ async function startNormalApp() {
     } catch (err) {
         log.error('[Main] Falha ao iniciar backend:', err);
 
-        // Fechar splash
-        if (splashWindow && !splashWindow.isDestroyed()) {
-            splashWindow.close();
+        // Destruir janela principal para evitar estado inconsistente
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.destroy();
+            mainWindow = null;
         }
 
         // Mostrar diálogo de erro com opção de tentar novamente ou sair
@@ -319,7 +508,6 @@ async function startNormalApp() {
         });
 
         if (response === 0) {
-            // Tentar novamente
             await startNormalApp();
         } else {
             app.quit();
@@ -347,9 +535,11 @@ function openWizard() {
     log.info('[Main] Primeiro run detectado - abrindo wizard...');
 
     const wizardWindow = new BrowserWindow({
-        width: 800,
-        height: 650,
-        resizable: false,
+        width: 1920,
+        height: 1000,
+        minWidth: 1440,
+        minHeight: 800,
+        resizable: true,
         frame: true,
         titleBarStyle: 'default',
         title: 'LUMINA - Configuração Inicial',
@@ -429,9 +619,52 @@ function registerWizardHandlers(wizardWindow) {
                 fs.mkdirSync(path.join(userDataPath, dir), { recursive: true });
             }
 
+            // Salvar credenciais do admin em arquivo separado (pending-admin.json)
+            // para criar o usuário via API após o backend iniciar.
+            // NUNCA incluir no .env — são credenciais de acesso, não configuração.
+            if (config.adminEmail && config.adminUsername && config.adminPassword) {
+                const pendingAdminPath = path.join(userDataPath, 'pending-admin.json');
+                fs.writeFileSync(pendingAdminPath, JSON.stringify({
+                    email: config.adminEmail,
+                    username: config.adminUsername,
+                    password: config.adminPassword,
+                    full_name: 'Administrador',
+                }), 'utf-8');
+                log.info('[Wizard] pending-admin.json salvo (será criado após backend iniciar).');
+            } else {
+                log.warn('[Wizard] Dados de admin incompletos — usuário não será criado automaticamente.');
+            }
+
             return { success: true };
         } catch (err) {
             log.error('[Wizard] Erro ao salvar config:', err);
+            return { success: false, error: err.message };
+        }
+    });
+
+    /** Salva o PDF do template de autorização em userData como pending-template.pdf */
+    registerHandler('wizard:savePdf', async (event, pdfArrayBuffer) => {
+        try {
+            const userDataPath = app.getPath('userData');
+            const pdfPath = path.join(userDataPath, 'pending-template.pdf');
+
+            // Converter ArrayBuffer → Buffer do Node.js
+            const buffer = Buffer.from(pdfArrayBuffer);
+
+            // Validação básica: verificar header PDF (%PDF-)
+            if (!buffer.slice(0, 5).toString('ascii').startsWith('%PDF')) {
+                return { success: false, error: 'Arquivo inválido: não é um PDF' };
+            }
+
+            if (buffer.length > 20 * 1024 * 1024) {
+                return { success: false, error: 'PDF muito grande (máx. 20MB)' };
+            }
+
+            fs.writeFileSync(pdfPath, buffer);
+            log.info(`[Wizard] pending-template.pdf salvo (${Math.round(buffer.length / 1024)}KB)`);
+            return { success: true };
+        } catch (err) {
+            log.error('[Wizard] Erro ao salvar PDF template:', err);
             return { success: false, error: err.message };
         }
     });
@@ -507,25 +740,12 @@ function registerWizardHandlers(wizardWindow) {
         }
     });
 
-    /** Finaliza o wizard, cria usuário admin e sinaliza para iniciar o app */
+    /** Finaliza o wizard e sinaliza para iniciar o app */
     registerHandler('wizard:complete', async (event) => {
         try {
-            // Iniciar backend Python temporariamente para criar o usuário admin
-            const tempManager = new PythonManager({
-                isDev,
-                resourcesPath: process.resourcesPath || path.join(__dirname, '..'),
-                userDataPath: app.getPath('userData'),
-            });
-
-            await tempManager.start();
-
-            // O registro do admin é feito via script scripts/create_default_admin.py OU
-            // pela rota de setup se existir. Por ora, sinalizamos que o wizard completou.
-            // O usuário poderá criar conta na primeira tela de login.
-
-            await tempManager.stop();
-
-            // Sinalizar para o evento 'wizard-done' no app
+            // O backend Python será iniciado por startNormalApp() após o wizard.
+            // O admin será criado via /v1/auth/register no primeiro acesso (Login.jsx).
+            log.info('[Wizard] Wizard completado - sinalizando para iniciar app...');
             app.emit('wizard-done');
             return { success: true };
         } catch (err) {
@@ -663,6 +883,8 @@ function buildEnvFile(config) {
 // ============================================================
 
 app.whenReady().then(async () => {
+    // Remover menu nativo do Electron (File/Edit/View/Window/Help)
+    Menu.setApplicationMenu(null);
     log.info('[Main] app.whenReady() - verificando primeiro run...');
 
     if (isFirstRun()) {

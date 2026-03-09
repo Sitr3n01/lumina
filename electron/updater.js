@@ -4,14 +4,19 @@
  */
 'use strict';
 
-const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
+let autoUpdater = null; // Lazy load - carregado sob demanda para evitar erro de app não estar pronto
 
 /**
  * Configura e inicializa o auto-updater
  * @param {Electron.BrowserWindow} mainWindow - Janela principal para envio de eventos
  */
 function setupAutoUpdater(mainWindow) {
+    // Lazy load - require apenas quando app está pronto
+    if (!autoUpdater) {
+        autoUpdater = require('electron-updater').autoUpdater;
+    }
+
     // Usar electron-log para logs do updater (não console.log em produção)
     autoUpdater.logger = log;
     autoUpdater.logger.transports.file.level = 'info';
@@ -81,6 +86,9 @@ function setupAutoUpdater(mainWindow) {
  * Chamado via IPC quando o usuário aceita baixar a atualização
  */
 function downloadUpdate() {
+    if (!autoUpdater) {
+        autoUpdater = require('electron-updater').autoUpdater;
+    }
     autoUpdater.downloadUpdate().catch((err) => {
         log.error('[Updater] Erro ao baixar atualização:', err);
     });
@@ -91,6 +99,9 @@ function downloadUpdate() {
  * Chamado via IPC quando o usuário consente a instalação
  */
 function installUpdate() {
+    if (!autoUpdater) {
+        autoUpdater = require('electron-updater').autoUpdater;
+    }
     log.info('[Updater] Usuário aceitou instalar - reiniciando...');
     autoUpdater.quitAndInstall(false, true);
 }

@@ -19,23 +19,58 @@ export function AuthProvider({ children }) {
 
   // Validar token existente ao montar o contexto
   useEffect(() => {
-    const token = localStorage.getItem('lumina_token');
-    if (!token) {
+    const existingToken = localStorage.getItem('lumina_token');
+
+    if (existingToken) {
+      // Token de sessão anterior — validar imediatamente (backend já pronto)
+      authAPI.getMe()
+        .then((userData) => setUser(userData))
+        .catch(() => localStorage.removeItem('lumina_token'))
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    // Sem token salvo — tentar auto-login pós-wizard via Electron IPC
+    if (!window.electronAPI?.onBackendReady) {
+      // Modo web / sem Electron: não há auto-login
       setLoading(false);
       return;
     }
 
-    authAPI.getMe()
-      .then((userData) => setUser(userData))
-      .catch(() => {
+    // Aguardar sinal do main process que o backend está pronto antes de tentar IPC
+    const removeBackendReadyListener = window.electronAPI.onBackendReady(async () => {
+      removeBackendReadyListener(); // one-shot: remover listener imediatamente
+      try {
+        const autoToken = await window.electronAPI.getAutoLoginToken();
+        if (autoToken) {
+          localStorage.setItem('lumina_token', autoToken);
+          const userData = await authAPI.getMe();
+          setUser(userData);
+        }
+      } catch (e) {
+        console.error('[AuthContext] Auto-login pós-wizard falhou:', e);
         localStorage.removeItem('lumina_token');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Fallback: se backend:ready nunca disparar (timeout de segurança)
+    const fallbackTimer = setTimeout(() => {
+      removeBackendReadyListener();
+      setLoading(false);
+    }, 15000);
+
+    return () => {
+      removeBackendReadyListener();
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   // Escutar evento de logout disparado pelo interceptor 401 do api.js
   useEffect(() => {
     const handleForcedLogout = () => {
+      localStorage.removeItem('lumina_token');
       setUser(null);
     };
     window.addEventListener('auth:logout', handleForcedLogout);

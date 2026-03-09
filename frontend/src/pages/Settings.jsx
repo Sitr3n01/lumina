@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
-import { settingsAPI } from '../services/api';
+import { Save, RefreshCw, CheckCircle, AlertCircle, Eye, EyeOff, Bot, Zap } from 'lucide-react';
+import { settingsAPI, aiAPI } from '../services/api';
 import './Settings.css';
 
 const Settings = () => {
@@ -49,6 +49,16 @@ const Settings = () => {
     // Features
     enableAutoDocumentGeneration: false,
     enableConflictNotifications: true,
+
+    // AI Settings
+    aiProvider: 'anthropic',
+    aiApiKey: '',
+    aiModel: '',
+    aiBaseUrl: '',
+    aiApiKeySet: false,
+
+    // Document / branding
+    condoLogoUrl: '',
   });
 
   useEffect(() => {
@@ -76,6 +86,11 @@ const Settings = () => {
           syncIntervalMinutes: data.syncIntervalMinutes || prev.syncIntervalMinutes,
           enableAutoDocumentGeneration: data.enableAutoDocumentGeneration ?? prev.enableAutoDocumentGeneration,
           enableConflictNotifications: data.enableConflictNotifications ?? prev.enableConflictNotifications,
+          aiProvider: data.aiProvider || prev.aiProvider,
+          aiApiKeySet: data.aiApiKeySet ?? prev.aiApiKeySet,
+          aiModel: data.aiModel || prev.aiModel,
+          aiBaseUrl: data.aiBaseUrl || prev.aiBaseUrl,
+          condoLogoUrl: data.condoLogoUrl ?? prev.condoLogoUrl,
         }));
       } catch (error) {
         if (!cancelled) {
@@ -112,6 +127,10 @@ const Settings = () => {
         syncIntervalMinutes: data.syncIntervalMinutes || prev.syncIntervalMinutes,
         enableAutoDocumentGeneration: data.enableAutoDocumentGeneration ?? prev.enableAutoDocumentGeneration,
         enableConflictNotifications: data.enableConflictNotifications ?? prev.enableConflictNotifications,
+        aiProvider: data.aiProvider || prev.aiProvider,
+        aiApiKeySet: data.aiApiKeySet ?? prev.aiApiKeySet,
+        aiModel: data.aiModel || prev.aiModel,
+        aiBaseUrl: data.aiBaseUrl || prev.aiBaseUrl,
       }));
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -181,11 +200,21 @@ const Settings = () => {
         >
           Configuracao Avancada
         </button>
+        <button
+          className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai')}
+          style={activeTab === 'ai' ? { color: '#8b5cf6', borderBottomColor: '#8b5cf6' } : {}}
+        >
+          <Bot size={14} style={{ display: 'inline', marginRight: 5 }} />
+          Inteligencia Artificial
+        </button>
       </div>
 
       <div className="settings-content">
         {activeTab === 'easy' ? (
           <EasySettings settings={settings} onChange={handleChange} />
+        ) : activeTab === 'ai' ? (
+          <AISettings settings={settings} onChange={handleChange} showMessage={showMessage} />
         ) : (
           <AdvancedSettings settings={settings} onChange={handleChange} />
         )}
@@ -279,6 +308,20 @@ const EasySettings = ({ settings, onChange }) => {
               onChange={(e) => onChange('condoAdminName', e.target.value)}
               placeholder="Ex: Administradora XYZ Ltda"
             />
+          </div>
+
+          <div className="form-field">
+            <label className="label">URL do Logo (opcional)</label>
+            <input
+              type="text"
+              className="input"
+              value={settings.condoLogoUrl}
+              onChange={(e) => onChange('condoLogoUrl', e.target.value)}
+              placeholder="https://exemplo.com/logo.png  ou  data:image/png;base64,..."
+            />
+            <small className="field-help">
+              URL pública ou imagem base64 — exibida no cabeçalho da Autorização de Hospedagem
+            </small>
           </div>
 
           <div className="form-field">
@@ -603,6 +646,168 @@ const AdvancedSettings = ({ settings, onChange }) => {
               Gerar automaticamente documentos de autorizacao do condominio
             </small>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ========== ABA IA ==========
+const AI_PURPLE = '#8b5cf6';
+
+const AISettings = ({ settings, onChange, showMessage }) => {
+  const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  const handleTest = async () => {
+    if (!settings.aiApiKey) {
+      showMessage('Informe a API Key antes de testar', 'error');
+      return;
+    }
+    setTesting(true);
+    try {
+      const res = await aiAPI.testConnection({
+        provider: settings.aiProvider,
+        api_key: settings.aiApiKey,
+        model: settings.aiModel || getDefaultModel(settings.aiProvider),
+        base_url: settings.aiBaseUrl || null,
+      });
+      const result = res.data;
+      showMessage(result.success ? `Conexao OK: ${result.message}` : result.message, result.success ? 'success' : 'error');
+    } catch {
+      showMessage('Erro ao testar conexao', 'error');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const getDefaultModel = (provider) => {
+    if (provider === 'openai') return 'gpt-4o-mini';
+    if (provider === 'compatible') return 'llama3';
+    return 'claude-3-5-haiku-latest';
+  };
+
+  return (
+    <div className="settings-section">
+      <div className="section-group">
+        <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Bot size={18} style={{ color: AI_PURPLE }} />
+          Configurar Assistente de IA
+        </h3>
+        <p className="section-description">
+          Configure o provider e credenciais para o assistente LUMINA AI.
+          Suporta Claude (Anthropic), GPT (OpenAI) e qualquer provider compativel com API OpenAI.
+        </p>
+
+        <div className="form-grid">
+          <div className="form-field">
+            <label className="label">Provider de IA</label>
+            <select
+              className="select"
+              value={settings.aiProvider}
+              onChange={(e) => onChange('aiProvider', e.target.value)}
+              style={{ width: '100%' }}
+            >
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI (GPT)</option>
+              <option value="compatible">Compativel (Ollama, Groq, LM Studio...)</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label className="label">
+              API Key
+              {settings.aiApiKeySet && (
+                <span style={{ marginLeft: 8, fontSize: 11, color: '#22c55e', fontWeight: 400 }}>
+                  (configurada no servidor)
+                </span>
+              )}
+            </label>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <input
+                type={showKey ? 'text' : 'password'}
+                className="input"
+                value={settings.aiApiKey}
+                onChange={(e) => onChange('aiApiKey', e.target.value)}
+                placeholder={settings.aiApiKeySet ? '••••••••••••••••••••' : 'sk-ant-... ou sk-...'}
+                style={{ flex: 1, paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(v => !v)}
+                style={{
+                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                  padding: 0,
+                }}
+              >
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <small className="field-help">
+              {settings.aiProvider === 'anthropic' && 'Obtenha em: console.anthropic.com'}
+              {settings.aiProvider === 'openai' && 'Obtenha em: platform.openai.com'}
+              {settings.aiProvider === 'compatible' && 'Chave do provider compativel (pode ser qualquer valor para Ollama local)'}
+            </small>
+          </div>
+
+          <div className="form-field">
+            <label className="label">Modelo</label>
+            <input
+              type="text"
+              className="input"
+              value={settings.aiModel}
+              onChange={(e) => onChange('aiModel', e.target.value)}
+              placeholder={getDefaultModel(settings.aiProvider)}
+            />
+            <small className="field-help">
+              {settings.aiProvider === 'anthropic' && 'Ex: claude-3-5-haiku-latest, claude-3-5-sonnet-latest'}
+              {settings.aiProvider === 'openai' && 'Ex: gpt-4o-mini, gpt-4o, gpt-3.5-turbo'}
+              {settings.aiProvider === 'compatible' && 'Ex: llama3, gemma3:4b, mistral'}
+            </small>
+          </div>
+
+          {settings.aiProvider === 'compatible' && (
+            <div className="form-field">
+              <label className="label">Base URL</label>
+              <input
+                type="url"
+                className="input"
+                value={settings.aiBaseUrl}
+                onChange={(e) => onChange('aiBaseUrl', e.target.value)}
+                placeholder="http://localhost:11434/v1"
+              />
+              <small className="field-help">
+                URL base do provider (ex: Ollama: http://localhost:11434/v1, Groq: https://api.groq.com/openai/v1)
+              </small>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button
+            className="btn"
+            onClick={handleTest}
+            disabled={testing}
+            style={{
+              background: 'rgba(139, 92, 246, 0.12)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              color: AI_PURPLE,
+            }}
+          >
+            <Zap size={15} />
+            {testing ? 'Testando...' : 'Testar Conexao'}
+          </button>
+          <small style={{ color: 'var(--text-disable)' }}>
+            Testa a conectividade sem salvar
+          </small>
+        </div>
+
+        <div className="info-box" style={{ marginTop: 20 }}>
+          <p>
+            <strong>Nota de seguranca:</strong> A API Key e salva de forma segura no banco de dados local.
+            Para uso em producao, prefira definir <code>AI_API_KEY</code> no arquivo <code>.env</code>.
+          </p>
         </div>
       </div>
     </div>

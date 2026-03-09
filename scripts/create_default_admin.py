@@ -48,7 +48,7 @@ def create_default_admin():
         # Criar usuário admin
         admin_user = User(
             username="admin",
-            email="admin@sentinel.local",
+            email="admin@lumina.local",
             full_name="Administrador",
             hashed_password=get_password_hash("Admin123!"),
             is_active=True,

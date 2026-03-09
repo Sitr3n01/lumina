@@ -8,7 +8,11 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
 from app.config import settings
-from app.models import Booking, BookingConflict
+from app.models.booking import Booking
+from app.models.booking_conflict import BookingConflict
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class NotificationService:
@@ -34,7 +38,7 @@ class NotificationService:
                     chat_id=admin_id, text=message, parse_mode=parse_mode
                 )
             except TelegramError as e:
-                print(f"❌ Erro ao enviar mensagem para {admin_id}: {e}")
+                logger.error(f"[ERR] Erro ao enviar mensagem no Telegram - API ou permissoes falharam.")
                 success = False
 
         return success
@@ -56,7 +60,7 @@ class NotificationService:
                     reply_markup=reply_markup
                 )
             except TelegramError as e:
-                print(f"❌ Erro ao enviar mensagem para {admin_id}: {e}")
+                logger.error(f"[ERR] Erro ao enviar mensagem com teclado no Telegram - API ou permissoes falharam.")
                 success = False
 
         return success

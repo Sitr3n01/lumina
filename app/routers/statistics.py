@@ -190,20 +190,21 @@ def get_occupancy_stats(
 @router.get("/revenue")
 def get_revenue_stats(
     property_id: int = Query(..., description="ID do imóvel"),
+    months: int = Query(6, ge=1, le=24, description="Número de meses para análise"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Retorna estatísticas de receita (quando disponível).
+    Retorna receita mensal como array para alimentar o BarChart do frontend.
+    Cada item: {month, total_revenue, airbnb_revenue, booking_revenue}.
     """
     from app.utils.date_utils import today_local
     from datetime import timedelta
 
     booking_service = BookingService(db)
 
-    # Reservas dos últimos 6 meses
     today = today_local()
-    start_date = today - timedelta(days=180)
+    start_date = today - timedelta(days=months * 30)
 
     bookings = booking_service.get_bookings_in_period(
         property_id,
@@ -211,39 +212,82 @@ def get_revenue_stats(
         today + timedelta(days=30)
     )
 
-    # Calcular receita
-    total_revenue = sum(
-        float(b.total_price) for b in bookings
-        if b.total_price and b.status == BookingStatus.CONFIRMED
+    # Agrupar receita por mês
+    monthly: dict = {}
+    for b in bookings:
+        if not b.total_price or b.status != BookingStatus.CONFIRMED:
+            continue
+        # Usar check_in_date como referência do mês da reserva
+        month_key = b.check_in_date.strftime("%Y-%m")
+        if month_key not in monthly:
+            monthly[month_key] = {
+                "month": month_key,
+                "total_revenue": 0.0,
+                "airbnb_revenue": 0.0,
+                "booking_revenue": 0.0,
+            }
+        price = float(b.total_price)
+        monthly[month_key]["total_revenue"] += price
+        if b.platform == "airbnb":
+            monthly[month_key]["airbnb_revenue"] += price
+        elif b.platform == "booking":
+            monthly[month_key]["booking_revenue"] += price
+
+    # Arredondar e ordenar por mês
+    result = sorted(monthly.values(), key=lambda x: x["month"])
+    for item in result:
+        item["total_revenue"] = round(item["total_revenue"], 2)
+        item["airbnb_revenue"] = round(item["airbnb_revenue"], 2)
+        item["booking_revenue"] = round(item["booking_revenue"], 2)
+
+    return result
+
+
+@router.get("/platforms")
+def get_platform_stats(
+    property_id: int = Query(..., description="ID do imóvel"),
+    months: int = Query(6, ge=1, le=24, description="Número de meses para análise"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Retorna reservas e receita agrupadas por plataforma.
+    Cada item: {platform, bookings_count, total_revenue}.
+    """
+    from app.utils.date_utils import today_local
+    from datetime import timedelta
+
+    booking_service = BookingService(db)
+
+    today = today_local()
+    start_date = today - timedelta(days=months * 30)
+
+    bookings = booking_service.get_bookings_in_period(
+        property_id,
+        start_date,
+        today + timedelta(days=30)
     )
 
-    # Por plataforma
-    airbnb_revenue = sum(
-        float(b.total_price) for b in bookings
-        if b.total_price and b.platform == "airbnb" and b.status == BookingStatus.CONFIRMED  # FIX: Usar enum
-    )
+    platforms: dict = {}
+    for b in bookings:
+        platform = b.platform or "manual"
+        if platform not in platforms:
+            platforms[platform] = {
+                "platform": platform,
+                "bookings_count": 0,
+                "total_revenue": 0.0,
+            }
+        platforms[platform]["bookings_count"] += 1
+        if b.total_price and b.status == BookingStatus.CONFIRMED:
+            platforms[platform]["total_revenue"] += float(b.total_price)
 
-    booking_revenue = sum(
-        float(b.total_price) for b in bookings
-        if b.total_price and b.platform == "booking" and b.status == BookingStatus.CONFIRMED  # FIX: Usar enum
-    )
+    result = list(platforms.values())
+    for item in result:
+        item["total_revenue"] = round(item["total_revenue"], 2)
 
-    # Reservas com preço
-    bookings_with_price = [b for b in bookings if b.total_price]
-
-    avg_price = (total_revenue / len(bookings_with_price)) if bookings_with_price else 0
-
-    return {
-        "total_revenue": round(total_revenue, 2),
-        "average_price_per_booking": round(avg_price, 2),
-        "by_platform": {
-            "airbnb": round(airbnb_revenue, 2),
-            "booking": round(booking_revenue, 2)
-        },
-        "bookings_with_price": len(bookings_with_price),
-        "currency": "BRL",
-        "period": "últimos 6 meses"
-    }
+    # Ordenar por número de reservas (decrescente)
+    result.sort(key=lambda x: x["bookings_count"], reverse=True)
+    return result
 
 
 @router.get("/monthly-report")
