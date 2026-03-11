@@ -11,6 +11,20 @@ class SettingsUpdate(BaseModel):
     syncIntervalMinutes: Optional[int] = Field(None, ge=5, le=1440, description="Intervalo de sync em minutos")
     enableAutoDocumentGeneration: Optional[bool] = Field(None, description="Geração automática de documentos")
     enableConflictNotifications: Optional[bool] = Field(None, description="Notificações de conflitos")
+    # Imóvel (editáveis via Modo de Edição — override do .env)
+    maxGuests: Optional[int] = Field(None, ge=1, le=20, description="Capacidade máxima de hóspedes")
+    propertyName: Optional[str] = Field(None, description="Nome do imóvel (override do wizard)")
+    propertyAddress: Optional[str] = Field(None, description="Endereço do imóvel (override do wizard)")
+    # Condomínio (editáveis via Modo de Edição)
+    condoName: Optional[str] = Field(None, description="Nome do condomínio (override do wizard)")
+    condoAdminName: Optional[str] = Field(None, description="Nome da administração (override do wizard)")
+    # Proprietário (editáveis via Modo de Edição)
+    ownerName: Optional[str] = Field(None, description="Nome do proprietário (override do wizard)")
+    ownerEmail: Optional[str] = Field(None, description="Email do proprietário (override do wizard)")
+    ownerPhone: Optional[str] = Field(None, description="Telefone do proprietário (override do wizard)")
+    ownerApto: Optional[str] = Field(None, description="Apartamento do proprietário (override do wizard)")
+    ownerBloco: Optional[str] = Field(None, description="Bloco do proprietário (override do wizard)")
+    ownerGaragem: Optional[str] = Field(None, description="Garagem do proprietário (override do wizard)")
     # AI Settings
     aiProvider: Optional[str] = Field(None, description="Provider de IA: anthropic | openai | compatible")
     aiApiKey: Optional[str] = Field(None, description="API Key do provider de IA")
@@ -25,7 +39,6 @@ class SettingsResponse(BaseModel):
     # Dados do imóvel (read-only, do .env)
     propertyName: str = ""
     propertyAddress: str = ""
-    maxGuests: int = 6
     condoName: str = ""
     condoAdminName: str = ""
 
@@ -37,8 +50,21 @@ class SettingsResponse(BaseModel):
     ownerBloco: str = ""
     ownerGaragem: str = ""
 
+    # URLs iCal (read-only, do .env — exibição apenas)
+    airbnbIcalUrl: str = ""
+    bookingIcalUrl: str = ""
+
+    # Email (read-only, do .env — exibição apenas; senha nunca retornada)
+    emailProvider: str = ""
+    emailFrom: str = ""
+    emailPasswordSet: bool = False
+
+    # Telegram (read-only, do .env — exibição apenas)
+    telegramBotToken: str = ""
+
     # Editáveis (merge .env + DB)
     condoEmail: str = ""
+    maxGuests: int = 6
     syncIntervalMinutes: int = 30
     enableAutoDocumentGeneration: bool = False
     enableConflictNotifications: bool = True

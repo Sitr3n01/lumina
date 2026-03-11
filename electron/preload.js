@@ -68,6 +68,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     getAppPath: () => ipcRenderer.invoke('app:path'),
 
+    /**
+     * Verifica se o app está configurado para iniciar com o Windows
+     * @returns {Promise<boolean>}
+     */
+    getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
+
+    /**
+     * Ativa ou desativa o início automático com o Windows
+     * @param {boolean} enabled
+     * @returns {Promise<boolean>}
+     */
+    setAutoLaunch: (enabled) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
+
     // === WINDOW ===
     /**
      * Minimiza a janela principal
@@ -83,6 +96,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
      * Encerra o aplicativo completamente
      */
     quit: () => ipcRenderer.send('app:quit'),
+
+    /**
+     * Factory reset: remove o .env do userData e relança o app para o wizard
+     * @returns {Promise<void>}
+     */
+    factoryReset: () => ipcRenderer.invoke('app:factoryReset'),
 
     // === EVENTS (main → renderer) ===
     /**

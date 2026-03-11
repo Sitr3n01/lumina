@@ -44,3 +44,22 @@ def update_settings(
         "message": "Configurações salvas com sucesso",
         "saved": saved,
     }
+
+
+@router.post("/reset")
+def reset_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Hard reset: remove todas as configurações do banco de dados,
+    revertendo para os valores originais do wizard (.env).
+    Requer autenticação.
+    """
+    service = SettingsService(db)
+    count = service.reset_all_settings()
+    return {
+        "success": True,
+        "message": f"Hard reset concluído. {count} configurações revertidas para os valores originais.",
+        "cleared": count,
+    }

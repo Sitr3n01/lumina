@@ -3,6 +3,12 @@ import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
+/** Retorna localStorage ou sessionStorage conforme preferência do usuário */
+const getTokenStorage = () =>
+  localStorage.getItem('lumina_remember_login') === 'false'
+    ? sessionStorage
+    : localStorage;
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,18 +20,22 @@ export function AuthProvider({ children }) {
       // Ignorar erro de rede no logout — limpar estado local de qualquer forma
     }
     localStorage.removeItem('lumina_token');
+    sessionStorage.removeItem('lumina_token');
     setUser(null);
   }, []);
 
   // Validar token existente ao montar o contexto
   useEffect(() => {
-    const existingToken = localStorage.getItem('lumina_token');
+    const existingToken = localStorage.getItem('lumina_token') || sessionStorage.getItem('lumina_token');
 
     if (existingToken) {
       // Token de sessão anterior — validar imediatamente (backend já pronto)
       authAPI.getMe()
         .then((userData) => setUser(userData))
-        .catch(() => localStorage.removeItem('lumina_token'))
+        .catch(() => {
+          localStorage.removeItem('lumina_token');
+          sessionStorage.removeItem('lumina_token');
+        })
         .finally(() => setLoading(false));
       return;
     }
@@ -43,7 +53,7 @@ export function AuthProvider({ children }) {
       try {
         const autoToken = await window.electronAPI.getAutoLoginToken();
         if (autoToken) {
-          localStorage.setItem('lumina_token', autoToken);
+          getTokenStorage().setItem('lumina_token', autoToken);
           const userData = await authAPI.getMe();
           setUser(userData);
         }
@@ -71,6 +81,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handleForcedLogout = () => {
       localStorage.removeItem('lumina_token');
+      sessionStorage.removeItem('lumina_token');
       setUser(null);
     };
     window.addEventListener('auth:logout', handleForcedLogout);
@@ -79,7 +90,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     const response = await authAPI.login(credentials);
-    localStorage.setItem('lumina_token', response.access_token);
+    getTokenStorage().setItem('lumina_token', response.access_token);
     setUser(response.user);
     return response;
   }, []);
@@ -91,7 +102,7 @@ export function AuthProvider({ children }) {
       username: userData.username,
       password: userData.password,
     });
-    localStorage.setItem('lumina_token', loginResp.access_token);
+    getTokenStorage().setItem('lumina_token', loginResp.access_token);
     setUser(loginResp.user);
     return response;
   }, []);

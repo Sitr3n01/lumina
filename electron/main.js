@@ -535,10 +535,10 @@ function openWizard() {
     log.info('[Main] Primeiro run detectado - abrindo wizard...');
 
     const wizardWindow = new BrowserWindow({
-        width: 1920,
-        height: 1000,
-        minWidth: 1440,
-        minHeight: 800,
+        width: 1440,
+        height: 900,
+        minWidth: 1024,
+        minHeight: 720,
         resizable: true,
         frame: true,
         titleBarStyle: 'default',

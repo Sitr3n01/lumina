@@ -264,6 +264,7 @@ const ChatInput = ({ input, setInput, onSend, onKeyDown, loading }) => (
     border: '1px solid var(--border-color, #23303d)',
     borderRadius: 12,
     padding: '10px 12px',
+    marginTop: 12,
   }}>
     <textarea
       value={input}

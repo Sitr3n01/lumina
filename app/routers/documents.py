@@ -14,6 +14,7 @@ from app.models.property import Property
 from app.models.guest import Guest
 from app.middleware.auth import get_current_active_user
 from app.services.document_service import DocumentService
+from app.services.settings_service import SettingsService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -33,6 +34,7 @@ doc_service = DocumentService()
 @router.post("/generate", response_model=DocumentResponse)
 def generate_document(
     request: GenerateDocumentRequest,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -48,12 +50,16 @@ def generate_document(
     property_data = request.property.model_dump()
     guest_data = request.guest.model_dump()
 
+    # Buscar logo do condomínio das configurações
+    logo_url = SettingsService(db).get_all_settings().get("condoLogoUrl", "")
+
     # Gerar documento
     result = doc_service.generate_condo_authorization(
         booking_data=booking_data,
         property_data=property_data,
         guest_data=guest_data,
-        save_to_file=request.save_to_file
+        save_to_file=request.save_to_file,
+        logo_url=logo_url,
     )
 
     if not result["success"]:
@@ -150,12 +156,16 @@ def generate_document_from_booking(
         "owner_name": settings.OWNER_NAME,
     }
 
+    # Buscar logo do condomínio das configurações
+    logo_url = SettingsService(db).get_all_settings().get("condoLogoUrl", "")
+
     # Gerar documento
     result = doc_service.generate_condo_authorization(
         booking_data=booking_data,
         property_data=property_data,
         guest_data=guest_data,
-        save_to_file=request.save_to_file
+        save_to_file=request.save_to_file,
+        logo_url=logo_url,
     )
 
     if not result["success"]:
@@ -348,6 +358,7 @@ def delete_document(
 @router.post("/generate-and-download")
 async def generate_and_download(
     request: GenerateDocumentRequest,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -363,12 +374,16 @@ async def generate_and_download(
     property_data = request.property.model_dump()
     guest_data = request.guest.model_dump()
 
+    # Buscar logo do condomínio das configurações
+    logo_url = SettingsService(db).get_all_settings().get("condoLogoUrl", "")
+
     # Gerar documento (sem salvar em arquivo)
     result = doc_service.generate_condo_authorization(
         booking_data=booking_data,
         property_data=property_data,
         guest_data=guest_data,
-        save_to_file=False
+        save_to_file=False,
+        logo_url=logo_url,
     )
 
     if not result["success"]:

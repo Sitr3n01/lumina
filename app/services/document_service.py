@@ -8,10 +8,13 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from docx import Document
+from docx.shared import Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import shutil
 import io
 import re
 import json
+import base64
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -73,12 +76,47 @@ class DocumentService:
         else:
             cell.text = text
 
+    def _insert_logo_header(self, doc, logo_url: str) -> None:
+        """
+        Insere a logo do condomínio no início do documento.
+        Suporta base64 data URI e URL pública.
+        Falha graciosamente — não interrompe a geração do documento se a logo não puder ser inserida.
+        """
+        try:
+            if logo_url.startswith('data:'):
+                # Base64 data URI: data:image/png;base64,<data>
+                _, encoded = logo_url.split(',', 1)
+                # Corrigir padding base64 se necessário
+                padding = 4 - len(encoded) % 4
+                if padding != 4:
+                    encoded += '=' * padding
+                img_io = io.BytesIO(base64.b64decode(encoded))
+            else:
+                # URL pública — download com timeout curto
+                import requests as http_requests
+                resp = http_requests.get(logo_url, timeout=5)
+                resp.raise_for_status()
+                img_io = io.BytesIO(resp.content)
+
+            # Adicionar parágrafo com imagem (alinhado à direita)
+            para = doc.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = para.add_run()
+            run.add_picture(img_io, height=Cm(1.8))
+
+            # Mover elemento XML para o início do body (antes de todas as tabelas)
+            doc.element.body.insert(0, para._element)
+
+        except Exception as e:
+            logger.warning(f"[DocumentService] Logo insert failed (non-fatal): {e}")
+
     def generate_condo_authorization(
         self,
         booking_data: Dict[str, Any],
         property_data: Dict[str, Any],
         guest_data: Dict[str, Any],
-        save_to_file: bool = True
+        save_to_file: bool = True,
+        logo_url: str = "",
     ) -> Dict[str, Any]:
         """
         Gera autorização de condomínio preenchendo o template real.
@@ -99,6 +137,10 @@ class DocumentService:
 
             # Copiar template para não modificar o original
             doc = Document(str(template_path))
+
+            # Inserir logo do condomínio no início do documento (se configurada)
+            if logo_url:
+                self._insert_logo_header(doc, logo_url)
 
             # Formatar datas
             check_in = booking_data.get('check_in')

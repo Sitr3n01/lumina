@@ -43,11 +43,11 @@ class TelegramBot:
     async def start(self):
         """Inicia o bot"""
         if not self.token or self.token == "":
-            print("[WARN] TELEGRAM_BOT_TOKEN nao configurado. Bot nao sera iniciado.")
+            logger.warning("[TelegramBot] TELEGRAM_BOT_TOKEN nao configurado. Bot nao sera iniciado.")
             return
 
         if not self.admin_ids:
-            print("[WARN] TELEGRAM_ADMIN_USER_IDS nao configurado. Bot nao sera iniciado.")
+            logger.warning("[TelegramBot] TELEGRAM_ADMIN_USER_IDS nao configurado. Bot nao sera iniciado.")
             return
 
         # Criar aplicação
@@ -57,22 +57,22 @@ class TelegramBot:
         self._register_handlers()
 
         # Iniciar bot
-        print("[BOT] Iniciando bot do Telegram...")
+        logger.info("[TelegramBot] Iniciando bot do Telegram...")
         await self.application.initialize()
         await self.application.start()
         await self.application.updater.start_polling()
         self._running = True
-        print("[OK] Bot do Telegram iniciado com sucesso!")
+        logger.info("[TelegramBot] Bot do Telegram iniciado com sucesso!")
 
     async def stop(self):
         """Para o bot"""
         if self.application and self._running:
-            print("[BOT] Parando bot do Telegram...")
+            logger.info("[TelegramBot] Parando bot do Telegram...")
             await self.application.updater.stop()
             await self.application.stop()
             await self.application.shutdown()
             self._running = False
-            print("[OK] Bot do Telegram parado!")
+            logger.info("[TelegramBot] Bot do Telegram parado!")
 
     def _register_handlers(self):
         """Registra todos os handlers de comandos"""
@@ -411,7 +411,13 @@ class TelegramBot:
 
             await update.message.reply_text(text, parse_mode="Markdown")
         except Exception as e:
-            await update.message.reply_text(f"❌ Erro na sincronização: {str(e)}")
+            logger.error(
+                f"[TelegramBot] Erro na sincronização para user {update.effective_user.id}: {e}",
+                exc_info=True,
+            )
+            await update.message.reply_text(
+                "❌ Erro ao sincronizar os calendários. Verifique os logs do sistema."
+            )
         finally:
             db.close()
 
@@ -470,7 +476,9 @@ class TelegramBot:
                 )
 
                 # Gerar documento
+                from app.services.settings_service import SettingsService
                 doc_service = DocumentService()
+                logo_url = SettingsService(db).get_all_settings().get("condoLogoUrl", "")
                 booking_data = {
                     "id": booking.id,
                     "check_in": booking.check_in_date,
@@ -493,7 +501,8 @@ class TelegramBot:
                     booking_data=booking_data,
                     property_data=property_data,
                     guest_data=guest_data,
-                    save_to_file=True
+                    save_to_file=True,
+                    logo_url=logo_url,
                 )
 
                 if not result["success"]:

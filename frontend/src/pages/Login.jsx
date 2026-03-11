@@ -9,9 +9,12 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    localStorage.getItem('lumina_remember_login') !== 'false'
+  );
 
   const [form, setForm] = useState({
-    username: '',
+    username: localStorage.getItem('lumina_last_username') || '',
     email: '',
     password: '',
     full_name: '',
@@ -29,6 +32,11 @@ const Login = () => {
     setError('');
   };
 
+  const handleRememberMeChange = (checked) => {
+    setRememberMe(checked);
+    localStorage.setItem('lumina_remember_login', checked ? 'true' : 'false');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -36,6 +44,12 @@ const Login = () => {
 
     try {
       if (mode === 'login') {
+        // Salvar preferência e username antes de logar
+        if (rememberMe) {
+          localStorage.setItem('lumina_last_username', form.username);
+        } else {
+          localStorage.removeItem('lumina_last_username');
+        }
         await login({ username: form.username, password: form.password });
       } else {
         await register({
@@ -157,6 +171,21 @@ const Login = () => {
               </button>
             </div>
           </div>
+
+          {!isSetup && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => handleRememberMeChange(e.target.checked)}
+                style={{ width: 'auto', cursor: 'pointer' }}
+              />
+              <label htmlFor="rememberMe" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', margin: 0 }}>
+                Manter sessão ativa
+              </label>
+            </div>
+          )}
 
           {error && (
             <div className="message message-error" style={{ margin: 0 }}>
