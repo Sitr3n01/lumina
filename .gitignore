@@ -126,6 +126,9 @@ cython_debug/
 .ipynb_checkpoints/
 *.ipynb
 
+# === ASSETS EXTERNOS (gerados por ferramentas como favicon.io) ===
+favicon_io/
+
 # === ESPECÍFICO DO PROJETO ===
 # Migrations (quando adicionar Alembic)
 # migrations/versions/*.py

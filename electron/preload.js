@@ -173,3 +173,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('update:not-available', handler);
     },
 });
+
+// === WIZARD API ===
+// Exposta separadamente para que wizard.html funcione tanto via wizard-preload.js
+// (fluxo legado) quanto via este preload (janela única — mainWindow carrega wizard.html).
+contextBridge.exposeInMainWorld('wizardAPI', {
+    /** Retorna as configurações padrão para preencher o wizard */
+    getDefaultConfig: () => ipcRenderer.invoke('wizard:getDefaults'),
+
+    /** Salva a configuração no arquivo .env do userData */
+    saveConfig: (data) => ipcRenderer.invoke('wizard:save', data),
+
+    /** Testa se uma URL iCal é válida */
+    testIcalUrl: (url) => ipcRenderer.invoke('wizard:testIcal', url),
+
+    /** Testa a conexão com o servidor de email (SMTP) */
+    testEmailConnection: (config) => ipcRenderer.invoke('wizard:testEmail', config),
+
+    /** Finaliza o wizard e sinaliza para iniciar o app principal */
+    complete: () => ipcRenderer.invoke('wizard:complete'),
+
+    /** Salva o PDF do template de autorização em userData */
+    savePdfTemplate: (pdfArrayBuffer) => ipcRenderer.invoke('wizard:savePdf', pdfArrayBuffer),
+});

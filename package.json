@@ -1,6 +1,6 @@
 {
     "name": "lumina-desktop",
-    "version": "A.0.1.0",
+    "version": "0.1.0",
     "description": "LUMINA - Apartment Management System",
     "main": "electron/main.js",
     "private": true,
@@ -25,5 +25,59 @@
         "electron": "^28.3.3",
         "electron-builder": "^24.9.0",
         "wait-on": "^7.2.0"
+    },
+    "build": {
+        "appId": "com.lumina.desktop",
+        "productName": "LUMINA",
+        "copyright": "Copyright © 2026 LUMINA",
+        "asar": false,
+        "directories": {
+            "buildResources": "electron/assets",
+            "output": "release"
+        },
+        "files": [
+            "electron/**/*",
+            "package.json",
+            "!electron/assets/!(tray-icon.*)"
+        ],
+        "extraResources": [
+            {
+                "from": "frontend/dist",
+                "to": "app/frontend/dist",
+                "filter": ["**/*"]
+            },
+            {
+                "from": "dist/lumina-backend",
+                "to": "python-dist/lumina-backend",
+                "filter": ["**/*"]
+            },
+            {
+                "from": "templates",
+                "to": "templates",
+                "filter": ["**/*"]
+            }
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": ["x64"]
+                }
+            ],
+            "icon": "electron/assets/tray-icon.png",
+            "artifactName": "LUMINA-Setup-A.${version}.exe"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "LUMINA"
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "Sitr3n01",
+            "repo": "AP_Controller"
+        }
     }
 }

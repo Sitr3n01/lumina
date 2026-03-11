@@ -191,23 +191,49 @@ function registerIpcHandlers(mainWindow, pythonManager) {
     // === FACTORY RESET ===
 
     /**
-     * Factory reset: remove o .env do userData e relança o app.
-     * Na próxima inicialização, isFirstRun() retorna true → wizard abre automaticamente.
+     * Factory reset: remove .env E o banco de dados do userData, depois relança o app.
+     * Na próxima inicialização, isFirstRun() retorna true → wizard abre com DB limpo.
+     * IMPORTANTE: Apagar apenas o .env deixava o DB com o usuário antigo, causando 403
+     * no registro após o wizard → usuário novo nunca era criado.
      */
     ipcMain.handle('app:factoryReset', async () => {
         log.info('[IPC] app:factoryReset — iniciando reset de fábrica...');
+        const userData = app.getPath('userData');
+
+        // 1. Remover .env (faz isFirstRun() retornar true → wizard na próxima abertura)
         try {
-            const envPath = path.join(app.getPath('userData'), '.env');
+            const envPath = path.join(userData, '.env');
             if (fs.existsSync(envPath)) {
                 fs.unlinkSync(envPath);
-                log.info('[IPC] .env removido com sucesso. App será relançado para o wizard.');
-            } else {
-                log.warn('[IPC] .env não encontrado em userData — app será relançado mesmo assim.');
+                log.info('[IPC] .env removido.');
             }
         } catch (err) {
-            log.error('[IPC] Erro ao remover .env durante factory reset:', err.message);
+            log.error('[IPC] Erro ao remover .env:', err.message);
         }
-        // Relaunch queue: inicia nova instância e encerra esta
+
+        // 2. Remover banco de dados (garante que registro no wizard cria usuário novo)
+        try {
+            const dbPath = path.join(userData, 'data', 'lumina.db');
+            if (fs.existsSync(dbPath)) {
+                fs.unlinkSync(dbPath);
+                log.info('[IPC] lumina.db removido (reset completo).');
+            }
+        } catch (err) {
+            log.error('[IPC] Erro ao remover lumina.db:', err.message);
+        }
+
+        // 3. Remover pending-admin.json se existir (evita conflito na próxima execução)
+        try {
+            const pendingPath = path.join(userData, 'pending-admin.json');
+            if (fs.existsSync(pendingPath)) {
+                fs.unlinkSync(pendingPath);
+                log.info('[IPC] pending-admin.json removido.');
+            }
+        } catch (err) {
+            log.error('[IPC] Erro ao remover pending-admin.json:', err.message);
+        }
+
+        // Relaunch: inicia nova instância e encerra esta
         app.relaunch();
         app.exit(0);
     });

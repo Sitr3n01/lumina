@@ -1,8 +1,9 @@
 # LUMINA A.0.1.0 - Estado do Projeto
 
-> Atualizado em: 10/03/2026
+> Atualizado em: 11/03/2026
 > Branch: `feature/electron-migration`
 > Versao: **A.0.1.0** (Alpha 0.1.0 — Desktop Electron)
+> Release: publicada no GitHub (LUMINA-Setup-A.0.1.0.exe)
 
 ---
 
@@ -68,7 +69,7 @@ Aplicativo Desktop Windows usando Electron, com backend Python (FastAPI) embutid
 | **MVP2: Notificacoes** | ✅ Completo | Central DB-backed, polling do Electron tray |
 | **MVP3: AI Chat** | ✅ Completo | Multi-provider (Anthropic/OpenAI/compatible), chat streaming |
 | **MVP3: AI Pricing** | ✅ Completo | Sugestoes de precificacao via AI |
-| **Electron Desktop** | ✅ Completo | Wizard setup, splash unificado, tray, auto-update |
+| **Electron Desktop** | ✅ Completo | Wizard setup, splash unificado, tray, auto-update, janela unica |
 | **Autenticacao** | ✅ Completo | JWT, register invite-only, lockout, blacklist |
 | **Auditoria de Seguranca** | ✅ Score ~9.0/10 | Jinja2 sandbox, will-navigate, path traversal bloqueado |
 | **Testes Automatizados** | ✅ 34/35 passando | 1 falha pre-existente (token blacklist isolation) |
@@ -112,7 +113,7 @@ app.whenReady()
 | `app:path` | handle | userData path |
 | `app:getAutoLaunch` | handle | Status inicio com Windows |
 | `app:setAutoLaunch` | handle | Configurar inicio com Windows |
-| `app:factoryReset` | handle | Apaga .env + relanca para wizard |
+| `app:factoryReset` | handle | Apaga .env + lumina.db + pending-admin.json + relanca para wizard |
 | `app:quit` | on | Encerra o app |
 | `window:minimize` | on | Minimiza janela |
 | `window:close` | on | Esconde (vai para tray) |
@@ -207,7 +208,9 @@ app.whenReady()
 
 ---
 
-## 9. Bugs Corrigidos nesta Sessao (10/03/2026)
+## 9. Bugs Corrigidos
+
+### Sessao 10/03/2026
 
 | Bug | Arquivo | Descricao | Severidade |
 |-----|---------|-----------|-----------|
@@ -216,6 +219,16 @@ app.whenReady()
 | Logo nao passada | `app/telegram/bot.py` | `generate_condo_authorization()` sem `logo_url` — logo nunca aparecia em docs Telegram | MEDIO |
 | print() em producao | `app/telegram/bot.py` | Usando print() em vez de logger nos metodos start/stop | BAIXO |
 | Wizard gigante | `electron/main.js` | Janela do wizard era 1920x1000 vs dashboard 1440x900 | UX |
+
+### Sessao 11/03/2026
+
+| Bug | Arquivo | Descricao | Severidade |
+|-----|---------|-----------|-----------|
+| Auto-login falha apos wizard | `electron/main.js` | Wizard concluia mas app abria na tela de login sem autenticar | CRITICO |
+| Register 403 loop | `electron/main.js` | Em segundas execucoes, register retornava 403 (usuario ja existe) — autoLoginToken nunca era setado | CRITICO |
+| Factory reset incompleto | `electron/ipc-handlers.js` | Reset apagava apenas `.env`, mantinha DB → wizard rodava mas register voltava 403 | ALTO |
+| sentinel.db nao limpo no reset dev | `scripts/reset_dev_state.bat` | Dev usava banco diferente (`data/sentinel.db`) nao incluido no script de reset | MEDIO |
+| Tray icon ausente na build | `electron/tray.js` | Windows requer .ico para bandeja — PNG falhava silenciosamente; fallback buscava `icon.ico` inexistente | MEDIO |
 
 ---
 
