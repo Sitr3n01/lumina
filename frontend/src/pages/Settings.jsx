@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, RefreshCw, CheckCircle, AlertCircle, Eye, EyeOff, Bot, Zap } from 'lucide-react';
+import { Save, RefreshCw, CheckCircle, AlertCircle, Eye, EyeOff, Bot, Zap, Monitor, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { settingsAPI, aiAPI } from '../services/api';
 import './Settings.css';
 
@@ -8,6 +8,11 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [autoLaunch, setAutoLaunch] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(
+    localStorage.getItem('lumina_remember_login') !== 'false'
+  );
 
   const [settings, setSettings] = useState({
     // Dados do imovel (carregados do servidor)
@@ -37,10 +42,10 @@ const Settings = () => {
     telegramBotToken: '',
     telegramAdminUserIds: '',
 
-    // Email
-    emailProvider: 'gmail',
+    // Email (read-only — configurado no assistente de instalação)
+    emailProvider: '',
     emailFrom: '',
-    emailPassword: '',
+    emailPasswordSet: false,
     emailSmtpHost: '',
     emailSmtpPort: 587,
     emailImapHost: '',
@@ -61,6 +66,13 @@ const Settings = () => {
     condoLogoUrl: '',
   });
 
+  // Carregar estado do auto-launch via Electron IPC
+  useEffect(() => {
+    if (window.electronAPI?.getAutoLaunch) {
+      window.electronAPI.getAutoLaunch().then(setAutoLaunch).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -74,9 +86,19 @@ const Settings = () => {
           ...prev,
           propertyName: data.propertyName || prev.propertyName,
           propertyAddress: data.propertyAddress || prev.propertyAddress,
+          maxGuests: data.maxGuests ?? prev.maxGuests,
           condoName: data.condoName || prev.condoName,
           condoAdminName: data.condoAdminName || prev.condoAdminName,
           condoEmail: data.condoEmail || prev.condoEmail,
+          // iCal (read-only, do .env)
+          airbnbIcalUrl: data.airbnbIcalUrl || prev.airbnbIcalUrl,
+          bookingIcalUrl: data.bookingIcalUrl || prev.bookingIcalUrl,
+          // Email (read-only, do .env)
+          emailProvider: data.emailProvider || prev.emailProvider,
+          emailFrom: data.emailFrom || prev.emailFrom,
+          emailPasswordSet: data.emailPasswordSet ?? prev.emailPasswordSet,
+          // Telegram (read-only, do .env)
+          telegramBotToken: data.telegramBotToken || prev.telegramBotToken,
           ownerName: data.ownerName || prev.ownerName,
           ownerEmail: data.ownerEmail || prev.ownerEmail,
           ownerPhone: data.ownerPhone || prev.ownerPhone,
@@ -105,38 +127,40 @@ const Settings = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const loadSettings = async () => {
+  const handleHardReset = async () => {
+    const msg =
+      'ATENÇÃO: Hard Reset vai apagar TODAS as configurações editadas ' +
+      '(incluindo chaves de IA configuradas pela interface) e reverter para os dados de fábrica.\n\n' +
+      'O aplicativo será reiniciado e voltará à tela do wizard de configuração inicial.\n\n' +
+      'Esta ação não pode ser desfeita. Deseja continuar?';
+    let confirmed = false;
+    if (window.electronAPI?.showConfirmDialog) {
+      confirmed = await window.electronAPI.showConfirmDialog({
+        title: 'Hard Reset — Reverter para Fábrica',
+        message: msg,
+        buttons: ['Cancelar', 'Sim, Resetar Tudo'],
+        defaultId: 0,
+        cancelId: 0,
+      });
+    } else {
+      confirmed = window.confirm(msg);
+    }
+    if (!confirmed) return;
     try {
-      setLoading(true);
-      const response = await settingsAPI.getAll();
-      const data = response.data;
-
-      setSettings(prev => ({
-        ...prev,
-        propertyName: data.propertyName || prev.propertyName,
-        propertyAddress: data.propertyAddress || prev.propertyAddress,
-        condoName: data.condoName || prev.condoName,
-        condoAdminName: data.condoAdminName || prev.condoAdminName,
-        condoEmail: data.condoEmail || prev.condoEmail,
-        ownerName: data.ownerName || prev.ownerName,
-        ownerEmail: data.ownerEmail || prev.ownerEmail,
-        ownerPhone: data.ownerPhone || prev.ownerPhone,
-        ownerApto: data.ownerApto || prev.ownerApto,
-        ownerBloco: data.ownerBloco || prev.ownerBloco,
-        ownerGaragem: data.ownerGaragem || prev.ownerGaragem,
-        syncIntervalMinutes: data.syncIntervalMinutes || prev.syncIntervalMinutes,
-        enableAutoDocumentGeneration: data.enableAutoDocumentGeneration ?? prev.enableAutoDocumentGeneration,
-        enableConflictNotifications: data.enableConflictNotifications ?? prev.enableConflictNotifications,
-        aiProvider: data.aiProvider || prev.aiProvider,
-        aiApiKeySet: data.aiApiKeySet ?? prev.aiApiKeySet,
-        aiModel: data.aiModel || prev.aiModel,
-        aiBaseUrl: data.aiBaseUrl || prev.aiBaseUrl,
-      }));
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      showMessage('Erro ao carregar configuracoes', 'error');
-    } finally {
-      setLoading(false);
+      await settingsAPI.reset();
+      if (window.electronAPI?.factoryReset) {
+        // Electron: remove .env do userData e relança o app → wizard abre automaticamente
+        await window.electronAPI.factoryReset();
+        // Código abaixo não é executado (app já foi encerrado)
+      } else {
+        // Web mode: limpar tokens e redirecionar para login
+        localStorage.removeItem('lumina_token');
+        sessionStorage.removeItem('lumina_token');
+        window.dispatchEvent(new Event('auth:logout'));
+      }
+    } catch (err) {
+      console.error('Hard reset failed:', err);
+      showMessage('Erro ao resetar configurações.', 'error');
     }
   };
 
@@ -160,6 +184,18 @@ const Settings = () => {
 
   const handleChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAutoLaunchChange = async (enabled) => {
+    setAutoLaunch(enabled);
+    if (window.electronAPI?.setAutoLaunch) {
+      await window.electronAPI.setAutoLaunch(enabled);
+    }
+  };
+
+  const handleRememberLoginChange = (enabled) => {
+    setRememberLogin(enabled);
+    localStorage.setItem('lumina_remember_login', enabled ? 'true' : 'false');
   };
 
   if (loading) {
@@ -212,18 +248,38 @@ const Settings = () => {
 
       <div className="settings-content">
         {activeTab === 'easy' ? (
-          <EasySettings settings={settings} onChange={handleChange} />
+          <EasySettings settings={settings} onChange={handleChange} editMode={editMode} />
         ) : activeTab === 'ai' ? (
           <AISettings settings={settings} onChange={handleChange} showMessage={showMessage} />
         ) : (
-          <AdvancedSettings settings={settings} onChange={handleChange} />
+          <AdvancedSettings
+            settings={settings}
+            onChange={handleChange}
+            autoLaunch={autoLaunch}
+            onAutoLaunchChange={handleAutoLaunchChange}
+            rememberLogin={rememberLogin}
+            onRememberLoginChange={handleRememberLoginChange}
+          />
         )}
       </div>
 
       <div className="settings-actions">
-        <button className="btn btn-secondary" onClick={loadSettings} disabled={saving}>
-          <RefreshCw size={16} />
-          Restaurar
+        <button
+          className="btn"
+          onClick={handleHardReset}
+          disabled={saving}
+          title="Hard Reset — Apaga todas as configurações editadas e retorna ao wizard"
+          style={{ background: '#e53e3e', color: '#fff', border: 'none' }}
+        >
+          <AlertTriangle size={16} />
+          Hard Reset
+        </button>
+        <button
+          className={`btn ${editMode ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setEditMode(v => !v)}
+          title={editMode ? 'Desativar edição de campos críticos' : 'Editar campos do wizard'}
+        >
+          {editMode ? <><Unlock size={16} /> Edição Ativa</> : <><Lock size={16} /> Editar Dados</>}
         </button>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           <Save size={16} />
@@ -235,9 +291,21 @@ const Settings = () => {
 };
 
 // ========== ABA FACIL ==========
-const EasySettings = ({ settings, onChange }) => {
+const EasySettings = ({ settings, onChange, editMode }) => {
   return (
     <div className="settings-section">
+
+      {/* Banner de aviso do modo de edição */}
+      {editMode && (
+        <div className="message message-warning" style={{ marginBottom: 16 }}>
+          <AlertTriangle size={16} />
+          <span>
+            Modo de edição ativo — alterações nos campos do wizard serão salvas no banco de dados
+            e terão precedência sobre os valores originais do wizard.
+          </span>
+        </div>
+      )}
+
       <div className="section-group">
         <h3 className="section-title">Dados do Imovel</h3>
         <p className="section-description">
@@ -251,8 +319,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.propertyName}
+              readOnly={!editMode}
               onChange={(e) => onChange('propertyName', e.target.value)}
-              placeholder="Ex: Apartamento 2 Quartos - Centro"
             />
           </div>
 
@@ -262,8 +330,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.propertyAddress}
+              readOnly={!editMode}
               onChange={(e) => onChange('propertyAddress', e.target.value)}
-              placeholder="Rua, Numero, Bairro, CEP, Cidade - Estado"
             />
           </div>
 
@@ -279,6 +347,12 @@ const EasySettings = ({ settings, onChange }) => {
             />
           </div>
         </div>
+
+        {!editMode && (
+          <div className="info-box">
+            <p>Nome e endereço do imóvel são configurados durante a instalação. Ative o <strong>Modo de Edição</strong> para alterá-los.</p>
+          </div>
+        )}
       </div>
 
       <div className="section-group">
@@ -294,8 +368,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.condoName}
+              readOnly={!editMode}
               onChange={(e) => onChange('condoName', e.target.value)}
-              placeholder="Ex: Condominio Residencial Exemplo"
             />
           </div>
 
@@ -305,8 +379,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.condoAdminName}
+              readOnly={!editMode}
               onChange={(e) => onChange('condoAdminName', e.target.value)}
-              placeholder="Ex: Administradora XYZ Ltda"
             />
           </div>
 
@@ -343,7 +417,9 @@ const EasySettings = ({ settings, onChange }) => {
       <div className="section-group">
         <h3 className="section-title">Dados do Proprietario</h3>
         <p className="section-description">
-          Informacoes fixas do proprietario (carregadas do servidor)
+          {editMode
+            ? 'Modo de edição ativo — os campos abaixo podem ser alterados'
+            : 'Informacoes do proprietario (ative o Modo de Edição para alterar)'}
         </p>
 
         <div className="form-grid">
@@ -353,7 +429,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.ownerName}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerName', e.target.value)}
             />
           </div>
 
@@ -363,7 +440,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="email"
               className="input"
               value={settings.ownerEmail}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerEmail', e.target.value)}
             />
           </div>
 
@@ -373,7 +451,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.ownerPhone}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerPhone', e.target.value)}
             />
           </div>
 
@@ -383,7 +462,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.ownerApto}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerApto', e.target.value)}
             />
           </div>
 
@@ -393,7 +473,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.ownerBloco}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerBloco', e.target.value)}
             />
           </div>
 
@@ -403,14 +484,17 @@ const EasySettings = ({ settings, onChange }) => {
               type="text"
               className="input"
               value={settings.ownerGaragem}
-              readOnly
+              readOnly={!editMode}
+              onChange={(e) => onChange('ownerGaragem', e.target.value)}
             />
           </div>
         </div>
 
-        <div className="info-box">
-          <p><strong>Nota:</strong> Os dados do proprietario sao configurados no servidor (.env) e utilizados automaticamente nos documentos de autorizacao.</p>
-        </div>
+        {!editMode && (
+          <div className="info-box">
+            <p><strong>Nota:</strong> Os dados do proprietario sao configurados no wizard e utilizados nos documentos de autorizacao. Ative o <strong>Modo de Edição</strong> para alterá-los.</p>
+          </div>
+        )}
       </div>
 
       <div className="section-group">
@@ -434,8 +518,8 @@ const EasySettings = ({ settings, onChange }) => {
               type="url"
               className="input"
               value={settings.airbnbIcalUrl}
-              onChange={(e) => onChange('airbnbIcalUrl', e.target.value)}
-              placeholder="https://www.airbnb.com/calendar/ical/XXXXXXX.ics"
+              readOnly
+              placeholder="Configurado durante a instalação"
             />
           </div>
 
@@ -445,10 +529,14 @@ const EasySettings = ({ settings, onChange }) => {
               type="url"
               className="input"
               value={settings.bookingIcalUrl}
-              onChange={(e) => onChange('bookingIcalUrl', e.target.value)}
-              placeholder="https://admin.booking.com/hotel/hoteladmin/ical/XXXXXXX.ics"
+              readOnly
+              placeholder="Configurado durante a instalação"
             />
           </div>
+        </div>
+
+        <div className="info-box">
+          <p>As URLs iCal são configuradas durante a instalação e usadas pelo sistema de sincronização. Para alterá-las, reconfigure o aplicativo.</p>
         </div>
       </div>
     </div>
@@ -456,9 +544,55 @@ const EasySettings = ({ settings, onChange }) => {
 };
 
 // ========== ABA AVANCADA ==========
-const AdvancedSettings = ({ settings, onChange }) => {
+const AdvancedSettings = ({ settings, onChange, autoLaunch, onAutoLaunchChange, rememberLogin, onRememberLoginChange }) => {
+  const isElectron = Boolean(window.electronAPI);
+
   return (
     <div className="settings-section">
+
+      {/* Seção Sistema — apenas no Electron */}
+      {isElectron && (
+        <div className="section-group">
+          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Monitor size={16} />
+            Sistema
+          </h3>
+          <p className="section-description">
+            Preferências do aplicativo desktop
+          </p>
+
+          <div className="form-grid">
+            <div className="form-field checkbox-field">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={autoLaunch}
+                  onChange={(e) => onAutoLaunchChange(e.target.checked)}
+                />
+                <span>Iniciar com o Windows</span>
+              </label>
+              <small className="field-help">
+                Abre o LUMINA automaticamente quando o Windows inicializa
+              </small>
+            </div>
+
+            <div className="form-field checkbox-field">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(e) => onRememberLoginChange(e.target.checked)}
+                />
+                <span>Manter sessão ativa entre reinicializações</span>
+              </label>
+              <small className="field-help">
+                Mantém o login salvo ao fechar e reabrir o aplicativo. Desative para exigir login a cada abertura.
+              </small>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="section-group">
         <h3 className="section-title">Sincronizacao</h3>
         <p className="section-description">
@@ -486,36 +620,26 @@ const AdvancedSettings = ({ settings, onChange }) => {
       <div className="section-group">
         <h3 className="section-title">Telegram Bot</h3>
         <p className="section-description">
-          Configuracoes para notificacoes via Telegram
+          Configuracoes de Telegram definidas durante a instalacao (somente leitura)
         </p>
+
+        <div className="info-box">
+          <p>
+            <strong>Configurado na instalação.</strong> Para alterar o token ou IDs de administrador,
+            reconfigure o aplicativo pelo assistente de instalação.
+          </p>
+        </div>
 
         <div className="form-grid">
           <div className="form-field">
-            <label className="label">Token do Bot</label>
+            <label className="label">Token do Bot (mascarado)</label>
             <input
               type="text"
               className="input"
               value={settings.telegramBotToken}
-              onChange={(e) => onChange('telegramBotToken', e.target.value)}
-              placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+              readOnly
+              placeholder="Não configurado"
             />
-            <small className="field-help">
-              Obtenha em: @BotFather no Telegram
-            </small>
-          </div>
-
-          <div className="form-field">
-            <label className="label">IDs de Usuarios Admin</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.telegramAdminUserIds}
-              onChange={(e) => onChange('telegramAdminUserIds', e.target.value)}
-              placeholder="123456789,987654321"
-            />
-            <small className="field-help">
-              IDs separados por virgula. Obtenha em: @userinfobot
-            </small>
           </div>
         </div>
       </div>
@@ -523,23 +647,31 @@ const AdvancedSettings = ({ settings, onChange }) => {
       <div className="section-group">
         <h3 className="section-title">Configuracoes de Email</h3>
         <p className="section-description">
-          Configure o provedor e credenciais de email para envio automatico
+          Configuracoes de email definidas durante a instalacao (somente leitura)
         </p>
+
+        <div className="info-box">
+          <p>
+            <strong>Configurado na instalação.</strong> Para alterar provedor, credenciais ou configurações
+            SMTP, reconfigure o aplicativo pelo assistente de instalação.
+            {settings.emailPasswordSet && (
+              <span style={{ marginLeft: 8, color: 'var(--success)', fontWeight: 500 }}>
+                ✓ Senha configurada
+              </span>
+            )}
+          </p>
+        </div>
 
         <div className="form-grid">
           <div className="form-field">
             <label className="label">Provedor de Email</label>
-            <select
-              className="select"
+            <input
+              type="text"
+              className="input"
               value={settings.emailProvider}
-              onChange={(e) => onChange('emailProvider', e.target.value)}
-              style={{ width: '100%' }}
-            >
-              <option value="gmail">Gmail</option>
-              <option value="outlook">Outlook</option>
-              <option value="yahoo">Yahoo</option>
-              <option value="custom">Personalizado</option>
-            </select>
+              readOnly
+              placeholder="Não configurado"
+            />
           </div>
 
           <div className="form-field">
@@ -548,68 +680,11 @@ const AdvancedSettings = ({ settings, onChange }) => {
               type="email"
               className="input"
               value={settings.emailFrom}
-              onChange={(e) => onChange('emailFrom', e.target.value)}
-              placeholder="seu-email@gmail.com"
+              readOnly
+              placeholder="Não configurado"
             />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Senha / App Password</label>
-            <input
-              type="password"
-              className="input"
-              value={settings.emailPassword}
-              onChange={(e) => onChange('emailPassword', e.target.value)}
-              placeholder="Senha do aplicativo"
-            />
-            <small className="field-help">
-              Para Gmail, use uma Senha de Aplicativo (App Password)
-            </small>
           </div>
         </div>
-
-        {settings.emailProvider === 'custom' && (
-          <div className="form-grid" style={{ marginTop: '16px' }}>
-            <div className="form-field">
-              <label className="label">SMTP Host</label>
-              <input
-                type="text"
-                className="input"
-                value={settings.emailSmtpHost}
-                onChange={(e) => onChange('emailSmtpHost', e.target.value)}
-                placeholder="smtp.example.com"
-              />
-            </div>
-            <div className="form-field">
-              <label className="label">SMTP Porta</label>
-              <input
-                type="number"
-                className="input"
-                value={settings.emailSmtpPort}
-                onChange={(e) => onChange('emailSmtpPort', parseInt(e.target.value))}
-              />
-            </div>
-            <div className="form-field">
-              <label className="label">IMAP Host</label>
-              <input
-                type="text"
-                className="input"
-                value={settings.emailImapHost}
-                onChange={(e) => onChange('emailImapHost', e.target.value)}
-                placeholder="imap.example.com"
-              />
-            </div>
-            <div className="form-field">
-              <label className="label">IMAP Porta</label>
-              <input
-                type="number"
-                className="input"
-                value={settings.emailImapPort}
-                onChange={(e) => onChange('emailImapPort', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="section-group">
@@ -648,6 +723,7 @@ const AdvancedSettings = ({ settings, onChange }) => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };

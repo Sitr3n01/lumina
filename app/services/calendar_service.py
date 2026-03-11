@@ -141,7 +141,7 @@ class CalendarService:
             # Notificar novas reservas (logging + DB + futuramente Telegram)
             if new_bookings:
                 try:
-                    notification_service = NotificationService(self.db)
+                    notification_service = NotificationService()
                     for booking in new_bookings:
                         notification_service.notify_new_booking(booking)
                     logger.info(f"  [NOTIF] Notified {len(new_bookings)} new booking(s)")

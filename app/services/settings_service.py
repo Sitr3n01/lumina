@@ -16,9 +16,23 @@ logger = get_logger(__name__)
 # Mapa: chave_frontend -> chave_db
 EDITABLE_FIELDS = {
     "condoEmail": "condo_email",
+    "maxGuests": "max_guests",
     "syncIntervalMinutes": "sync_interval_minutes",
     "enableAutoDocumentGeneration": "enable_auto_document_generation",
     "enableConflictNotifications": "enable_conflict_notifications",
+    # Imóvel (override do .env via Modo de Edição)
+    "propertyName": "property_name",
+    "propertyAddress": "property_address",
+    # Condomínio (override do .env via Modo de Edição)
+    "condoName": "condo_name",
+    "condoAdminName": "condo_admin_name",
+    # Proprietário (override do .env via Modo de Edição)
+    "ownerName": "owner_name",
+    "ownerEmail": "owner_email",
+    "ownerPhone": "owner_phone",
+    "ownerApto": "owner_apto",
+    "ownerBloco": "owner_bloco",
+    "ownerGaragem": "owner_garagem",
     # AI Settings
     "aiProvider": "ai_provider",
     "aiApiKey": "ai_api_key",
@@ -31,9 +45,22 @@ EDITABLE_FIELDS = {
 # Mapa: chave_db -> tipo Python
 FIELD_TYPES = {
     "condo_email": str,
+    "max_guests": int,
     "sync_interval_minutes": int,
     "enable_auto_document_generation": bool,
     "enable_conflict_notifications": bool,
+    # Imóvel / condomínio / proprietário
+    "property_name": str,
+    "property_address": str,
+    "condo_name": str,
+    "condo_admin_name": str,
+    "owner_name": str,
+    "owner_email": str,
+    "owner_phone": str,
+    "owner_apto": str,
+    "owner_bloco": str,
+    "owner_garagem": str,
+    # AI
     "ai_provider": str,
     "ai_api_key": str,
     "ai_model": str,
@@ -57,7 +84,6 @@ class SettingsService:
         result = {
             "propertyName": app_settings.PROPERTY_NAME,
             "propertyAddress": app_settings.PROPERTY_ADDRESS,
-            "maxGuests": 6,
             "condoName": app_settings.CONDO_NAME,
             "condoAdminName": app_settings.CONDO_ADMIN_NAME,
             "ownerName": app_settings.OWNER_NAME,
@@ -69,9 +95,19 @@ class SettingsService:
             "contactPhone": app_settings.CONTACT_PHONE,
             "contactEmail": app_settings.CONTACT_EMAIL,
             "timezone": app_settings.TIMEZONE,
+            # iCal URLs (read-only, exibição apenas)
+            "airbnbIcalUrl": getattr(app_settings, "AIRBNB_ICAL_URL", "") or "",
+            "bookingIcalUrl": getattr(app_settings, "BOOKING_ICAL_URL", "") or "",
+            # Email (read-only, exibição apenas; senha nunca retornada)
+            "emailProvider": getattr(app_settings, "EMAIL_PROVIDER", "") or "",
+            "emailFrom": getattr(app_settings, "EMAIL_FROM", "") or "",
+            "emailPasswordSet": bool(getattr(app_settings, "EMAIL_PASSWORD", "")),
+            # Telegram (read-only, exibição apenas)
+            "telegramBotToken": self._mask_token(getattr(app_settings, "TELEGRAM_BOT_TOKEN", "") or ""),
 
-            # Campos editáveis (defaults do .env)
+            # Campos editáveis (defaults do .env, substituídos pelo DB)
             "condoEmail": app_settings.CONDO_EMAIL,
+            "maxGuests": 6,
             "syncIntervalMinutes": app_settings.CALENDAR_SYNC_INTERVAL_MINUTES,
             "enableAutoDocumentGeneration": app_settings.ENABLE_AUTO_DOCUMENT_GENERATION,
             "enableConflictNotifications": app_settings.ENABLE_CONFLICT_NOTIFICATIONS,
@@ -110,6 +146,19 @@ class SettingsService:
         self.db.commit()
         return saved
 
+    def reset_all_settings(self) -> int:
+        """
+        Deleta todos os AppSetting do banco de dados, revertendo para os valores originais do .env.
+
+        Returns:
+            Número de registros deletados
+        """
+        count = self.db.query(AppSetting).count()
+        self.db.query(AppSetting).delete()
+        self.db.commit()
+        logger.info(f"[SettingsService] Hard reset: {count} configurações removidas do DB.")
+        return count
+
     def get_setting(self, db_key: str) -> Optional[str]:
         """Busca uma configuração específica do DB"""
         setting = self.db.query(AppSetting).filter(
@@ -133,6 +182,13 @@ class SettingsService:
         else:
             setting = AppSetting(key=key, value=value)
             self.db.add(setting)
+
+    @staticmethod
+    def _mask_token(token: str) -> str:
+        """Mascara token Telegram mostrando apenas os primeiros 8 chars"""
+        if not token or len(token) < 8:
+            return token
+        return token[:8] + "•" * min(len(token) - 8, 20)
 
     @staticmethod
     def _cast_value(value: str, field_type: type) -> Any:

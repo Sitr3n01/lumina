@@ -274,6 +274,15 @@ input:hover, select:hover {
   background: var(--glass-2);
 }
 
+/* Forçar tema escuro no dropdown nativo do Chromium/Electron */
+select {
+  color-scheme: dark;
+}
+select option {
+  background: var(--card-bg);
+  color: var(--text-main);
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
   background: rgba(19, 127, 236, 0.06);

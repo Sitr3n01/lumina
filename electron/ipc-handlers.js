@@ -104,6 +104,28 @@ function registerIpcHandlers(mainWindow, pythonManager) {
     /** Retorna o caminho userData do Electron */
     ipcMain.handle('app:path', () => app.getPath('userData'));
 
+    /** Retorna se o app está configurado para iniciar com o Windows */
+    ipcMain.handle('app:getAutoLaunch', () => {
+        try {
+            return app.getLoginItemSettings().openAtLogin;
+        } catch (err) {
+            log.warn('[IPC] app:getAutoLaunch falhou:', err.message);
+            return false;
+        }
+    });
+
+    /** Ativa ou desativa o início automático com o Windows */
+    ipcMain.handle('app:setAutoLaunch', (_, enabled) => {
+        try {
+            app.setLoginItemSettings({ openAtLogin: Boolean(enabled) });
+            log.info('[IPC] Auto-launch definido para:', Boolean(enabled));
+            return true;
+        } catch (err) {
+            log.error('[IPC] app:setAutoLaunch falhou:', err.message);
+            return false;
+        }
+    });
+
     // === WINDOW ===
 
     /** Minimiza a janela */
@@ -164,6 +186,30 @@ function registerIpcHandlers(mainWindow, pythonManager) {
         } catch (err) {
             log.error('[IPC] Erro ao instalar atualização:', err.message);
         }
+    });
+
+    // === FACTORY RESET ===
+
+    /**
+     * Factory reset: remove o .env do userData e relança o app.
+     * Na próxima inicialização, isFirstRun() retorna true → wizard abre automaticamente.
+     */
+    ipcMain.handle('app:factoryReset', async () => {
+        log.info('[IPC] app:factoryReset — iniciando reset de fábrica...');
+        try {
+            const envPath = path.join(app.getPath('userData'), '.env');
+            if (fs.existsSync(envPath)) {
+                fs.unlinkSync(envPath);
+                log.info('[IPC] .env removido com sucesso. App será relançado para o wizard.');
+            } else {
+                log.warn('[IPC] .env não encontrado em userData — app será relançado mesmo assim.');
+            }
+        } catch (err) {
+            log.error('[IPC] Erro ao remover .env durante factory reset:', err.message);
+        }
+        // Relaunch queue: inicia nova instância e encerra esta
+        app.relaunch();
+        app.exit(0);
     });
 
     log.info('[IPC] Todos os handlers registrados.');

@@ -14,8 +14,10 @@ logger = get_logger(__name__)
 class AIPricingService:
     def __init__(self, db: Session):
         self.db = db
-        self.api_key = settings.ANTHROPIC_API_KEY
-        
+        # Usar effective_ai_key para respeitar chave configurada via Settings (DB override)
+        # Fallback para ANTHROPIC_API_KEY por compatibilidade com .env legados
+        self.api_key = settings.effective_ai_key or settings.ANTHROPIC_API_KEY
+
         if self.api_key:
             self.client = anthropic.Anthropic(api_key=self.api_key)
         else:
@@ -84,8 +86,17 @@ class AIPricingService:
             Inclua pelo menos as próximas 4 semanas críticas.
             """
             
+            # Usar modelo configurado pelo usuário (via Settings) se for modelo Anthropic,
+            # caso contrário usar haiku como fallback seguro para o SDK anthropic
+            configured_model = settings.effective_ai_model
+            anthropic_model = (
+                configured_model
+                if configured_model and "claude" in configured_model.lower()
+                else "claude-3-haiku-20240307"
+            )
+
             response = self.client.messages.create(
-                model="claude-3-haiku-20240307",
+                model=anthropic_model,
                 max_tokens=2000,
                 temperature=0.3,
                 messages=[

@@ -19,8 +19,8 @@ api.interceptors.request.use(async (config) => {
     config.baseURL = electronBaseUrl;
   }
 
-  // Injetar token JWT em todos os requests (se disponivel)
-  const token = localStorage.getItem('lumina_token');
+  // Injetar token JWT em todos os requests (verificar ambos os storages)
+  const token = localStorage.getItem('lumina_token') || sessionStorage.getItem('lumina_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -37,6 +37,7 @@ api.interceptors.response.use(
     // 401 = token expirado ou invalido — forcar logout via evento global
     if (error.response?.status === 401) {
       localStorage.removeItem('lumina_token');
+      sessionStorage.removeItem('lumina_token');
       window.dispatchEvent(new Event('auth:logout'));
     }
 
@@ -112,7 +113,6 @@ export const systemAPI = {
 export const documentsAPI = {
   generate: (data) => api.post('/v1/documents/generate', data),
   generateFromBooking: (data) => api.post('/v1/documents/generate-from-booking', data),
-  generateReceiptFromBooking: (data) => api.post('/v1/documents/generate-receipt-from-booking', data),
   list: (params = {}) => api.get('/v1/documents/list', { params }),
   download: (filename) => api.get(`/v1/documents/download/${filename}`, { responseType: 'blob' }),
   delete: (filename) => api.delete(`/v1/documents/${filename}`),
@@ -134,6 +134,7 @@ export const emailsAPI = {
 export const settingsAPI = {
   getAll: () => api.get('/v1/settings'),
   update: (data) => api.put('/v1/settings', data),
+  reset: () => api.post('/v1/settings/reset'),
 };
 
 // ========== NOTIFICATIONS ==========
