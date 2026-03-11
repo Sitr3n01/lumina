@@ -18,14 +18,16 @@ let trayUpdateInterval = null;
  * @returns {Electron.Tray}
  */
 function createTray(mainWindow, pythonManager) {
-    // Usar tray-icon.png ou fallback para icon.ico
+    // No Windows, new Tray() requer .ico — PNG falha silenciosamente.
+    // Priorizar tray-icon.ico em win32, fallback para PNG em outros sistemas.
     const trayIconPath = (() => {
-        const png = path.join(__dirname, 'assets', 'tray-icon.png');
-        const ico = path.join(__dirname, 'assets', 'icon.ico');
         const fs = require('fs');
+        if (process.platform === 'win32') {
+            const ico = path.join(__dirname, 'assets', 'tray-icon.ico');
+            if (fs.existsSync(ico)) return ico;
+        }
+        const png = path.join(__dirname, 'assets', 'tray-icon.png');
         if (fs.existsSync(png)) return png;
-        if (fs.existsSync(ico)) return ico;
-        // Fallback: usar um ícone padrão do Electron se nenhum existir
         return path.join(__dirname, 'assets', 'tray-icon.png');
     })();
 

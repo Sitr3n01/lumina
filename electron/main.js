@@ -85,9 +85,11 @@ function updateSplash(text, progress) {
  * Cria a janela principal do aplicativo.
  * Carrega splash.html como conteúdo inicial (experiência unificada).
  * Quando o backend estiver pronto, startNormalApp() navega para o React via loadURL/loadFile.
+ * @param {Object} [options={}]
+ * @param {string} [options.initialFile] - Arquivo HTML a carregar inicialmente (padrão: splash.html)
  * @returns {BrowserWindow}
  */
-function createMainWindow() {
+function createMainWindow(options = {}) {
     const win = new BrowserWindow({
         width: 1440,
         height: 900,
@@ -107,8 +109,9 @@ function createMainWindow() {
 
     win.center();
 
-    // Carregar tela de loading inicial (evita janela branca enquanto backend inicia)
-    win.loadFile(path.join(__dirname, 'splash.html'));
+    // Carregar arquivo inicial (splash por padrão; wizard.html para primeiro run)
+    const fileToLoad = options.initialFile || path.join(__dirname, 'splash.html');
+    win.loadFile(fileToLoad);
 
     // Mostrar janela quando o splash carregar (rápido, sem flash)
     win.once('ready-to-show', () => {
@@ -338,8 +341,15 @@ function uploadPdfTemplateToBackend(port, pdfBuffer, authToken) {
 async function startNormalApp() {
     log.info('[Main] Iniciando app normal...');
 
-    // 1. Criar janela principal imediatamente — exibe splash.html como loading screen
-    mainWindow = createMainWindow();
+    // 1. Criar janela principal (ou reutilizar se já existir — fluxo pós-wizard)
+    // No fluxo wizard: mainWindow já existe carregando wizard.html.
+    // Navegar para splash enquanto o Python inicia, depois para o React.
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        mainWindow = createMainWindow();
+    } else {
+        // Janela existente (vinda do wizard): mostrar splash de loading
+        mainWindow.loadFile(path.join(__dirname, 'splash.html'));
+    }
 
     // 2. Inicializar Python Manager
     pythonManager = new PythonManager({
@@ -364,8 +374,32 @@ async function startNormalApp() {
         log.info('[Main] Backend Python pronto em', pythonManager.getUrl());
         updateSplash('Backend pronto!', 50);
 
-        // 4. Criar conta admin + auto-login se houver pending-admin.json (pós-wizard)
+        // 3.5 Detectar setup incompleto: .env existe mas DB não tem usuários e não há
+        // pending-admin.json. Isso ocorre quando uma instalação anterior completou o wizard
+        // mas o backend falhou antes de criar o admin. Re-abre o wizard para reconfiguração.
         const pendingAdminPath = path.join(app.getPath('userData'), 'pending-admin.json');
+        if (!fs.existsSync(pendingAdminPath)) {
+            try {
+                const setupRes = await fetch(
+                    `${pythonManager.getUrl()}/api/v1/auth/setup-status`
+                );
+                const setupData = await setupRes.json();
+                if (setupData.needs_setup) {
+                    log.warn('[Main] Setup incompleto detectado: backend sem usuários e sem pending-admin.json. Re-abrindo wizard...');
+                    updateSplash('Configuração inicial necessária...', 55);
+                    await new Promise(r => setTimeout(r, 600));
+                    // destroy() ignora o handler close (que faz e.preventDefault + hide)
+                    mainWindow.destroy();
+                    mainWindow = null;
+                    openWizard();
+                    return;
+                }
+            } catch (e) {
+                log.warn('[Main] Não foi possível verificar setup-status (continuando):', e.message);
+            }
+        }
+
+        // 4. Criar conta admin + auto-login se houver pending-admin.json (pós-wizard)
         let autoLoginToken = null;
 
         if (fs.existsSync(pendingAdminPath)) {
@@ -402,10 +436,26 @@ async function startNormalApp() {
                         log.warn(`[Main] Login pós-registro falhou: ${loginResult.status}. pending-admin.json mantido para retry.`);
                     }
                 } else if (regResult.status === 403) {
-                    // Usuário já existe — pending-admin.json nunca conseguirá registrar um novo.
-                    // Limpar o arquivo para evitar loop eterno; usuário deve logar com credenciais originais.
+                    // Usuário já existe — tentar auto-login com as credenciais do wizard.
+                    // Caso comum: usuário rodou o wizard mais de uma vez com as MESMAS credenciais.
+                    // Se o login funcionar, o auto-login ocorre normalmente para o dashboard.
+                    // Se falhar (credenciais diferentes das que estão no DB), cai no login manual.
+                    try {
+                        const retryLogin = await httpPost(port, '/api/v1/auth/login', {
+                            username: adminData.username,
+                            password: adminData.password,
+                        }, 10000);
+                        if (retryLogin.status === 200 && retryLogin.body.access_token) {
+                            autoLoginToken = retryLogin.body.access_token;
+                            log.info('[Main] Auto-login com usuário já existente bem-sucedido.');
+                        } else {
+                            log.warn('[Main] Auto-login com credenciais do wizard falhou (credenciais divergentes). Login manual necessário.');
+                        }
+                    } catch (loginErr) {
+                        log.warn('[Main] Erro no auto-login pós-403:', loginErr.message);
+                    }
                     try { fs.unlinkSync(pendingAdminPath); } catch (_) { }
-                    log.warn('[Main] Sistema já configurado (403). pending-admin.json removido. Login manual necessário.');
+                    log.warn('[Main] Sistema já configurado (403). pending-admin.json removido.');
                 } else {
                     // Falha transitória (500, rede, etc.) — manter para retry na próxima abertura.
                     log.warn(`[Main] Registro admin falhou: ${regResult.status} — ${JSON.stringify(regResult.body)}. pending-admin.json mantido para retry.`);
@@ -529,40 +579,26 @@ function isFirstRun() {
 }
 
 /**
- * Abre o wizard de configuração inicial
+ * Abre o wizard de configuração inicial na janela principal (sem popup separado).
+ * Usa a mesma mainWindow com preload.js combinado (electronAPI + wizardAPI).
+ * Quando o wizard conclui, a janela navega para splash → React via startNormalApp().
  */
 function openWizard() {
-    log.info('[Main] Primeiro run detectado - abrindo wizard...');
+    log.info('[Main] Primeiro run detectado - carregando wizard na janela principal...');
 
-    const wizardWindow = new BrowserWindow({
-        width: 1440,
-        height: 900,
-        minWidth: 1024,
-        minHeight: 720,
-        resizable: true,
-        frame: true,
-        titleBarStyle: 'default',
-        title: 'LUMINA - Configuração Inicial',
-        backgroundColor: '#0f0f1a',
-        webPreferences: {
-            preload: path.join(__dirname, 'wizard', 'wizard-preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-        },
+    // Janela única: carregar wizard.html diretamente (sem flash de splash)
+    mainWindow = createMainWindow({
+        initialFile: path.join(__dirname, 'wizard', 'wizard.html'),
     });
 
-    wizardWindow.loadFile(path.join(__dirname, 'wizard', 'wizard.html'));
-    wizardWindow.center();
-
     // Registrar handlers do wizard (retorna cleanup function)
-    const cleanupWizardHandlers = registerWizardHandlers(wizardWindow);
+    const cleanupWizardHandlers = registerWizardHandlers(mainWindow);
 
-    // Quando o wizard completar, limpar handlers e iniciar app normal
+    // Quando o wizard completar, limpar handlers e iniciar app na mesma janela
     app.once('wizard-done', async () => {
-        log.info('[Main] Wizard completado - limpando handlers e iniciando app...');
+        log.info('[Main] Wizard completado - iniciando app na mesma janela...');
         cleanupWizardHandlers();
-        wizardWindow.close();
-        await startNormalApp();
+        await startNormalApp();  // mainWindow já existe — navega para splash → React
     });
 }
 

@@ -41,15 +41,18 @@ export function AuthProvider({ children }) {
     }
 
     // Sem token salvo — tentar auto-login pós-wizard via Electron IPC
-    if (!window.electronAPI?.onBackendReady) {
+    if (!window.electronAPI?.getAutoLoginToken) {
       // Modo web / sem Electron: não há auto-login
       setLoading(false);
       return;
     }
 
-    // Aguardar sinal do main process que o backend está pronto antes de tentar IPC
-    const removeBackendReadyListener = window.electronAPI.onBackendReady(async () => {
-      removeBackendReadyListener(); // one-shot: remover listener imediatamente
+    // Chamada direta ao IPC — sem depender do evento backend:ready.
+    // O handler 'auth:getAutoLoginToken' é registrado em main.js ANTES de loadFile(),
+    // portanto está disponível quando este useEffect executa (pós-render).
+    // O evento backend:ready sofria race condition: era enviado em did-finish-load
+    // (que dispara durante/antes do render) antes do listener ser registrado aqui.
+    (async () => {
       try {
         const autoToken = await window.electronAPI.getAutoLoginToken();
         if (autoToken) {
@@ -60,21 +63,11 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.error('[AuthContext] Auto-login pós-wizard falhou:', e);
         localStorage.removeItem('lumina_token');
+        sessionStorage.removeItem('lumina_token');
       } finally {
         setLoading(false);
       }
-    });
-
-    // Fallback: se backend:ready nunca disparar (timeout de segurança)
-    const fallbackTimer = setTimeout(() => {
-      removeBackendReadyListener();
-      setLoading(false);
-    }, 15000);
-
-    return () => {
-      removeBackendReadyListener();
-      clearTimeout(fallbackTimer);
-    };
+    })();
   }, []);
 
   // Escutar evento de logout disparado pelo interceptor 401 do api.js

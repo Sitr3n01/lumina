@@ -99,6 +99,18 @@ a = Analysis(
         # anyio async
         'anyio',
         'anyio._backends._asyncio',
+        # AI providers (lazy imports em ai_service.py — PyInstaller não detecta automaticamente)
+        'anthropic',
+        'anthropic._legacy_response',
+        'anthropic.resources',
+        'anthropic.types',
+        'openai',
+        'openai.resources',
+        'openai.types',
+        # httpcore (dependência de httpx)
+        'httpcore',
+        'httpcore._async',
+        'httpcore._sync',
     ],
     hookspath=[],
     hooksconfig={},

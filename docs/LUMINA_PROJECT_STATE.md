@@ -1,8 +1,9 @@
 # LUMINA A.0.1.0 - Estado do Projeto
 
-> Atualizado em: 10/03/2026
+> Atualizado em: 11/03/2026
 > Branch: `feature/electron-migration`
-> Versao: **A.0.1.0** (Alpha 0.1.0 — Desktop Electron)
+> Versao: **A.0.1.0** (Alpha 0.1.0 - Desktop Electron)
+> Release: publicada no GitHub (LUMINA-Setup-A.0.1.0.exe)
 
 ---
 
@@ -31,25 +32,25 @@ Aplicativo Desktop Windows usando Electron, com backend Python (FastAPI) embutid
 ## 2. Arquitetura
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   ELECTRON SHELL                     │
-│  main.js → PythonManager → Backend FastAPI           │
-│  preload.js → contextBridge → window.electronAPI     │
-│  tray.js, updater.js, ipc-handlers.js               │
-│  wizard/ (setup inicial, IPC handlers separados)     │
-├─────────────────────────────────────────────────────┤
-│              FRONTEND (React 18 + Vite)              │
-│  10 paginas, state-based routing em App.jsx          │
-│  AuthContext (JWT) + PropertyContext                 │
-│  Axios HTTP client (api.js) com interceptors         │
-├─────────────────────────────────────────────────────┤
-│              BACKEND (FastAPI + SQLAlchemy)           │
-│  REST API, JWT auth (BCrypt + blacklist), slowapi    │
-│  SQLite database, background tasks async             │
-│  Calendar sync (iCal), document generation (.docx)  │
-│  Email (SMTP/IMAP aiosmtplib), Telegram bot         │
-│  AI multi-provider (Anthropic / OpenAI / compatible) │
-└─────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|                   ELECTRON SHELL                    |
+|  main.js -> PythonManager -> Backend FastAPI        |
+|  preload.js -> contextBridge -> window.electronAPI  |
+|  tray.js, updater.js, ipc-handlers.js               |
+|  wizard/ (setup inicial, IPC handlers separados)    |
++-----------------------------------------------------+
+|              FRONTEND (React 18 + Vite)             |
+|  10 paginas, state-based routing em App.jsx         |
+|  AuthContext (JWT) + PropertyContext                |
+|  Axios HTTP client (api.js) com interceptors        |
++-----------------------------------------------------+
+|              BACKEND (FastAPI + SQLAlchemy)         |
+|  REST API, JWT auth (BCrypt + blacklist), slowapi   |
+|  SQLite database, background tasks async            |
+|  Calendar sync (iCal), document generation (.docx) |
+|  Email (SMTP/IMAP aiosmtplib), Telegram bot        |
+|  AI multi-provider (Anthropic / OpenAI / compativel)|
++-----------------------------------------------------+
 ```
 
 ---
@@ -58,48 +59,51 @@ Aplicativo Desktop Windows usando Electron, com backend Python (FastAPI) embutid
 
 | Modulo | Status | Notas |
 |--------|--------|-------|
-| **MVP1: Calendarios** | ✅ Completo | Sync iCal Airbnb + Booking, deteccao de conflitos |
-| **MVP1: Reservas** | ✅ Completo | CRUD, upload manual, filtros, plataformas |
-| **MVP1: Conflitos** | ✅ Completo | Deteccao automatica, resolucao manual |
-| **MVP1: Estatisticas** | ✅ Completo | Ocupacao, receita, plataformas, relatorio mensal |
-| **MVP2: Documentos** | ✅ Completo | Geracao .docx, logo do condominio, preview HTML |
-| **MVP2: Emails** | ✅ Completo | SMTP/IMAP, templates Jinja2 Sandboxed, Outlook/Gmail/Yahoo |
-| **MVP2: Telegram** | ✅ Completo | Bot polling, comandos, aprovacao de reservas |
-| **MVP2: Notificacoes** | ✅ Completo | Central DB-backed, polling do Electron tray |
-| **MVP3: AI Chat** | ✅ Completo | Multi-provider (Anthropic/OpenAI/compatible), chat streaming |
-| **MVP3: AI Pricing** | ✅ Completo | Sugestoes de precificacao via AI |
-| **Electron Desktop** | ✅ Completo | Wizard setup, splash unificado, tray, auto-update |
-| **Autenticacao** | ✅ Completo | JWT, register invite-only, lockout, blacklist |
-| **Auditoria de Seguranca** | ✅ Score ~9.0/10 | Jinja2 sandbox, will-navigate, path traversal bloqueado |
-| **Testes Automatizados** | ✅ 34/35 passando | 1 falha pre-existente (token blacklist isolation) |
+| **MVP1: Calendarios** | Completo | Sync iCal Airbnb + Booking, deteccao de conflitos |
+| **MVP1: Reservas** | Completo | CRUD, upload manual, filtros, plataformas |
+| **MVP1: Conflitos** | Completo | Deteccao automatica, resolucao manual |
+| **MVP1: Estatisticas** | Completo | Ocupacao, receita, plataformas, relatorio mensal |
+| **MVP2: Documentos** | Completo | Geracao .docx, logo do condominio, preview HTML |
+| **MVP2: Emails** | Completo | SMTP/IMAP, templates Jinja2 Sandboxed, Outlook/Gmail/Yahoo |
+| **MVP2: Telegram** | Completo | Bot polling, comandos, aprovacao de reservas |
+| **MVP2: Notificacoes** | Completo | Central DB-backed, polling do Electron tray |
+| **MVP3: AI Chat** | Completo | Multi-provider (Anthropic/OpenAI/compatible), chat streaming |
+| **MVP3: AI Pricing** | Completo | Sugestoes de precificacao via AI |
+| **Electron Desktop** | Completo | Wizard setup, splash unificado, tray, auto-update, janela unica |
+| **Autenticacao** | Completo | JWT, register invite-only, lockout, blacklist |
+| **Auditoria de Seguranca** | Score ~9.0/10 | Jinja2 sandbox, will-navigate, path traversal bloqueado |
+| **Testes Automatizados** | 34/35 passando | 1 falha pre-existente (token blacklist isolation) |
 
 ---
 
 ## 4. Arquitetura do Electron
 
 ### Fluxo de Inicializacao
+
 ```
 app.whenReady()
-  ├─ isFirstRun()? (verifica .env em userData)
-  │   ├─ SIM → openWizard() → registra wizard IPC handlers
-  │   │         wizard-done event → startNormalApp()
-  │   └─ NAO → startNormalApp()
-  │             ├─ createMainWindow() → splash.html
-  │             ├─ PythonManager.start() → PyInstaller bundle
-  │             ├─ health check polling
-  │             ├─ pending-admin.json → POST /register
-  │             ├─ pending-template.pdf → backend
-  │             └─ loadURL(React app)
-  └─ registerIpcHandlers() → todos os canais IPC
+  +- isFirstRun()? (verifica .env em userData)
+  |   +- SIM -> openWizard() -> registra wizard IPC handlers
+  |   |         wizard-done event -> startNormalApp()
+  |   +- NAO -> startNormalApp()
+  |             +- createMainWindow() -> splash.html
+  |             +- PythonManager.start() -> PyInstaller bundle
+  |             +- health check polling
+  |             +- pending-admin.json -> POST /register
+  |             +- pending-template.pdf -> backend
+  |             +- loadURL(React app)
+  +- registerIpcHandlers() -> todos os canais IPC
 ```
 
 ### Tamanhos de Janela (padronizados)
+
 | Janela | width | height | minWidth | minHeight |
 |--------|-------|--------|----------|-----------|
 | Wizard (setup inicial) | 1440 | 900 | 1024 | 720 |
 | App principal (dashboard) | 1440 | 900 | 1024 | 720 |
 
 ### IPC Handlers Registrados
+
 | Canal | Tipo | Descricao |
 |-------|------|-----------|
 | `backend:getUrl` | handle | URL do backend Python |
@@ -112,7 +116,7 @@ app.whenReady()
 | `app:path` | handle | userData path |
 | `app:getAutoLaunch` | handle | Status inicio com Windows |
 | `app:setAutoLaunch` | handle | Configurar inicio com Windows |
-| `app:factoryReset` | handle | Apaga .env + relanca para wizard |
+| `app:factoryReset` | handle | Apaga .env + lumina.db + pending-admin.json + relanca para wizard |
 | `app:quit` | on | Encerra o app |
 | `window:minimize` | on | Minimiza janela |
 | `window:close` | on | Esconde (vai para tray) |
@@ -168,7 +172,7 @@ app.whenReady()
 ```
 .env (imutavel em producao)     AppSetting (DB, editavel via UI)
         |                               |
-        └──────────── merge ────────────┘
+        +------------ merge ------------+
                          |
                   get_all_settings()
                          |
@@ -190,48 +194,63 @@ app.whenReady()
 
 | Item | Status |
 |------|--------|
-| JWT com blacklist | ✅ Implementado |
-| Lockout apos 5 tentativas | ✅ Implementado |
-| Jinja2 SandboxedEnvironment | ✅ Implementado |
-| Electron will-navigate bloqueado | ✅ Implementado |
-| Path traversal em documentos | ✅ Bloqueado (sanitize_filename) |
-| IDOR em download de documentos | ✅ Protegido |
-| str(e) nao exposto ao cliente | ✅ Verificado (Telegram fix aplicado) |
-| Rate limiting | ✅ (desabilitado em desktop/localhost) |
-| CSRF protection middleware | ✅ Implementado |
-| Security headers middleware | ✅ Implementado |
-| nodeIntegration: false | ✅ Implementado |
-| contextIsolation: true | ✅ Implementado |
-| Register invite-only | ✅ Implementado |
-| datetime.utcnow() substituido | ✅ Substituido por timezone.utc |
+| JWT com blacklist | Implementado |
+| Lockout apos 5 tentativas | Implementado |
+| Jinja2 SandboxedEnvironment | Implementado |
+| Electron will-navigate bloqueado | Implementado |
+| Path traversal em documentos | Bloqueado (sanitize_filename) |
+| IDOR em download de documentos | Protegido |
+| str(e) nao exposto ao cliente | Verificado (Telegram fix aplicado) |
+| Rate limiting | Implementado (desabilitado em desktop/localhost) |
+| CSRF protection middleware | Implementado |
+| Security headers middleware | Implementado |
+| nodeIntegration: false | Implementado |
+| contextIsolation: true | Implementado |
+| Register invite-only | Implementado |
+| datetime.utcnow() substituido | Substituido por timezone.utc |
 
 ---
 
-## 9. Bugs Corrigidos nesta Sessao (10/03/2026)
+## 9. Bugs Corrigidos
+
+### Sessao 10/03/2026
 
 | Bug | Arquivo | Descricao | Severidade |
 |-----|---------|-----------|-----------|
-| Endpoint fantasma | `frontend/src/services/api.js` | `generateReceiptFromBooking` — endpoint nao existe no backend | CRITICO |
+| Endpoint fantasma | `frontend/src/services/api.js` | `generateReceiptFromBooking` - endpoint nao existe no backend | CRITICO |
 | str(e) no Telegram | `app/telegram/bot.py` | Erro de sync expunha detalhes internos ao usuario | ALTO |
-| Logo nao passada | `app/telegram/bot.py` | `generate_condo_authorization()` sem `logo_url` — logo nunca aparecia em docs Telegram | MEDIO |
+| Logo nao passada | `app/telegram/bot.py` | `generate_condo_authorization()` sem `logo_url` - logo nunca aparecia em docs Telegram | MEDIO |
 | print() em producao | `app/telegram/bot.py` | Usando print() em vez de logger nos metodos start/stop | BAIXO |
 | Wizard gigante | `electron/main.js` | Janela do wizard era 1920x1000 vs dashboard 1440x900 | UX |
+
+### Sessao 11/03/2026
+
+| Bug | Arquivo | Descricao | Severidade |
+|-----|---------|-----------|-----------|
+| Auto-login falha apos wizard | `electron/main.js` | Wizard concluia mas app abria na tela de login sem autenticar | CRITICO |
+| Register 403 loop | `electron/main.js` | Em segundas execucoes, register retornava 403 (usuario ja existe) - autoLoginToken nunca era setado | CRITICO |
+| Factory reset incompleto | `electron/ipc-handlers.js` | Reset apagava apenas `.env`, mantinha DB - wizard rodava mas register voltava 403 | ALTO |
+| sentinel.db nao limpo no reset dev | `scripts/reset_dev_state.bat` | Dev usava banco diferente (`data/sentinel.db`) nao incluido no script de reset | MEDIO |
+| Tray icon ausente na build | `electron/tray.js` | Windows requer .ico para bandeja - PNG falhava silenciosamente; fallback buscava `icon.ico` inexistente | MEDIO |
 
 ---
 
 ## 10. Arquivos Legados / Para Limpeza
 
-### Removidos nesta sessao:
-- `legacy/web-deployment/` — **13 arquivos** de Docker/nginx/systemd (modo web legado arquivado)
+### Removidos:
+- `legacy/web-deployment/` - **13 arquivos** de Docker/nginx/systemd (modo web legado arquivado)
+- `GEMINI.md` - instrucoes removidas
+- `electron-builder.yml` - substituido por config em `package.json`
+- `pyproject.toml` - substituido por `lumina.spec` (PyInstaller)
 
 ### Scripts obsoletos (manter para referencia historica):
-- `scripts/add_lockout_fields.py` — Migracao DB (campos ja existem nos modelos)
-- `scripts/create_users_table.py` — Criacao de tabela (SQLAlchemy cria automaticamente)
-- `scripts/protect_routes.py` — Auditoria de seguranca (fase concluida)
-- `scripts/create_admin_user.py` — Substituido por `create_default_admin.py` e pelo Wizard
+- `scripts/add_lockout_fields.py` - Migracao DB (campos ja existem nos modelos)
+- `scripts/create_users_table.py` - Criacao de tabela (SQLAlchemy cria automaticamente)
+- `scripts/protect_routes.py` - Auditoria de seguranca (fase concluida)
+- `scripts/create_admin_user.py` - Substituido por `create_default_admin.py` e pelo Wizard
 
 ### Arquivo de pycache suspeito:
-- `tests/__pycache__/conftest.cpython-313-pytest-9.0.2.pyc.56892` — Extensao incomum, residuo de crash
+- `tests/__pycache__/conftest.cpython-313-pytest-9.0.2.pyc.56892` - Extensao incomum, residuo de crash
 
 ---
 
@@ -261,7 +280,7 @@ cross-env LUMINA_DESKTOP=true python -m uvicorn app.main:app --host 127.0.0.1 --
 # Frontend (desenvolvimento)
 cd frontend && npm run dev
 
-# Electron (desenvolvimento) — apos backend e frontend rodando
+# Electron (desenvolvimento) - apos backend e frontend rodando
 cross-env ELECTRON_DEV=true LUMINA_DEV_BACKEND_PORT=8000 electron .
 
 # Dev completo (todos juntos)
