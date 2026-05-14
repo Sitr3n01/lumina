@@ -3,12 +3,12 @@
 Sistema de backup automático do banco de dados.
 Cria backups regulares com rotação automática.
 """
-import shutil
-import gzip
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import List, Optional
+
 import asyncio
+import gzip
+import shutil
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from app.config import settings
 from app.utils.logger import get_logger
@@ -59,7 +59,7 @@ class BackupManager:
 
         self.db_path = settings.database_path
 
-    def create_backup(self, backup_type: str = "daily") -> Optional[Path]:
+    def create_backup(self, backup_type: str = "daily") -> Path | None:
         """
         Cria um backup do banco de dados.
 
@@ -90,11 +90,10 @@ class BackupManager:
             # Copiar e comprimir banco de dados
             logger.info(f"Creating {backup_type} backup: {backup_filename}")
 
-            with open(self.db_path, 'rb') as f_in:
-                with gzip.open(backup_path, 'wb', compresslevel=9) as f_out:
-                    shutil.copyfileobj(f_in, f_out)
+            with open(self.db_path, "rb") as f_in, gzip.open(backup_path, "wb", compresslevel=9) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
-            backup_size_mb = backup_path.stat().st_size / (1024 ** 2)
+            backup_size_mb = backup_path.stat().st_size / (1024**2)
             logger.info(f"Backup created successfully: {backup_path} ({backup_size_mb:.2f} MB)")
 
             # Executar rotação de backups antigos
@@ -148,7 +147,7 @@ class BackupManager:
 
         try:
             # Criar backup do banco atual antes de restaurar
-            current_backup = self.db_path.with_suffix('.db.before_restore')
+            current_backup = self.db_path.with_suffix(".db.before_restore")
             if self.db_path.exists():
                 shutil.copy2(self.db_path, current_backup)
                 logger.info(f"Current database backed up to: {current_backup}")
@@ -156,9 +155,8 @@ class BackupManager:
             # Descomprimir e restaurar
             logger.info(f"Restoring backup from: {backup_path}")
 
-            with gzip.open(backup_path, 'rb') as f_in:
-                with open(self.db_path, 'wb') as f_out:
-                    shutil.copyfileobj(f_in, f_out)
+            with gzip.open(backup_path, "rb") as f_in, open(self.db_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
             logger.info("Backup restored successfully")
             return True
@@ -171,7 +169,7 @@ class BackupManager:
                 logger.info("Restored previous database state")
             return False
 
-    def list_backups(self, backup_type: Optional[str] = None) -> List[dict]:
+    def list_backups(self, backup_type: str | None = None) -> list[dict]:
         """
         Lista todos os backups disponíveis.
 
@@ -195,13 +193,15 @@ class BackupManager:
         for btype, bdir in dirs_to_scan.items():
             for backup_file in sorted(bdir.glob("*.db.gz"), key=lambda p: p.stat().st_mtime, reverse=True):
                 stat = backup_file.stat()
-                backups.append({
-                    "type": btype,
-                    "filename": backup_file.name,
-                    "path": str(backup_file),
-                    "size_mb": round(stat.st_size / (1024 ** 2), 2),
-                    "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                })
+                backups.append(
+                    {
+                        "type": btype,
+                        "filename": backup_file.name,
+                        "path": str(backup_file),
+                        "size_mb": round(stat.st_size / (1024**2), 2),
+                        "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    }
+                )
 
         return backups
 
@@ -268,7 +268,7 @@ async def scheduled_backup_task():
         await asyncio.sleep(60)
 
 
-def create_manual_backup(backup_type: str = "daily") -> Optional[Path]:
+def create_manual_backup(backup_type: str = "daily") -> Path | None:
     """
     Função helper para criar backup manual.
 

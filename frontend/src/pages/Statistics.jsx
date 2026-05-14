@@ -79,6 +79,7 @@ const Statistics = () => {
     };
     load();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const loadStatistics = async () => {

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePropertyId } from '../contexts/PropertyContext';
 import { aiAPI } from '../services/api';
 import {
-  Bot, AlertTriangle, CheckCircle2, RefreshCw, DollarSign,
+  Bot, AlertTriangle, CheckCircle2, DollarSign,
   Send, User, Settings, MessageSquare, Sparkles,
 } from 'lucide-react';
 

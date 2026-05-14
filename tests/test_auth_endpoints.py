@@ -2,10 +2,10 @@
 """
 Testes dos endpoints de autenticacao: register, login, me, logout, change-password, setup-status.
 """
-import pytest
 
 
 # ========== SETUP STATUS ==========
+
 
 def test_setup_status_empty_db(client):
     """Sistema sem usuarios retorna needs_setup=true."""
@@ -25,14 +25,18 @@ def test_setup_status_with_user(client, admin_user):
 
 # ========== REGISTER ==========
 
+
 def test_register_first_user(client):
     """Primeiro usuario e registrado com sucesso e automaticamente admin."""
-    response = client.post("/api/v1/auth/register", json={
-        "email": "first@lumina.com",
-        "username": "firstuser",
-        "password": "First123",
-        "full_name": "First User",
-    })
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "first@lumina.com",
+            "username": "firstuser",
+            "password": "First123",
+            "full_name": "First User",
+        },
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "first@lumina.com"
@@ -44,42 +48,55 @@ def test_register_first_user(client):
 
 def test_register_blocked_after_first_user(client, admin_user):
     """Registro e bloqueado se ja existe usuario no sistema."""
-    response = client.post("/api/v1/auth/register", json={
-        "email": "second@lumina.com",
-        "username": "seconduser",
-        "password": "Second123",
-    })
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "second@lumina.com",
+            "username": "seconduser",
+            "password": "Second123",
+        },
+    )
     assert response.status_code == 403
 
 
 def test_register_weak_password(client):
     """Senha fraca e rejeitada com 422."""
-    response = client.post("/api/v1/auth/register", json={
-        "email": "weak@lumina.com",
-        "username": "weakuser",
-        "password": "123456",  # Sem maiuscula e muito curta
-    })
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "weak@lumina.com",
+            "username": "weakuser",
+            "password": "123456",  # Sem maiuscula e muito curta
+        },
+    )
     assert response.status_code == 422
 
 
 def test_register_invalid_username(client):
     """Username com caracteres especiais e rejeitado."""
-    response = client.post("/api/v1/auth/register", json={
-        "email": "test@lumina.com",
-        "username": "user name!",  # Espaco e ! invalidos
-        "password": "Valid123",
-    })
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "test@lumina.com",
+            "username": "user name!",  # Espaco e ! invalidos
+            "password": "Valid123",
+        },
+    )
     assert response.status_code == 422
 
 
 # ========== LOGIN ==========
 
+
 def test_login_success(client, admin_user):
     """Login com credenciais validas retorna token JWT."""
-    response = client.post("/api/v1/auth/login", json={
-        "username": "admin",
-        "password": "Admin123",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "admin",
+            "password": "Admin123",
+        },
+    )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
@@ -91,33 +108,43 @@ def test_login_success(client, admin_user):
 
 def test_login_with_email(client, admin_user):
     """Login com email tambem funciona."""
-    response = client.post("/api/v1/auth/login", json={
-        "username": "admin@lumina.com",
-        "password": "Admin123",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "admin@lumina.com",
+            "password": "Admin123",
+        },
+    )
     assert response.status_code == 200
     assert "access_token" in response.json()
 
 
 def test_login_wrong_password(client, admin_user):
     """Login com senha errada retorna 401."""
-    response = client.post("/api/v1/auth/login", json={
-        "username": "admin",
-        "password": "senhaerrada",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "admin",
+            "password": "senhaerrada",
+        },
+    )
     assert response.status_code == 401
 
 
 def test_login_nonexistent_user(client):
     """Login com usuario inexistente retorna 401 (sem vazar existencia)."""
-    response = client.post("/api/v1/auth/login", json={
-        "username": "naoexiste",
-        "password": "Qualquer123",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "naoexiste",
+            "password": "Qualquer123",
+        },
+    )
     assert response.status_code == 401
 
 
 # ========== GET ME ==========
+
 
 def test_get_me_authenticated(client, admin_user, auth_headers):
     """GET /me com token valido retorna dados do usuario."""
@@ -146,6 +173,7 @@ def test_get_me_invalid_token(client):
 
 # ========== LOGOUT ==========
 
+
 def test_logout_revokes_token(client, admin_user, auth_headers, admin_token):
     """Apos logout, o mesmo token e invalido."""
     # Logout
@@ -159,6 +187,7 @@ def test_logout_revokes_token(client, admin_user, auth_headers, admin_token):
 
 # ========== CHANGE PASSWORD ==========
 
+
 def test_change_password_success(client, admin_user, auth_headers):
     """Mudanca de senha com senha antiga correta funciona."""
     response = client.post(
@@ -169,10 +198,13 @@ def test_change_password_success(client, admin_user, auth_headers):
     assert response.status_code == 200
 
     # Consegue logar com nova senha
-    login_resp = client.post("/api/v1/auth/login", json={
-        "username": "admin",
-        "password": "NewAdmin456",
-    })
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "admin",
+            "password": "NewAdmin456",
+        },
+    )
     assert login_resp.status_code == 200
 
 

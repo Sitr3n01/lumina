@@ -3,14 +3,15 @@ Router para configurações do sistema.
 GET /api/v1/settings - Retorna todas as configurações (merge .env + DB)
 PUT /api/v1/settings - Salva configurações editáveis no banco de dados
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models.user import User
 from app.middleware.auth import get_current_active_user
+from app.models.user import User
+from app.schemas.settings import SettingsResponse, SettingsUpdate
 from app.services.settings_service import SettingsService
-from app.schemas.settings import SettingsUpdate, SettingsResponse
 
 router = APIRouter(prefix="/api/v1/settings", tags=["Settings"])
 

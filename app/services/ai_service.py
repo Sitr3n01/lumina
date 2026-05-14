@@ -9,11 +9,11 @@ Suporta múltiplos providers:
 O serviço injeta contexto real do imóvel/reservas no system prompt para que
 qualquer modelo responda de forma contextualizada.
 """
+
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -65,6 +65,7 @@ documentos, estatísticas e receitas do imóvel abaixo.
 
 # ─────────────────────────── AI Service ───────────────────────────
 
+
 class AIService:
     """
     Serviço de IA multi-provider.
@@ -75,22 +76,22 @@ class AIService:
 
     def __init__(
         self,
-        provider: Optional[str] = None,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
-        base_url: Optional[str] = None,
+        provider: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        base_url: str | None = None,
     ):
         self.provider = (provider or app_settings.AI_PROVIDER).lower()
-        self.api_key  = api_key  or app_settings.effective_ai_key
-        self.model    = model    or app_settings.effective_ai_model
+        self.api_key = api_key or app_settings.effective_ai_key
+        self.model = model or app_settings.effective_ai_model
         self.base_url = base_url or app_settings.AI_BASE_URL or None
 
     # ── Public interface ──────────────────────────────────────────
 
     def chat(
         self,
-        messages: List[Dict[str, str]],
-        system_prompt: Optional[str] = None,
+        messages: list[dict[str, str]],
+        system_prompt: str | None = None,
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> str:
@@ -112,8 +113,7 @@ class AIService:
         """
         if not self.api_key:
             raise ValueError(
-                "API Key de IA não configurada. "
-                "Acesse Configurações → Inteligência Artificial para configurar."
+                "API Key de IA não configurada. Acesse Configurações → Inteligência Artificial para configurar."
             )
 
         if self.provider == "anthropic":
@@ -122,7 +122,7 @@ class AIService:
             # "openai" e "compatible" usam o mesmo SDK OpenAI
             return self._chat_openai(messages, system_prompt, max_tokens, temperature)
 
-    def test_connection(self) -> Dict[str, Any]:
+    def test_connection(self) -> dict[str, Any]:
         """
         Testa a conexão com o provider e retorna status.
 
@@ -156,18 +156,18 @@ class AIService:
 
     def _chat_anthropic(
         self,
-        messages: List[Dict[str, str]],
-        system_prompt: Optional[str],
+        messages: list[dict[str, str]],
+        system_prompt: str | None,
         max_tokens: int,
         temperature: float,
     ) -> str:
         try:
             import anthropic
         except ImportError:
-            raise RuntimeError("SDK anthropic não instalado. Execute: pip install anthropic")
+            raise RuntimeError("SDK anthropic não instalado. Execute: pip install anthropic") from None
 
         client = anthropic.Anthropic(api_key=self.api_key)
-        kwargs: Dict[str, Any] = dict(
+        kwargs: dict[str, Any] = dict(
             model=self.model,
             max_tokens=max_tokens,
             messages=messages,
@@ -180,23 +180,23 @@ class AIService:
 
     def _chat_openai(
         self,
-        messages: List[Dict[str, str]],
-        system_prompt: Optional[str],
+        messages: list[dict[str, str]],
+        system_prompt: str | None,
         max_tokens: int,
         temperature: float,
     ) -> str:
         try:
             from openai import OpenAI
         except ImportError:
-            raise RuntimeError("SDK openai não instalado. Execute: pip install openai")
+            raise RuntimeError("SDK openai não instalado. Execute: pip install openai") from None
 
-        kwargs: Dict[str, Any] = {"api_key": self.api_key}
+        kwargs: dict[str, Any] = {"api_key": self.api_key}
         if self.base_url:
             kwargs["base_url"] = self.base_url
 
         client = OpenAI(**kwargs)
 
-        all_messages: List[Dict[str, str]] = []
+        all_messages: list[dict[str, str]] = []
         if system_prompt:
             all_messages.append({"role": "system", "content": system_prompt})
         all_messages.extend(messages)
@@ -226,7 +226,7 @@ class AIService:
 
             # Property info
             prop = db.query(Property).filter(Property.id == property_id).first()
-            property_name    = prop.name    if prop else app_settings.PROPERTY_NAME
+            property_name = prop.name if prop else app_settings.PROPERTY_NAME
             property_address = prop.address if prop else app_settings.PROPERTY_ADDRESS
 
             # All confirmed bookings for this property
@@ -244,37 +244,30 @@ class AIService:
             total_bookings = len(bookings)
 
             # Next check-in
-            upcoming = [
-                b for b in bookings
-                if b.check_in_date >= today
-            ]
+            upcoming = [b for b in bookings if b.check_in_date >= today]
             upcoming.sort(key=lambda b: b.check_in_date)
             next_checkin = (
                 f"{upcoming[0].guest_name} em {upcoming[0].check_in_date.strftime('%d/%m/%Y')}"
-                if upcoming else "Nenhuma reserva futura"
+                if upcoming
+                else "Nenhuma reserva futura"
             )
 
             # Current booking
-            current = [
-                b for b in bookings
-                if b.check_in_date <= today < b.check_out_date
-            ]
+            current = [b for b in bookings if b.check_in_date <= today < b.check_out_date]
             current_booking = (
                 f"{current[0].guest_name} (saída: {current[0].check_out_date.strftime('%d/%m/%Y')})"
-                if current else "Nenhuma reserva ativa"
+                if current
+                else "Nenhuma reserva ativa"
             )
 
             # Occupancy last 30 days
-            recent = [
-                b for b in bookings
-                if b.check_out_date >= thirty_days_ago and b.check_in_date <= today
-            ]
+            recent = [b for b in bookings if b.check_out_date >= thirty_days_ago and b.check_in_date <= today]
             occupied_nights = sum(
                 min(b.check_out_date, today) - max(b.check_in_date, thirty_days_ago)
                 for b in recent
                 if min(b.check_out_date, today) > max(b.check_in_date, thirty_days_ago)
             )
-            occupied_days = getattr(occupied_nights, 'days', 0) if hasattr(occupied_nights, 'days') else 0
+            occupied_days = getattr(occupied_nights, "days", 0) if hasattr(occupied_nights, "days") else 0
             occupancy_rate = round((occupied_days / 30) * 100, 1)
 
             # Revenue last 30 days
@@ -286,6 +279,7 @@ class AIService:
             # Conflicts
             try:
                 from app.core.conflict_detector import ConflictDetector
+
                 conflict_detector = ConflictDetector(db)
                 conflicts_count = len(conflict_detector.get_active_conflicts(property_id))
             except Exception:

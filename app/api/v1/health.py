@@ -3,25 +3,27 @@
 Endpoints de health check e monitoramento do sistema.
 Usado por load balancers e ferramentas de monitoramento.
 """
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from datetime import datetime, timezone
-from typing import Dict, Any
-import psutil
-import os
 
-from app.database.session import get_db
+import os
+from datetime import UTC, datetime
+from typing import Any
+
+import psutil
+from fastapi import APIRouter, Depends, status
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
 from app.config import settings
-from app.version import __version__
-from app.models.user import User
+from app.database.session import get_db
 from app.middleware.auth import get_current_admin_user
+from app.models.user import User
+from app.version import __version__
 
 router = APIRouter(prefix="/health", tags=["Health Check"])
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def health_check_basic() -> Dict[str, Any]:
+def health_check_basic() -> dict[str, Any]:
     """
     Health check básico - retorna apenas status OK.
     Usado por load balancers para verificar se a aplicação está rodando.
@@ -31,14 +33,14 @@ def health_check_basic() -> Dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
         "service": settings.APP_NAME,
         "environment": settings.APP_ENV,
     }
 
 
 @router.get("/ready", status_code=status.HTTP_200_OK)
-def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
+def readiness_check(db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Readiness check - verifica se a aplicação está pronta para receber tráfego.
     Valida conexão com banco de dados e outros recursos críticos.
@@ -58,7 +60,7 @@ def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
     try:
         db.execute(text("SELECT 1"))
         checks["database"] = {"status": "healthy", "message": "Database connection OK"}
-    except Exception as e:
+    except Exception:
         checks["database"] = {"status": "unhealthy", "message": "Database connection failed"}
 
     # Verificar se diretórios críticos existem
@@ -66,7 +68,7 @@ def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
     dirs_ok = all(os.path.exists(d) for d in critical_dirs)
     checks["filesystem"] = {
         "status": "healthy" if dirs_ok else "unhealthy",
-        "message": "All critical directories exist" if dirs_ok else "Missing critical directories"
+        "message": "All critical directories exist" if dirs_ok else "Missing critical directories",
     }
 
     # Status geral
@@ -74,13 +76,13 @@ def readiness_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
     return {
         "status": "ready" if all_healthy else "not_ready",
-        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
         "checks": checks,
     }
 
 
 @router.get("/live", status_code=status.HTTP_200_OK)
-def liveness_check() -> Dict[str, str]:
+def liveness_check() -> dict[str, str]:
     """
     Liveness check - verifica se a aplicação está viva (não travada).
     Usado por orquestradores como Kubernetes para restart automático.
@@ -90,15 +92,12 @@ def liveness_check() -> Dict[str, str]:
     """
     return {
         "status": "alive",
-        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
     }
 
 
 @router.get("/metrics", status_code=status.HTTP_200_OK)
-def system_metrics(
-    db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user)
-) -> Dict[str, Any]:
+def system_metrics(db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)) -> dict[str, Any]:
     """
     Métricas detalhadas do sistema (CPU, memória, disco, etc).
     Requer autenticação de administrador.
@@ -117,18 +116,18 @@ def system_metrics(
     # Métricas de memória
     memory = psutil.virtual_memory()
     memory_info = {
-        "total_mb": round(memory.total / (1024 ** 2), 2),
-        "available_mb": round(memory.available / (1024 ** 2), 2),
-        "used_mb": round(memory.used / (1024 ** 2), 2),
+        "total_mb": round(memory.total / (1024**2), 2),
+        "available_mb": round(memory.available / (1024**2), 2),
+        "used_mb": round(memory.used / (1024**2), 2),
         "percent": memory.percent,
     }
 
     # Métricas de disco
-    disk = psutil.disk_usage('.')
+    disk = psutil.disk_usage(".")
     disk_info = {
-        "total_gb": round(disk.total / (1024 ** 3), 2),
-        "used_gb": round(disk.used / (1024 ** 3), 2),
-        "free_gb": round(disk.free / (1024 ** 3), 2),
+        "total_gb": round(disk.total / (1024**3), 2),
+        "used_gb": round(disk.used / (1024**3), 2),
+        "free_gb": round(disk.free / (1024**3), 2),
         "percent": disk.percent,
     }
 
@@ -147,7 +146,7 @@ def system_metrics(
         db_size_bytes = os.path.getsize(db_path)
 
     return {
-        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        "timestamp": datetime.now(UTC).replace(tzinfo=None).isoformat(),
         "system": {
             "cpu": {
                 "count": cpu_count,
@@ -157,7 +156,7 @@ def system_metrics(
             "disk": disk_info,
         },
         "application": {
-            "database_size_mb": round(db_size_bytes / (1024 ** 2), 2),
+            "database_size_mb": round(db_size_bytes / (1024**2), 2),
             "total_users": user_count,
             "active_users": active_users,
         },
@@ -166,7 +165,7 @@ def system_metrics(
 
 
 @router.get("/version", status_code=status.HTTP_200_OK)
-def application_version() -> Dict[str, str]:
+def application_version() -> dict[str, str]:
     """
     Retorna informações de versão da aplicação.
 

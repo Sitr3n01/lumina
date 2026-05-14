@@ -2,28 +2,29 @@
 """
 Endpoints de autenticação: login, registro, mudança de senha.
 """
-from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+
+from datetime import UTC, datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
 
-from app.database.session import get_db
-from app.core.security import verify_password, get_password_hash, create_access_token
 from app.config import settings
+from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.token_blacklist import get_token_blacklist
+from app.database.session import get_db
+from app.middleware.auth import get_current_active_user, get_current_admin_user
 from app.models.user import User
 from app.schemas.auth import (
+    ChangePasswordRequest,
+    DeleteAccountRequest,
     LoginRequest,
     LoginResponse,
     UserCreate,
     UserResponse,
-    ChangePasswordRequest,
-    DeleteAccountRequest,
-    Token
 )
-from app.middleware.auth import get_current_user, get_current_active_user, get_current_admin_user
-from app.core.token_blacklist import get_token_blacklist
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 limiter = Limiter(key_func=get_remote_address, enabled=not (settings.LUMINA_DESKTOP or settings.APP_ENV == "test"))
@@ -32,11 +33,7 @@ security = HTTPBearer()
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("3/minute")  # Máximo 3 registros por minuto
-def register(
-    request: Request,
-    user_data: UserCreate,
-    db: Session = Depends(get_db)
-):
+def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Registra novo usuário no sistema.
 
@@ -57,24 +54,18 @@ def register(
     if user_count > 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Registro de novos usuários não permitido. Sistema já configurado."
+            detail="Registro de novos usuários não permitido. Sistema já configurado.",
         )
 
     # Verificar se email já existe
     existing_email = db.query(User).filter(User.email == user_data.email).first()
     if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email já cadastrado"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email já cadastrado")
 
     # Verificar se username já existe
     existing_username = db.query(User).filter(User.username == user_data.username).first()
     if existing_username:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username já cadastrado"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username já cadastrado")
 
     # Criar usuário
     hashed_password = get_password_hash(user_data.password)
@@ -91,7 +82,7 @@ def register(
         is_admin=True,  # Primeiro (e único) usuário é automaticamente admin
         # CRITICAL: Garantir que failed_login_attempts inicia em 0
         failed_login_attempts=0,
-        locked_until=None
+        locked_until=None,
     )
 
     db.add(new_user)
@@ -113,11 +104,7 @@ def setup_status(db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("5/minute")  # Máximo 5 tentativas de login por minuto
-def login(
-    request: Request,
-    login_data: LoginRequest,
-    db: Session = Depends(get_db)
-):
+def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Autentica usuário e retorna token JWT.
 
@@ -131,19 +118,17 @@ def login(
         HTTPException 401: Se credenciais inválidas
     """
     # Buscar por username ou email
-    user = db.query(User).filter(
-        (User.username == login_data.username) | (User.email == login_data.username)
-    ).first()
+    user = db.query(User).filter((User.username == login_data.username) | (User.email == login_data.username)).first()
 
     # PROTEÇÃO CONTRA ACCOUNT LOCKOUT:
     # Verificar se conta está bloqueada (antes da verificação de senha)
     if user and user.locked_until:
-        if datetime.now(timezone.utc).replace(tzinfo=None) < user.locked_until:
+        if datetime.now(UTC).replace(tzinfo=None) < user.locked_until:
             # Conta ainda está bloqueada
-            remaining = (user.locked_until - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds() / 60
+            remaining = (user.locked_until - datetime.now(UTC).replace(tzinfo=None)).total_seconds() / 60
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Conta bloqueada temporariamente. Tente novamente em {int(remaining)} minutos."
+                detail=f"Conta bloqueada temporariamente. Tente novamente em {int(remaining)} minutos.",
             )
         else:
             # Período de bloqueio expirou - resetar contadores
@@ -171,11 +156,11 @@ def login(
             LOCKOUT_MINUTES = 15
 
             if user.failed_login_attempts >= MAX_ATTEMPTS:
-                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=LOCKOUT_MINUTES)
+                user.locked_until = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=LOCKOUT_MINUTES)
                 db.commit()
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Muitas tentativas de login. Conta bloqueada por {LOCKOUT_MINUTES} minutos."
+                    detail=f"Muitas tentativas de login. Conta bloqueada por {LOCKOUT_MINUTES} minutos.",
                 )
 
             db.commit()
@@ -189,8 +174,7 @@ def login(
     # Verificar se usuário está ativo
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuário inativo. Entre em contato com o administrador."
+            status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo. Entre em contato com o administrador."
         )
 
     # Login bem-sucedido - resetar contador de tentativas
@@ -198,7 +182,7 @@ def login(
     user.locked_until = None
 
     # Atualizar last_login
-    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.last_login_at = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
 
     # Criar token JWT - APENAS ID DO USUÁRIO
@@ -207,22 +191,16 @@ def login(
     access_token = create_access_token(
         data={
             "sub": str(user.id),  # Apenas ID do usuário
-            "type": "access",     # Tipo do token
+            "type": "access",  # Tipo do token
         },
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
 
-    return LoginResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.from_orm(user)
-    )
+    return LoginResponse(access_token=access_token, token_type="bearer", user=UserResponse.from_orm(user))
 
 
 @router.get("/me", response_model=UserResponse)
-def get_current_user_info(
-    current_user: User = Depends(get_current_active_user)
-):
+def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """
     Retorna informações do usuário atualmente autenticado.
 
@@ -238,7 +216,7 @@ def get_current_user_info(
 def change_password(
     password_data: ChangePasswordRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Altera senha do usuário autenticado.
@@ -255,17 +233,11 @@ def change_password(
     """
     # Verificar senha antiga
     if not verify_password(password_data.old_password, current_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Senha atual incorreta"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta")
 
     # Verificar se nova senha é diferente
     if password_data.old_password == password_data.new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nova senha deve ser diferente da atual"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nova senha deve ser diferente da atual")
 
     # Atualizar senha
     current_user.hashed_password = get_password_hash(password_data.new_password)
@@ -274,18 +246,15 @@ def change_password(
     # REVOGAR TODOS os tokens do usuário (segurança)
     # Usuário precisará fazer login novamente com nova senha
     blacklist = get_token_blacklist()
-    token_exp = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     blacklist.revoke_all_user_tokens(current_user.id, token_exp)
 
-    return {
-        "message": "Senha alterada com sucesso. Faça login novamente com a nova senha."
-    }
+    return {"message": "Senha alterada com sucesso. Faça login novamente com a nova senha."}
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    current_user: User = Depends(get_current_active_user)
+    credentials: HTTPAuthorizationCredentials = Depends(security), current_user: User = Depends(get_current_active_user)
 ):
     """
     Logout do usuário com invalidação server-side do token.
@@ -300,7 +269,7 @@ def logout(
 
     # Adicionar token à blacklist
     blacklist = get_token_blacklist()
-    token_exp = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     blacklist.revoke_token(token, token_exp)
 
     return {"message": "Logout realizado com sucesso. Token invalidado."}
@@ -308,11 +277,12 @@ def logout(
 
 from fastapi import Body
 
+
 @router.delete("/delete-account", status_code=status.HTTP_200_OK)
 def delete_account(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-    request_data: DeleteAccountRequest = Body(...)
+    request_data: DeleteAccountRequest = Body(...),
 ):
     """
     Deleta conta do usuário autenticado (IRREVERSÍVEL).
@@ -328,10 +298,7 @@ def delete_account(
     """
     # Verificar senha
     if not verify_password(request_data.password, current_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Senha incorreta"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha incorreta")
 
     # Deletar usuário
     db.delete(current_user)
@@ -341,11 +308,7 @@ def delete_account(
 
 
 @router.post("/unlock-user/{user_id}", status_code=status.HTTP_200_OK)
-def unlock_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin_user)
-):
+def unlock_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin_user)):
     """
     Desbloqueia usuário manualmente (APENAS ADMIN).
 
@@ -362,10 +325,7 @@ def unlock_user(
     # Buscar usuário
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado")
 
     # Desbloquear e resetar contadores
     user.locked_until = None
@@ -375,5 +335,5 @@ def unlock_user(
     return {
         "message": f"Usuário {user.username} desbloqueado com sucesso",
         "user_id": user.id,
-        "username": user.username
+        "username": user.username,
     }

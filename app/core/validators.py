@@ -2,19 +2,18 @@
 """
 Input Validators para prevenção de XSS, SQL Injection e outros ataques.
 """
-import re
-import html
-from typing import Optional
 
+import html
+import re
 
 # Padrões perigosos comuns
 DANGEROUS_PATTERNS = [
-    r'<script[^>]*>.*?</script>',  # Script tags
-    r'javascript:',  # JavaScript protocol
-    r'on\w+\s*=',  # Event handlers (onclick, onload, etc)
-    r'<iframe',  # IFrames
-    r'<object',  # Objects
-    r'<embed',  # Embeds
+    r"<script[^>]*>.*?</script>",  # Script tags
+    r"javascript:",  # JavaScript protocol
+    r"on\w+\s*=",  # Event handlers (onclick, onload, etc)
+    r"<iframe",  # IFrames
+    r"<object",  # Objects
+    r"<embed",  # Embeds
 ]
 
 
@@ -54,11 +53,7 @@ def contains_dangerous_patterns(text: str) -> bool:
 
     text_lower = text.lower()
 
-    for pattern in DANGEROUS_PATTERNS:
-        if re.search(pattern, text_lower, re.IGNORECASE | re.DOTALL):
-            return True
-
-    return False
+    return any(re.search(pattern, text_lower, re.IGNORECASE | re.DOTALL) for pattern in DANGEROUS_PATTERNS)
 
 
 def validate_email_safe(email: str) -> bool:
@@ -75,7 +70,7 @@ def validate_email_safe(email: str) -> bool:
         return False
 
     # Padrão básico de email
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 
     return bool(re.match(email_pattern, email))
 
@@ -95,7 +90,7 @@ def validate_username_safe(username: str) -> bool:
 
     # Apenas letras, números, underscores e hífens
     # Min 3, max 30 caracteres
-    username_pattern = r'^[a-zA-Z0-9_-]{3,30}$'
+    username_pattern = r"^[a-zA-Z0-9_-]{3,30}$"
 
     return bool(re.match(username_pattern, username))
 
@@ -131,7 +126,7 @@ def sanitize_filename(filename: str) -> str:
     filename = filename.replace("/", "").replace("\\", "")
 
     # Remover caracteres perigosos, manter apenas alfanuméricos, pontos, hífens, underscores
-    filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
+    filename = re.sub(r"[^a-zA-Z0-9._-]", "", filename)
 
     # Remover pontos duplicados (.. -> .)
     while ".." in filename:
@@ -148,7 +143,7 @@ def sanitize_filename(filename: str) -> str:
     return filename[:255]
 
 
-def validate_url_safe(url: str, allowed_schemes: Optional[list] = None) -> bool:
+def validate_url_safe(url: str, allowed_schemes: list | None = None) -> bool:
     """
     Valida se URL é segura (sem javascript:, data:, etc).
 
@@ -163,13 +158,13 @@ def validate_url_safe(url: str, allowed_schemes: Optional[list] = None) -> bool:
         return False
 
     if allowed_schemes is None:
-        allowed_schemes = ['http', 'https']
+        allowed_schemes = ["http", "https"]
 
     # Converter para lowercase
     url_lower = url.lower().strip()
 
     # Verificar esquemas perigosos
-    dangerous_schemes = ['javascript:', 'data:', 'vbscript:', 'file:']
+    dangerous_schemes = ["javascript:", "data:", "vbscript:", "file:"]
     for scheme in dangerous_schemes:
         if url_lower.startswith(scheme):
             return False
@@ -180,10 +175,7 @@ def validate_url_safe(url: str, allowed_schemes: Optional[list] = None) -> bool:
             return True
 
     # URLs relativas são permitidas
-    if not url_lower.startswith(('http://', 'https://', '//', ':')):
-        return True
-
-    return False
+    return bool(not url_lower.startswith(("http://", "https://", "//", ":")))
 
 
 def strip_tags(text: str) -> str:
@@ -204,10 +196,10 @@ def strip_tags(text: str) -> str:
         return text
 
     # Remove todas as tags HTML
-    clean = re.sub(r'<[^>]+>', '', text)
+    clean = re.sub(r"<[^>]+>", "", text)
 
     # Remove espaços extras
-    clean = re.sub(r'\s+', ' ', clean).strip()
+    clean = re.sub(r"\s+", " ", clean).strip()
 
     return clean
 
@@ -231,10 +223,10 @@ def validate_json_safe(json_str: str, max_depth: int = 10) -> bool:
     current_nesting = 0
 
     for char in json_str:
-        if char in ['{', '[']:
+        if char in ["{", "["]:
             current_nesting += 1
             max_nesting = max(max_nesting, current_nesting)
-        elif char in ['}', ']']:
+        elif char in ["}", "]"]:
             current_nesting -= 1
 
     return max_nesting <= max_depth

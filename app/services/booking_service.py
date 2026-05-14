@@ -2,15 +2,16 @@
 Serviço de gerenciamento de reservas (bookings).
 Lógica de negócio para criar, atualizar, cancelar e consultar reservas.
 """
-from datetime import date, datetime
-from typing import List, Optional, Dict, Any
-from sqlalchemy import and_, or_
+
+from datetime import date
+from typing import Any
+
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from app.models.booking import Booking, BookingStatus
-from app.models.property import Property
+from app.utils.date_utils import today_local
 from app.utils.logger import get_logger
-from app.utils.date_utils import today_local, is_current_booking, is_past_booking
 
 logger = get_logger(__name__)
 
@@ -21,16 +22,11 @@ class BookingService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_booking_by_id(self, booking_id: int) -> Optional[Booking]:
+    def get_booking_by_id(self, booking_id: int) -> Booking | None:
         """Busca uma reserva por ID"""
         return self.db.query(Booking).filter(Booking.id == booking_id).first()
 
-    def get_booking_by_external_id(
-        self,
-        external_id: str,
-        platform: str,
-        property_id: int
-    ) -> Optional[Booking]:
+    def get_booking_by_external_id(self, external_id: str, platform: str, property_id: int) -> Booking | None:
         """
         Busca uma reserva pelo ID externo da plataforma.
 
@@ -42,15 +38,17 @@ class BookingService:
         Returns:
             Booking ou None
         """
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.external_id == external_id,
-                Booking.platform == platform,
-                Booking.property_id == property_id
+        return (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.external_id == external_id, Booking.platform == platform, Booking.property_id == property_id
+                )
             )
-        ).first()
+            .first()
+        )
 
-    def get_active_bookings(self, property_id: int) -> List[Booking]:
+    def get_active_bookings(self, property_id: int) -> list[Booking]:
         """
         Retorna todas as reservas ativas (confirmadas e não passadas).
 
@@ -62,20 +60,20 @@ class BookingService:
         """
         today = today_local()
 
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED,
-                Booking.check_out_date >= today
+        return (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.property_id == property_id,
+                    Booking.status == BookingStatus.CONFIRMED,
+                    Booking.check_out_date >= today,
+                )
             )
-        ).order_by(Booking.check_in_date).all()
+            .order_by(Booking.check_in_date)
+            .all()
+        )
 
-    def get_bookings_in_period(
-        self,
-        property_id: int,
-        start_date: date,
-        end_date: date
-    ) -> List[Booking]:
+    def get_bookings_in_period(self, property_id: int, start_date: date, end_date: date) -> list[Booking]:
         """
         Retorna reservas que se sobrepõem a um período.
 
@@ -87,16 +85,21 @@ class BookingService:
         Returns:
             Lista de reservas no período
         """
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.check_in_date < end_date,
-                Booking.check_out_date > start_date,
-                Booking.status == BookingStatus.CONFIRMED
+        return (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.property_id == property_id,
+                    Booking.check_in_date < end_date,
+                    Booking.check_out_date > start_date,
+                    Booking.status == BookingStatus.CONFIRMED,
+                )
             )
-        ).order_by(Booking.check_in_date).all()
+            .order_by(Booking.check_in_date)
+            .all()
+        )
 
-    def get_current_booking(self, property_id: int) -> Optional[Booking]:
+    def get_current_booking(self, property_id: int) -> Booking | None:
         """
         Retorna a reserva ativa no momento (hóspede atual).
 
@@ -108,16 +111,20 @@ class BookingService:
         """
         today = today_local()
 
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED,
-                Booking.check_in_date <= today,
-                Booking.check_out_date > today
+        return (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.property_id == property_id,
+                    Booking.status == BookingStatus.CONFIRMED,
+                    Booking.check_in_date <= today,
+                    Booking.check_out_date > today,
+                )
             )
-        ).first()
+            .first()
+        )
 
-    def get_next_bookings(self, property_id: int, limit: int = 5) -> List[Booking]:
+    def get_next_bookings(self, property_id: int, limit: int = 5) -> list[Booking]:
         """
         Retorna as próximas N reservas futuras.
 
@@ -130,15 +137,21 @@ class BookingService:
         """
         today = today_local()
 
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED,
-                Booking.check_in_date >= today
+        return (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.property_id == property_id,
+                    Booking.status == BookingStatus.CONFIRMED,
+                    Booking.check_in_date >= today,
+                )
             )
-        ).order_by(Booking.check_in_date).limit(limit).all()
+            .order_by(Booking.check_in_date)
+            .limit(limit)
+            .all()
+        )
 
-    def create_booking(self, booking_data: Dict[str, Any]) -> Booking:
+    def create_booking(self, booking_data: dict[str, Any]) -> Booking:
         """
         Cria uma nova reserva.
 
@@ -158,7 +171,7 @@ class BookingService:
         logger.info(f"[OK] Booking created: ID={booking.id}")
         return booking
 
-    def update_booking(self, booking: Booking, update_data: Dict[str, Any]) -> Booking:
+    def update_booking(self, booking: Booking, update_data: dict[str, Any]) -> Booking:
         """
         Atualiza uma reserva existente.
 
@@ -203,11 +216,11 @@ class BookingService:
     def get_bookings_paginated(
         self,
         property_id: int,
-        platform: Optional[str] = None,
-        status: Optional[str] = None,
+        platform: str | None = None,
+        status: str | None = None,
         page: int = 1,
-        page_size: int = 50
-    ) -> tuple[List[Booking], int]:
+        page_size: int = 50,
+    ) -> tuple[list[Booking], int]:
         """
         Retorna reservas com paginação eficiente no banco de dados.
 
@@ -222,9 +235,7 @@ class BookingService:
             Tupla (bookings, total)
         """
         # Query base
-        query = self.db.query(Booking).filter(
-            Booking.property_id == property_id
-        )
+        query = self.db.query(Booking).filter(Booking.property_id == property_id)
 
         # Aplicar filtros
         if platform:
@@ -237,18 +248,12 @@ class BookingService:
         total = query.count()
 
         # Aplicar paginação no SQL
-        bookings = query.order_by(Booking.check_in_date.desc())\
-            .offset((page - 1) * page_size)\
-            .limit(page_size)\
-            .all()
+        bookings = query.order_by(Booking.check_in_date.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
         return bookings, total
 
     def merge_booking_from_ical(
-        self,
-        event_data: Dict[str, Any],
-        calendar_source_id: int,
-        property_id: int
+        self, event_data: dict[str, Any], calendar_source_id: int, property_id: int
     ) -> tuple[Booking, str]:
         """
         Cria ou atualiza uma reserva com base em dados do iCal.
@@ -327,15 +332,16 @@ class BookingService:
         """
         today = today_local()
 
-        result = self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED,
-                Booking.check_out_date < today
+        result = (
+            self.db.query(Booking)
+            .filter(
+                and_(
+                    Booking.property_id == property_id,
+                    Booking.status == BookingStatus.CONFIRMED,
+                    Booking.check_out_date < today,
+                )
             )
-        ).update(
-            {"status": BookingStatus.COMPLETED},
-            synchronize_session=False
+            .update({"status": BookingStatus.COMPLETED}, synchronize_session=False)
         )
 
         self.db.commit()
@@ -345,7 +351,7 @@ class BookingService:
 
         return result
 
-    def get_booking_statistics(self, property_id: int) -> Dict[str, int]:
+    def get_booking_statistics(self, property_id: int) -> dict[str, int]:
         """
         Retorna estatísticas das reservas.
 
@@ -355,30 +361,25 @@ class BookingService:
         Returns:
             Dicionário com estatísticas
         """
-        total = self.db.query(Booking).filter(
-            Booking.property_id == property_id
-        ).count()
+        total = self.db.query(Booking).filter(Booking.property_id == property_id).count()
 
-        confirmed = self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED
-            )
-        ).count()
+        confirmed = (
+            self.db.query(Booking)
+            .filter(and_(Booking.property_id == property_id, Booking.status == BookingStatus.CONFIRMED))
+            .count()
+        )
 
-        completed = self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.COMPLETED
-            )
-        ).count()
+        completed = (
+            self.db.query(Booking)
+            .filter(and_(Booking.property_id == property_id, Booking.status == BookingStatus.COMPLETED))
+            .count()
+        )
 
-        cancelled = self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CANCELLED
-            )
-        ).count()
+        cancelled = (
+            self.db.query(Booking)
+            .filter(and_(Booking.property_id == property_id, Booking.status == BookingStatus.CANCELLED))
+            .count()
+        )
 
         return {
             "total": total,

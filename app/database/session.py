@@ -2,8 +2,9 @@
 Gerenciamento de sessões do banco de dados.
 Fornece dependency injection para FastAPI.
 """
+
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 from sqlalchemy.orm import Session
 
@@ -62,22 +63,10 @@ def create_all_tables():
     Cria todas as tabelas no banco de dados.
     Deve ser chamado durante a inicialização.
     """
-    from app.models.base import Base
     from app.database.connection import engine
 
     # Importar todos os modelos para garantir que estão registrados
-    from app.models import (
-        property,
-        calendar_source,
-        booking,
-        guest,
-        sync_log,
-        booking_conflict,
-        sync_action,
-    )
-    from app.models.app_settings import AppSetting
-    from app.models.notification import Notification
-    from app.models.user import User
+    from app.models.base import Base
 
     logger.info("Creating all database tables...")
     Base.metadata.create_all(bind=engine)
@@ -89,8 +78,8 @@ def drop_all_tables():
     CUIDADO: Remove todas as tabelas do banco de dados.
     Use apenas para desenvolvimento/testes.
     """
-    from app.models.base import Base
     from app.database.connection import engine
+    from app.models.base import Base
 
     logger.warning("Dropping all database tables...")
     Base.metadata.drop_all(bind=engine)

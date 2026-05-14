@@ -2,24 +2,24 @@
 """
 Middleware de autenticação JWT com Token Blacklist.
 """
-from fastapi import Request, HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from typing import Optional
+
 from datetime import datetime
 
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
 from app.core.security import decode_access_token
+from app.core.token_blacklist import get_token_blacklist
 from app.database.session import get_db
 from app.models.user import User
-from app.core.token_blacklist import get_token_blacklist
 
 # Security scheme para Swagger UI
 security = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)
 ) -> User:
     """
     Dependency para obter usuário atual autenticado.
@@ -59,10 +59,10 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
     # Extrair user_id do payload
-    user_id: Optional[int] = payload.get("sub")
+    user_id: int | None = payload.get("sub")
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -72,10 +72,7 @@ def get_current_user(
 
     # Verificar se TODOS os tokens do usuário foram revogados
     token_issued_at = payload.get("iat")
-    if token_issued_at and blacklist.is_user_revoked(
-        int(user_id),
-        datetime.fromtimestamp(token_issued_at)
-    ):
+    if token_issued_at and blacklist.is_user_revoked(int(user_id), datetime.fromtimestamp(token_issued_at)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token foi revogado (senha alterada)",
@@ -94,17 +91,12 @@ def get_current_user(
 
     # Verificar se usuário está ativo
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuário inativo"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
 
     return user
 
 
-def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency para garantir que usuário está ativo.
 
@@ -118,16 +110,11 @@ def get_current_active_user(
         HTTPException 403: Se usuário está inativo
     """
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuário inativo"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
     return current_user
 
 
-def get_current_admin_user(
-    current_user: User = Depends(get_current_active_user)
-) -> User:
+def get_current_admin_user(current_user: User = Depends(get_current_active_user)) -> User:
     """
     Dependency para garantir que usuário é admin.
 
@@ -150,17 +137,11 @@ def get_current_admin_user(
             ...
     """
     if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permissão negada: apenas administradores"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permissão negada: apenas administradores")
     return current_user
 
 
-def get_optional_current_user(
-    request: Request,
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+def get_optional_current_user(request: Request, db: Session = Depends(get_db)) -> User | None:
     """
     Dependency para rotas opcionalmente autenticadas.
     Retorna usuário se token presente e válido, None caso contrário.
@@ -188,7 +169,7 @@ def get_optional_current_user(
 
     try:
         payload = decode_access_token(token)
-        user_id: Optional[int] = payload.get("sub")
+        user_id: int | None = payload.get("sub")
 
         if user_id is None:
             return None

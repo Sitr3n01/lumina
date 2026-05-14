@@ -2,28 +2,28 @@
 Engine de sincronização de calendários iCal.
 Responsável por baixar, parsear e normalizar eventos do Airbnb e Booking.
 """
-import re
+
 import json
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+import re
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import httpx
 from icalendar import Calendar
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from app.config import settings
 from app.constants import (
-    PLATFORM_AIRBNB,
-    PLATFORM_BOOKING,
     AIRBNB_GUEST_PATTERN,
     BOOKING_GUEST_PATTERN,
+    CURRENCY_DEFAULT,
     DEFAULT_RETRY_ATTEMPTS,
     DEFAULT_TIMEOUT_SECONDS,
-    CURRENCY_DEFAULT,
+    PLATFORM_AIRBNB,
+    PLATFORM_BOOKING,
 )
+from app.utils.date_utils import calculate_nights, parse_ical_date
 from app.utils.logger import get_logger
-from app.utils.date_utils import parse_ical_date, calculate_nights
 
 logger = get_logger(__name__)
 
@@ -32,10 +32,7 @@ class CalendarSyncEngine:
     """Engine para sincronização de calendários iCal"""
 
     def __init__(self):
-        self.http_client = httpx.AsyncClient(
-            timeout=DEFAULT_TIMEOUT_SECONDS,
-            follow_redirects=True
-        )
+        self.http_client = httpx.AsyncClient(timeout=DEFAULT_TIMEOUT_SECONDS, follow_redirects=True)
         self.download_dir = Path("data/downloads")
         self.download_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,11 +40,8 @@ class CalendarSyncEngine:
         """Fecha o cliente HTTP"""
         await self.http_client.aclose()
 
-    @retry(
-        stop=stop_after_attempt(DEFAULT_RETRY_ATTEMPTS),
-        wait=wait_exponential(multiplier=1, min=2, max=10)
-    )
-    async def download_ical(self, url: str, platform: str) -> Optional[str]:
+    @retry(stop=stop_after_attempt(DEFAULT_RETRY_ATTEMPTS), wait=wait_exponential(multiplier=1, min=2, max=10))
+    async def download_ical(self, url: str, platform: str) -> str | None:
         """
         Baixa o conteúdo de um feed iCal com retry automático.
 
@@ -81,7 +75,7 @@ class CalendarSyncEngine:
             logger.error(f"Unexpected error downloading iCal from {platform}: {e}")
             raise
 
-    def parse_ical(self, content: str, platform: str) -> List[Dict[str, Any]]:
+    def parse_ical(self, content: str, platform: str) -> list[dict[str, Any]]:
         """
         Parseia o conteúdo iCal e extrai eventos de reserva.
 
@@ -113,7 +107,7 @@ class CalendarSyncEngine:
             logger.error(f"Error parsing iCal from {platform}: {e}")
             raise
 
-    def _extract_event_data(self, event, platform: str) -> Optional[Dict[str, Any]]:
+    def _extract_event_data(self, event, platform: str) -> dict[str, Any] | None:
         """
         Extrai dados de um evento iCal individual.
 
@@ -173,14 +167,17 @@ class CalendarSyncEngine:
                 "guest_count": 1,  # Padrão, pode ser atualizado depois
                 "total_price": None,  # iCal raramente inclui preço
                 "currency": CURRENCY_DEFAULT,  # BRL para Brasil
-                "raw_ical_data": json.dumps({
-                    "summary": summary,
-                    "description": description,
-                    "uid": uid,
-                    "status": status,
-                    "dtstart": check_in.isoformat(),
-                    "dtend": check_out.isoformat(),
-                }, ensure_ascii=False),
+                "raw_ical_data": json.dumps(
+                    {
+                        "summary": summary,
+                        "description": description,
+                        "uid": uid,
+                        "status": status,
+                        "dtstart": check_in.isoformat(),
+                        "dtend": check_out.isoformat(),
+                    },
+                    ensure_ascii=False,
+                ),
             }
 
             return event_data
@@ -212,7 +209,7 @@ class CalendarSyncEngine:
 
             # Fallback: se começar com "Reserved", pega o resto
             if text.lower().startswith(("reserved", "reservation")):
-                parts = re.split(r"[-:]", text, 1)
+                parts = re.split(r"[-:]", text, maxsplit=1)
                 if len(parts) > 1:
                     return parts[1].strip()
 
@@ -266,11 +263,7 @@ class CalendarSyncEngine:
 
         return status_mapping.get(ical_status, "confirmed")
 
-    async def sync_calendar_source(
-        self,
-        url: str,
-        platform: str
-    ) -> Dict[str, Any]:
+    async def sync_calendar_source(self, url: str, platform: str) -> dict[str, Any]:
         """
         Sincroniza uma fonte de calendário completa.
 
@@ -292,32 +285,20 @@ class CalendarSyncEngine:
             # Download
             content = await self.download_ical(url, platform)
             if not content:
-                return {
-                    "success": False,
-                    "events": [],
-                    "error": "Failed to download calendar"
-                }
+                return {"success": False, "events": [], "error": "Failed to download calendar"}
 
             # Parse
             events = self.parse_ical(content, platform)
 
-            return {
-                "success": True,
-                "events": events,
-                "error": None
-            }
+            return {"success": True, "events": events, "error": None}
 
         except Exception as e:
             logger.error(f"Calendar sync failed for {platform}: {e}")
-            return {
-                "success": False,
-                "events": [],
-                "error": str(e)
-            }
+            return {"success": False, "events": [], "error": str(e)}
 
 
 # Instância singleton do engine
-_calendar_engine: Optional[CalendarSyncEngine] = None
+_calendar_engine: CalendarSyncEngine | None = None
 
 
 def get_calendar_engine() -> CalendarSyncEngine:

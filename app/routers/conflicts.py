@@ -1,17 +1,15 @@
 """
 Router de API para gerenciamento de conflitos entre reservas.
 """
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
 
-from app.database.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.core.conflict_detector import ConflictDetector
-from app.services.sync_action_service import SyncActionService
-from app.models.booking_conflict import BookingConflict
-from app.models.user import User
+from app.database.session import get_db
 from app.middleware.auth import get_current_active_user
+from app.models.user import User
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,6 +19,7 @@ router = APIRouter(prefix="/api/conflicts", tags=["Conflicts"])
 
 class ConflictResponse(BaseModel):
     """Schema de resposta de conflito"""
+
     id: int
     booking_id_1: int
     booking_id_2: int
@@ -46,15 +45,16 @@ class ConflictResponse(BaseModel):
 
 class ConflictResolveRequest(BaseModel):
     """Schema para resolver conflito"""
+
     resolution_notes: str
 
 
-@router.get("/", response_model=List[ConflictResponse])
+@router.get("/", response_model=list[ConflictResponse])
 def list_conflicts(
     property_id: int = Query(..., description="ID do imóvel"),
     active_only: bool = Query(True, description="Apenas conflitos ativos"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Lista todos os conflitos.
@@ -73,24 +73,26 @@ def list_conflicts(
         b1 = conflict.booking_1
         b2 = conflict.booking_2
 
-        result.append({
-            "id": conflict.id,
-            "booking_id_1": conflict.booking_id_1,
-            "booking_id_2": conflict.booking_id_2,
-            "conflict_type": conflict.conflict_type.value,
-            "overlap_start": conflict.overlap_start.isoformat() if conflict.overlap_start else None,
-            "overlap_end": conflict.overlap_end.isoformat() if conflict.overlap_end else None,
-            "overlap_nights": conflict.overlap_nights,
-            "severity": conflict.severity,
-            "resolved": conflict.resolved,
-            "detected_at": conflict.detected_at.isoformat(),
-            "booking_1_guest": b1.guest_name,
-            "booking_1_platform": b1.platform,
-            "booking_1_dates": f"{b1.check_in_date} - {b1.check_out_date}",
-            "booking_2_guest": b2.guest_name,
-            "booking_2_platform": b2.platform,
-            "booking_2_dates": f"{b2.check_in_date} - {b2.check_out_date}",
-        })
+        result.append(
+            {
+                "id": conflict.id,
+                "booking_id_1": conflict.booking_id_1,
+                "booking_id_2": conflict.booking_id_2,
+                "conflict_type": conflict.conflict_type.value,
+                "overlap_start": conflict.overlap_start.isoformat() if conflict.overlap_start else None,
+                "overlap_end": conflict.overlap_end.isoformat() if conflict.overlap_end else None,
+                "overlap_nights": conflict.overlap_nights,
+                "severity": conflict.severity,
+                "resolved": conflict.resolved,
+                "detected_at": conflict.detected_at.isoformat(),
+                "booking_1_guest": b1.guest_name,
+                "booking_1_platform": b1.platform,
+                "booking_1_dates": f"{b1.check_in_date} - {b1.check_out_date}",
+                "booking_2_guest": b2.guest_name,
+                "booking_2_platform": b2.platform,
+                "booking_2_dates": f"{b2.check_in_date} - {b2.check_out_date}",
+            }
+        )
 
     return result
 
@@ -99,7 +101,7 @@ def list_conflicts(
 def get_conflict_summary(
     property_id: int = Query(..., description="ID do imóvel"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retorna resumo de conflitos.
@@ -115,34 +117,28 @@ def resolve_conflict(
     conflict_id: int,
     request: ConflictResolveRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Marca um conflito como resolvido.
     """
     conflict_detector = ConflictDetector(db)
 
-    conflict = conflict_detector.resolve_conflict(
-        conflict_id,
-        request.resolution_notes
-    )
+    conflict = conflict_detector.resolve_conflict(conflict_id, request.resolution_notes)
 
     if not conflict:
         raise HTTPException(status_code=404, detail="Conflito não encontrado")
 
     logger.info(f"Conflict {conflict_id} resolved via API")
 
-    return {
-        "message": "Conflito marcado como resolvido",
-        "conflict_id": conflict_id
-    }
+    return {"message": "Conflito marcado como resolvido", "conflict_id": conflict_id}
 
 
 @router.post("/detect")
 def detect_conflicts(
     property_id: int = Query(..., description="ID do imóvel"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Força detecção de conflitos para um imóvel.
@@ -160,5 +156,5 @@ def detect_conflicts(
     return {
         "conflicts_detected": len(conflicts),
         "auto_resolved": auto_resolved,
-        "active_conflicts": len([c for c in conflicts if not c.resolved])
+        "active_conflicts": len([c for c in conflicts if not c.resolved]),
     }

@@ -5,6 +5,7 @@ Script para criar primeiro usuário administrador.
 Usage:
     python scripts/create_admin_user.py
 """
+
 import sys
 from pathlib import Path
 
@@ -12,12 +13,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from getpass import getpass
+
 from sqlalchemy.orm import Session
 
+from app.core.security import get_password_hash
 from app.database.connection import SessionLocal, engine
 from app.models.base import Base
 from app.models.user import User
-from app.core.security import get_password_hash
 
 
 def create_admin():
@@ -45,7 +47,7 @@ def create_admin():
             print(f"⚠️  Já existe um administrador: {admin_exists.username}")
             print()
             response = input("Deseja criar outro administrador? (s/N): ").strip().lower()
-            if response != 's':
+            if response != "s":
                 print("Operação cancelada.")
                 return
 
@@ -127,7 +129,7 @@ def create_admin():
         print(f"Username: {admin_user.username}")
         print(f"Email:    {admin_user.email}")
         print(f"Nome:     {admin_user.full_name or '(não informado)'}")
-        print(f"Admin:    Sim")
+        print("Admin:    Sim")
         print()
         print("Use estas credenciais para fazer login no sistema.")
         print()
@@ -137,7 +139,7 @@ def create_admin():
         return
 
     except Exception as e:
-        print(f"\n❌ Erro ao criar administrador: {str(e)}")
+        print(f"\n❌ Erro ao criar administrador: {e!s}")
         db.rollback()
         return
 

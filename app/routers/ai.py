@@ -1,23 +1,24 @@
 """
 Router de IA — price-suggestions (legado), chat, test-connection e settings.
 """
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.config import settings as app_settings
 from app.database.session import get_db
-from app.models.user import User
 from app.middleware.auth import get_current_active_user, get_current_admin_user
-from app.services.ai_pricing_service import AIPricingService
-from app.services.ai_service import AIService
+from app.models.user import User
 from app.schemas.ai import (
-    AIPricingResponse,
     AIChatRequest,
     AIChatResponse,
+    AIPricingResponse,
+    AISettingsResponse,
     AITestRequest,
     AITestResponse,
-    AISettingsResponse,
 )
-from app.config import settings as app_settings
+from app.services.ai_pricing_service import AIPricingService
+from app.services.ai_service import AIService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -26,6 +27,7 @@ router = APIRouter(prefix="/api/v1/ai", tags=["AI Integration"])
 
 
 # ── Price Suggestions (legado) ─────────────────────────────────────────
+
 
 @router.post("/price-suggestions", response_model=AIPricingResponse, status_code=status.HTTP_200_OK)
 def get_price_suggestions(
@@ -50,6 +52,7 @@ def get_price_suggestions(
 
 
 # ── Chat ──────────────────────────────────────────────────────────────
+
 
 @router.post("/chat", response_model=AIChatResponse)
 def ai_chat(
@@ -81,6 +84,7 @@ def ai_chat(
 
 # ── Test Connection ───────────────────────────────────────────────────
 
+
 @router.post("/test", response_model=AITestResponse)
 def test_ai_connection(
     body: AITestRequest,
@@ -101,6 +105,7 @@ def test_ai_connection(
 
 
 # ── AI Settings ───────────────────────────────────────────────────────
+
 
 @router.get("/settings", response_model=AISettingsResponse)
 def get_ai_settings(

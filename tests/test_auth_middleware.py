@@ -3,14 +3,13 @@
 Testes do middleware de autenticacao JWT e comportamento de seguranca.
 Valida: tokens invalidos, expirados, adulterados, lockout de conta.
 """
-import pytest
-from unittest.mock import patch
-from datetime import datetime, timedelta, timezone
+
+from datetime import timedelta
 
 from app.core.security import create_access_token
 
-
 # ========== ENDPOINTS PUBLICOS ==========
+
 
 def test_health_check_no_auth(client):
     """Health check e publico — nao requer autenticacao."""
@@ -26,6 +25,7 @@ def test_setup_status_no_auth(client):
 
 
 # ========== ENDPOINTS PROTEGIDOS ==========
+
 
 def test_protected_endpoint_no_auth(client, admin_user):
     """Endpoint protegido sem token retorna 403."""
@@ -79,6 +79,7 @@ def test_protected_endpoint_malformed_header(client, admin_user):
 
 # ========== ACCOUNT LOCKOUT ==========
 
+
 def test_account_lockout_after_failed_attempts(client, admin_user):
     """
     Apos 5 tentativas de login com senha errada, conta e bloqueada.
@@ -86,20 +87,26 @@ def test_account_lockout_after_failed_attempts(client, admin_user):
     """
     # 5 tentativas erradas
     for i in range(5):
-        resp = client.post("/api/v1/auth/login", json={
-            "username": "admin",
-            "password": f"senhaerrada{i}",
-        })
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": f"senhaerrada{i}",
+            },
+        )
         if i < 4:
             assert resp.status_code == 401
         else:
             assert resp.status_code == 403
 
     # 6a tentativa — conta deve estar bloqueada
-    resp = client.post("/api/v1/auth/login", json={
-        "username": "admin",
-        "password": "Admin123",  # Senha correta, mas conta bloqueada
-    })
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "admin",
+            "password": "Admin123",  # Senha correta, mas conta bloqueada
+        },
+    )
     assert resp.status_code == 403
     # Mensagem deve mencionar bloqueio (sem vazar detalhes sensiveis)
     detail = resp.json().get("detail", "")
@@ -108,10 +115,11 @@ def test_account_lockout_after_failed_attempts(client, admin_user):
 
 # ========== INACTIVE USER ==========
 
+
 def test_inactive_user_cannot_login(client, db_session):
     """Usuario inativo nao consegue fazer login."""
-    from app.models.user import User
     from app.core.security import get_password_hash
+    from app.models.user import User
 
     inactive = User(
         email="inactive@lumina.test",
@@ -124,8 +132,11 @@ def test_inactive_user_cannot_login(client, db_session):
     db_session.add(inactive)
     db_session.commit()
 
-    response = client.post("/api/v1/auth/login", json={
-        "username": "inactiveuser",
-        "password": "Active123",
-    })
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "inactiveuser",
+            "password": "Active123",
+        },
+    )
     assert response.status_code == 403

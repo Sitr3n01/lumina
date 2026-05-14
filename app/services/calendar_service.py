@@ -2,20 +2,21 @@
 Serviço de gerenciamento de calendários.
 Orquestra o processo completo de sincronização: download, parse, merge e detecção de conflitos.
 """
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
 
-from app.models.calendar_source import CalendarSource
-from app.models.sync_log import SyncLog, SyncType, SyncStatus
-from app.models.property import Property
 from app.core.calendar_sync import get_calendar_engine
 from app.core.conflict_detector import ConflictDetector
-from app.services.booking_service import BookingService
-from app.services.sync_action_service import SyncActionService
+from app.models.calendar_source import CalendarSource
 from app.models.sync_action import TargetPlatform
-from app.telegram.notifications import NotificationService
+from app.models.sync_log import SyncLog, SyncStatus, SyncType
+from app.services.booking_service import BookingService
 from app.services.notification_db_service import NotificationDBService
+from app.services.sync_action_service import SyncActionService
+from app.telegram.notifications import NotificationService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -31,13 +32,11 @@ class CalendarService:
         self.conflict_detector = ConflictDetector(db)
         self.sync_action_service = SyncActionService(db)
 
-    def get_calendar_source_by_id(self, source_id: int) -> Optional[CalendarSource]:
+    def get_calendar_source_by_id(self, source_id: int) -> CalendarSource | None:
         """Busca uma fonte de calendário por ID"""
-        return self.db.query(CalendarSource).filter(
-            CalendarSource.id == source_id
-        ).first()
+        return self.db.query(CalendarSource).filter(CalendarSource.id == source_id).first()
 
-    def get_active_calendar_sources(self, property_id: int) -> List[CalendarSource]:
+    def get_active_calendar_sources(self, property_id: int) -> list[CalendarSource]:
         """
         Retorna todas as fontes de calendário ativas de um imóvel.
 
@@ -47,15 +46,13 @@ class CalendarService:
         Returns:
             Lista de CalendarSource ativos
         """
-        return self.db.query(CalendarSource).filter(
-            CalendarSource.property_id == property_id,
-            CalendarSource.sync_enabled == True
-        ).all()
+        return (
+            self.db.query(CalendarSource)
+            .filter(CalendarSource.property_id == property_id, CalendarSource.sync_enabled == True)
+            .all()
+        )
 
-    async def sync_calendar_source(
-        self,
-        calendar_source: CalendarSource
-    ) -> Dict[str, Any]:
+    async def sync_calendar_source(self, calendar_source: CalendarSource) -> dict[str, Any]:
         """
         Sincroniza uma fonte de calendário específica.
 
@@ -65,18 +62,18 @@ class CalendarService:
         Returns:
             Dicionário com resultado da sincronização
         """
-        logger.info(f"="*60)
+        logger.info("=" * 60)
         logger.info(f"Starting sync for {calendar_source.platform.value} (ID: {calendar_source.id})")
-        logger.info(f"="*60)
+        logger.info("=" * 60)
 
-        start_time = datetime.now(timezone.utc).replace(tzinfo=None)
+        start_time = datetime.now(UTC).replace(tzinfo=None)
 
         # Criar log de sincronização
         sync_log = SyncLog(
             calendar_source_id=calendar_source.id,
             sync_type=SyncType.ICAL,
             status=SyncStatus.SUCCESS,  # Será atualizado
-            started_at=start_time
+            started_at=start_time,
         )
         self.db.add(sync_log)
         self.db.commit()
@@ -84,37 +81,25 @@ class CalendarService:
         try:
             # Download e parse do iCal
             result = await self.sync_engine.sync_calendar_source(
-                url=calendar_source.ical_url,
-                platform=calendar_source.platform.value
+                url=calendar_source.ical_url, platform=calendar_source.platform.value
             )
 
             if not result["success"]:
                 # Erro no download/parse
                 sync_log.status = SyncStatus.ERROR
                 sync_log.error_message = result.get("error", "Unknown error")
-                sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                sync_log.sync_duration_ms = int(
-                    (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
-                )
+                sync_log.completed_at = datetime.now(UTC).replace(tzinfo=None)
+                sync_log.sync_duration_ms = int((sync_log.completed_at - sync_log.started_at).total_seconds() * 1000)
                 self.db.commit()
 
                 logger.error(f"[FAIL] Sync failed: {result['error']}")
-                return {
-                    "success": False,
-                    "error": result["error"],
-                    "sync_log_id": sync_log.id
-                }
+                return {"success": False, "error": result["error"], "sync_log_id": sync_log.id}
 
             # Processar eventos
             events = result["events"]
             logger.info(f"Processing {len(events)} events...")
 
-            stats = {
-                "added": 0,
-                "updated": 0,
-                "cancelled": 0,
-                "unchanged": 0
-            }
+            stats = {"added": 0, "updated": 0, "cancelled": 0, "unchanged": 0}
 
             new_bookings = []
 
@@ -122,7 +107,7 @@ class CalendarService:
                 booking, action = self.booking_service.merge_booking_from_ical(
                     event_data=event_data,
                     calendar_source_id=calendar_source.id,
-                    property_id=calendar_source.property_id
+                    property_id=calendar_source.property_id,
                 )
 
                 if action == "created":
@@ -161,24 +146,17 @@ class CalendarService:
                     logger.error(f"  [ERR] Error creating cancel notification: {e}")
 
             # Marcar reservas passadas como completadas
-            completed_count = self.booking_service.mark_completed_bookings(
-                calendar_source.property_id
-            )
+            completed_count = self.booking_service.mark_completed_bookings(calendar_source.property_id)
 
             # DETECÇÃO DE CONFLITOS
             logger.info("Detecting conflicts...")
             conflicts = self.conflict_detector.detect_all_conflicts(calendar_source.property_id)
 
             # Auto-resolver conflitos de reservas canceladas
-            auto_resolved = self.conflict_detector.auto_resolve_cancelled_conflicts(
-                calendar_source.property_id
-            )
+            auto_resolved = self.conflict_detector.auto_resolve_cancelled_conflicts(calendar_source.property_id)
 
             # Criar ações de bloqueio para novos conflitos críticos
-            conflicts_created = self._create_sync_actions_for_conflicts(
-                conflicts,
-                calendar_source.property_id
-            )
+            conflicts_created = self._create_sync_actions_for_conflicts(conflicts, calendar_source.property_id)
 
             # Notificação DB para conflitos detectados
             if conflicts:
@@ -187,7 +165,7 @@ class CalendarService:
                     notif_db.create(
                         type="conflict",
                         title=f"{len(conflicts)} conflito(s) detectado(s)",
-                        message=f"Verifique a página de conflitos para resolver.",
+                        message="Verifique a página de conflitos para resolver.",
                     )
                 except Exception as e:
                     logger.error(f"  [ERR] Error creating conflict notification: {e}")
@@ -198,19 +176,17 @@ class CalendarService:
             sync_log.bookings_updated = stats["updated"]
             sync_log.bookings_cancelled = stats["cancelled"]
             sync_log.conflicts_detected = len(conflicts)
-            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            sync_log.sync_duration_ms = int(
-                (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
-            )
+            sync_log.completed_at = datetime.now(UTC).replace(tzinfo=None)
+            sync_log.sync_duration_ms = int((sync_log.completed_at - sync_log.started_at).total_seconds() * 1000)
 
             # Atualizar calendar_source
-            calendar_source.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            calendar_source.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
             calendar_source.last_sync_status = "success"
 
             self.db.commit()
 
-            logger.info(f"")
-            logger.info(f"[OK] Sync completed successfully!")
+            logger.info("")
+            logger.info("[OK] Sync completed successfully!")
             logger.info(f"   Added: {stats['added']}")
             logger.info(f"   Updated: {stats['updated']}")
             logger.info(f"   Cancelled: {stats['cancelled']}")
@@ -222,13 +198,13 @@ class CalendarService:
             if conflicts_created > 0:
                 logger.info(f"   [WARN] Actions created: {conflicts_created}")
             logger.info(f"   Duration: {sync_log.sync_duration_ms}ms")
-            logger.info(f"="*60)
+            logger.info("=" * 60)
 
             return {
                 "success": True,
                 "stats": stats,
                 "sync_log_id": sync_log.id,
-                "duration_ms": sync_log.sync_duration_ms
+                "duration_ms": sync_log.sync_duration_ms,
             }
 
         except Exception as e:
@@ -238,22 +214,16 @@ class CalendarService:
             # Atualizar log com erro
             sync_log.status = SyncStatus.ERROR
             sync_log.error_message = str(e)
-            sync_log.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            sync_log.sync_duration_ms = int(
-                (sync_log.completed_at - sync_log.started_at).total_seconds() * 1000
-            )
+            sync_log.completed_at = datetime.now(UTC).replace(tzinfo=None)
+            sync_log.sync_duration_ms = int((sync_log.completed_at - sync_log.started_at).total_seconds() * 1000)
 
             calendar_source.last_sync_status = "error"
 
             self.db.commit()
 
-            return {
-                "success": False,
-                "error": str(e),
-                "sync_log_id": sync_log.id
-            }
+            return {"success": False, "error": str(e), "sync_log_id": sync_log.id}
 
-    async def sync_all_sources(self, property_id: int) -> Dict[str, Any]:
+    async def sync_all_sources(self, property_id: int) -> dict[str, Any]:
         """
         Sincroniza todas as fontes de calendário de um imóvel.
 
@@ -263,35 +233,22 @@ class CalendarService:
         Returns:
             Dicionário com resultado consolidado
         """
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"STARTING FULL CALENDAR SYNC FOR PROPERTY ID={property_id}")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
         sources = self.get_active_calendar_sources(property_id)
 
         if not sources:
             logger.warning("No active calendar sources found")
-            return {
-                "success": False,
-                "error": "No active calendar sources",
-                "results": []
-            }
+            return {"success": False, "error": "No active calendar sources", "results": []}
 
         results = []
-        total_stats = {
-            "added": 0,
-            "updated": 0,
-            "cancelled": 0,
-            "unchanged": 0
-        }
+        total_stats = {"added": 0, "updated": 0, "cancelled": 0, "unchanged": 0}
 
         for source in sources:
             result = await self.sync_calendar_source(source)
-            results.append({
-                "calendar_source_id": source.id,
-                "platform": source.platform.value,
-                **result
-            })
+            results.append({"calendar_source_id": source.id, "platform": source.platform.value, **result})
 
             if result.get("success") and "stats" in result:
                 stats = result["stats"]
@@ -302,27 +259,19 @@ class CalendarService:
 
         all_successful = all(r.get("success", False) for r in results)
 
-        logger.info(f"\n{'='*60}")
-        logger.info(f"FULL SYNC COMPLETED")
-        logger.info(f"{'='*60}")
-        logger.info(f"Total Changes:")
+        logger.info(f"\n{'=' * 60}")
+        logger.info("FULL SYNC COMPLETED")
+        logger.info(f"{'=' * 60}")
+        logger.info("Total Changes:")
         logger.info(f"  [NEW] Added: {total_stats['added']}")
         logger.info(f"  [UPD] Updated: {total_stats['updated']}")
         logger.info(f"  [DEL] Cancelled: {total_stats['cancelled']}")
         logger.info(f"  [--] Unchanged: {total_stats['unchanged']}")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
-        return {
-            "success": all_successful,
-            "total_stats": total_stats,
-            "results": results
-        }
+        return {"success": all_successful, "total_stats": total_stats, "results": results}
 
-    def _create_sync_actions_for_conflicts(
-        self,
-        conflicts: list,
-        property_id: int
-    ) -> int:
+    def _create_sync_actions_for_conflicts(self, conflicts: list, property_id: int) -> int:
         """
         Cria ações de sincronização para conflitos detectados.
         Determina qual plataforma precisa ser bloqueada.
@@ -365,12 +314,7 @@ class CalendarService:
             )
 
             # Determinar prioridade baseada na severidade
-            priority_map = {
-                "critical": "critical",
-                "high": "high",
-                "medium": "medium",
-                "low": "low"
-            }
+            priority_map = {"critical": "critical", "high": "high", "medium": "medium", "low": "low"}
             priority = priority_map.get(conflict.severity, "high")
 
             # Criar ação
@@ -381,7 +325,7 @@ class CalendarService:
                 target_platform=target_platform,
                 reason=reason,
                 trigger_booking=second_booking,
-                priority=priority
+                priority=priority,
             )
 
             actions_created += 1
@@ -389,11 +333,7 @@ class CalendarService:
 
         return actions_created
 
-    def get_sync_history(
-        self,
-        calendar_source_id: int,
-        limit: int = 10
-    ) -> List[SyncLog]:
+    def get_sync_history(self, calendar_source_id: int, limit: int = 10) -> list[SyncLog]:
         """
         Retorna o histórico de sincronizações.
 
@@ -404,11 +344,15 @@ class CalendarService:
         Returns:
             Lista de SyncLog
         """
-        return self.db.query(SyncLog).filter(
-            SyncLog.calendar_source_id == calendar_source_id
-        ).order_by(SyncLog.started_at.desc()).limit(limit).all()
+        return (
+            self.db.query(SyncLog)
+            .filter(SyncLog.calendar_source_id == calendar_source_id)
+            .order_by(SyncLog.started_at.desc())
+            .limit(limit)
+            .all()
+        )
 
-    def get_last_sync_log(self, calendar_source_id: int) -> Optional[SyncLog]:
+    def get_last_sync_log(self, calendar_source_id: int) -> SyncLog | None:
         """
         Retorna o último log de sincronização.
 
@@ -418,6 +362,9 @@ class CalendarService:
         Returns:
             SyncLog ou None
         """
-        return self.db.query(SyncLog).filter(
-            SyncLog.calendar_source_id == calendar_source_id
-        ).order_by(SyncLog.started_at.desc()).first()
+        return (
+            self.db.query(SyncLog)
+            .filter(SyncLog.calendar_source_id == calendar_source_id)
+            .order_by(SyncLog.started_at.desc())
+            .first()
+        )

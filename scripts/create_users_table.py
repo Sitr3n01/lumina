@@ -5,6 +5,7 @@ Script para criar tabela de usuários no banco de dados.
 Usage:
     python scripts/create_users_table.py
 """
+
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.database.connection import engine
 from app.models.base import Base
 from app.models.user import User  # Importa model para criar tabela
+
 
 def create_users_table():
     """Cria tabela de usuários no banco"""
@@ -49,8 +51,9 @@ def create_users_table():
         print()
 
     except Exception as e:
-        print(f"[ERRO] Erro ao criar tabela: {str(e)}")
+        print(f"[ERRO] Erro ao criar tabela: {e!s}")
         import traceback
+
         traceback.print_exc()
         return 1
 

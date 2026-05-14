@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { settingsAPI } from '../services/api';
+import { createContext, useContext, useState } from 'react';
 
 const PropertyContext = createContext(null);
 

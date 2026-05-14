@@ -5,11 +5,12 @@ Token Blacklist Service
 Gerencia invalidação de tokens JWT (logout, password change, etc).
 Suporta Redis (produção) com fallback para in-memory (desenvolvimento).
 """
+
 import time
-from typing import Optional, Set, Dict
-from datetime import datetime, timedelta, timezone
-from app.utils.logger import get_logger
+from datetime import UTC, datetime
+
 from app.config import settings
+from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -30,16 +31,16 @@ class TokenBlacklist:
     """
 
     def __init__(self):
-        self._redis_client: Optional[object] = None
-        self._memory_blacklist: Set[str] = set()
-        self._memory_expiry: Dict[str, float] = {}  # FIX: Track expiration times
+        self._redis_client: object | None = None
+        self._memory_blacklist: set[str] = set()
+        self._memory_expiry: dict[str, float] = {}  # FIX: Track expiration times
         self._setup_redis()
         self._start_cleanup_task()  # FIX: Iniciar limpeza automática
 
     def _setup_redis(self):
         """Tenta conectar ao Redis, usa in-memory como fallback"""
         # Verificar se Redis está configurado
-        redis_url = getattr(settings, 'REDIS_URL', None)
+        redis_url = getattr(settings, "REDIS_URL", None)
 
         if not redis_url:
             logger.warning(
@@ -53,10 +54,7 @@ class TokenBlacklist:
 
             # Tentar conectar ao Redis
             self._redis_client = redis.from_url(
-                redis_url,
-                decode_responses=True,
-                socket_connect_timeout=2,
-                socket_timeout=2
+                redis_url, decode_responses=True, socket_connect_timeout=2, socket_timeout=2
             )
 
             # Testar conexão
@@ -68,10 +66,7 @@ class TokenBlacklist:
             self._redis_client = None
 
         except Exception as e:
-            logger.warning(
-                f"Failed to connect to Redis: {e}. "
-                f"Using in-memory blacklist (not suitable for production)"
-            )
+            logger.warning(f"Failed to connect to Redis: {e}. Using in-memory blacklist (not suitable for production)")
             self._redis_client = None
 
     def revoke_token(self, token: str, expires_at: datetime) -> bool:
@@ -86,7 +81,7 @@ class TokenBlacklist:
             True se adicionado com sucesso
         """
         # Calcular TTL (tempo até expiração)
-        ttl_seconds = int((expires_at - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds())
+        ttl_seconds = int((expires_at - datetime.now(UTC).replace(tzinfo=None)).total_seconds())
 
         if ttl_seconds <= 0:
             # Token já expirou naturalmente, não precisa blacklist
@@ -161,7 +156,7 @@ class TokenBlacklist:
             True se marcado para revogação
         """
         key = f"user_revoked:{user_id}"
-        ttl_seconds = int((current_token_exp - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds())
+        ttl_seconds = int((current_token_exp - datetime.now(UTC).replace(tzinfo=None)).total_seconds())
 
         if ttl_seconds <= 0:
             return True
@@ -169,11 +164,7 @@ class TokenBlacklist:
         if self._redis_client:
             try:
                 # Armazena timestamp de revogação
-                self._redis_client.setex(
-                    key,
-                    ttl_seconds,
-                    str(int(time.time()))
-                )
+                self._redis_client.setex(key, ttl_seconds, str(int(time.time())))
                 logger.info(f"All tokens revoked for user {user_id}")
                 return True
 
@@ -241,10 +232,7 @@ class TokenBlacklist:
 
         # FIX: Limpar tokens expirados baseado em timestamp
         current_time = time.time()
-        expired_keys = [
-            k for k, exp_time in self._memory_expiry.items()
-            if exp_time <= current_time
-        ]
+        expired_keys = [k for k, exp_time in self._memory_expiry.items() if exp_time <= current_time]
 
         for key in expired_keys:
             self._memory_blacklist.discard(key)
@@ -261,9 +249,10 @@ class TokenBlacklist:
             return  # Redis não precisa de limpeza manual
 
         import asyncio
+
         try:
             # Tentar criar task se loop está disponível
-            asyncio.create_task(self._periodic_cleanup())
+            self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
             logger.info("Started periodic cleanup task for in-memory token blacklist")
         except RuntimeError:
             # Loop não disponível (startup), será chamado manualmente
@@ -272,6 +261,7 @@ class TokenBlacklist:
     async def _periodic_cleanup(self):
         """FIX: Task assíncrona que limpa tokens expirados a cada 5 minutos"""
         import asyncio
+
         while True:
             try:
                 await asyncio.sleep(300)  # 5 minutos
@@ -292,27 +282,23 @@ class TokenBlacklist:
                     "backend": "redis",
                     "tokens_revoked": len(keys),
                     "users_revoked": len(user_keys),
-                    "redis_connected": True
+                    "redis_connected": True,
                 }
 
             except Exception as e:
                 logger.error(f"Failed to get Redis stats: {e}")
-                return {
-                    "backend": "redis",
-                    "error": str(e),
-                    "redis_connected": False
-                }
+                return {"backend": "redis", "error": str(e), "redis_connected": False}
 
         else:
             return {
                 "backend": "memory",
                 "tokens_revoked": len(self._memory_blacklist),
-                "warning": "In-memory blacklist not suitable for production!"
+                "warning": "In-memory blacklist not suitable for production!",
             }
 
 
 # Singleton global
-_blacklist_instance: Optional[TokenBlacklist] = None
+_blacklist_instance: TokenBlacklist | None = None
 
 
 def get_token_blacklist() -> TokenBlacklist:

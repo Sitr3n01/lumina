@@ -2,31 +2,31 @@
 Bot do Telegram para gerenciamento de apartamento.
 Fornece comandos para visualizar reservas, conflitos e receber notificações.
 """
-import asyncio
+
+import contextlib
 from datetime import datetime
-from typing import Optional
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+
+from sqlalchemy.orm import Session
 from telegram.ext import (
     Application,
-    CommandHandler,
     CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
     MessageHandler,
     filters,
 )
-from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database.session import get_db
-from app.database.session import get_db_context
+from app.core.conflict_detector import ConflictDetector
+from app.database.session import get_db, get_db_context
 from app.models.booking import Booking
 from app.models.booking_conflict import BookingConflict
 from app.models.property import Property
-from app.core.conflict_detector import ConflictDetector
 from app.services.document_service import DocumentService
 from app.services.email_service import get_email_service
 from app.services.notification_db_service import NotificationDBService
 from app.utils.logger import get_logger
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ class TelegramBot:
     def __init__(self):
         self.token = settings.TELEGRAM_BOT_TOKEN
         self.admin_ids = settings.admin_user_ids
-        self.application: Optional[Application] = None
+        self.application: Application | None = None
         self._running = False
 
     async def start(self):
@@ -95,9 +95,7 @@ class TelegramBot:
         self.application.add_handler(CallbackQueryHandler(self._handle_callback))
 
         # Handler de mensagens desconhecidas
-        self.application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
-        )
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message))
 
     def _check_admin(self, user_id: int) -> bool:
         """Verifica se o usuário é admin"""
@@ -107,10 +105,7 @@ class TelegramBot:
         """Comando /start - Boas-vindas"""
         user = update.effective_user
         if not self._check_admin(user.id):
-            await update.message.reply_text(
-                "❌ Você não tem permissão para usar este bot.\n"
-                f"Seu ID: {user.id}"
-            )
+            await update.message.reply_text(f"❌ Você não tem permissão para usar este bot.\nSeu ID: {user.id}")
             return
 
         welcome_text = (
@@ -174,12 +169,8 @@ class TelegramBot:
             # Buscar dados
             property_obj = db.query(Property).first()
             total_bookings = db.query(Booking).count()
-            active_bookings = (
-                db.query(Booking).filter(Booking.status == "confirmed").count()
-            )
-            conflicts_count = (
-                db.query(BookingConflict).filter(BookingConflict.resolved == False).count()
-            )
+            active_bookings = db.query(Booking).filter(Booking.status == "confirmed").count()
+            conflicts_count = db.query(BookingConflict).filter(BookingConflict.resolved == False).count()
 
             # Montar mensagem
             status_text = (
@@ -203,18 +194,14 @@ class TelegramBot:
         db: Session = next(get_db())
         try:
             bookings = (
-                db.query(Booking)
-                .filter(Booking.status == "confirmed")
-                .order_by(Booking.check_in_date)
-                .limit(10)
-                .all()
+                db.query(Booking).filter(Booking.status == "confirmed").order_by(Booking.check_in_date).limit(10).all()
             )
 
             if not bookings:
                 await update.message.reply_text("📭 Nenhuma reserva confirmada encontrada.")
                 return
 
-            text = f"📅 **Reservas Confirmadas** (10 mais próximas)\n\n"
+            text = "📅 **Reservas Confirmadas** (10 mais próximas)\n\n"
             for booking in bookings:
                 platform_emoji = self._get_platform_emoji(booking.platform)
                 text += (
@@ -265,10 +252,7 @@ class TelegramBot:
                 text += "🟢 **CHECK-INS:**\n"
                 for booking in checkins:
                     platform_emoji = self._get_platform_emoji(booking.platform)
-                    text += (
-                        f"{platform_emoji} {booking.guest_name} "
-                        f"({booking.guest_count} hóspede(s))\n"
-                    )
+                    text += f"{platform_emoji} {booking.guest_name} ({booking.guest_count} hóspede(s))\n"
                 text += "\n"
             else:
                 text += "🟢 **CHECK-INS:** Nenhum\n\n"
@@ -335,11 +319,7 @@ class TelegramBot:
 
         db: Session = next(get_db())
         try:
-            conflicts = (
-                db.query(BookingConflict)
-                .filter(BookingConflict.resolved == False)
-                .all()
-            )
+            conflicts = db.query(BookingConflict).filter(BookingConflict.resolved == False).all()
 
             if not conflicts:
                 await update.message.reply_text("✅ Nenhum conflito detectado!")
@@ -375,20 +355,23 @@ class TelegramBot:
         db: Session = next(get_db())
         try:
             from app.services.calendar_service import CalendarService
+
             # Sincronizar
             sync = CalendarService(db)
             properties = db.query(Property).all()
             results = []
             conflicts = []
             detector = ConflictDetector(db)
-            
+
             for prop in properties:
                 res = await sync.sync_all_sources(prop.id)
                 if res.get("success"):
-                    results.append({
-                        "new_bookings": res.get("total_stats", {}).get("bookings_added", 0),
-                        "updated_bookings": res.get("total_stats", {}).get("bookings_updated", 0)
-                    })
+                    results.append(
+                        {
+                            "new_bookings": res.get("total_stats", {}).get("bookings_added", 0),
+                            "updated_bookings": res.get("total_stats", {}).get("bookings_updated", 0),
+                        }
+                    )
                 # Detectar conflitos
                 prop_conflicts = detector.detect_all_conflicts(prop.id)
                 conflicts.extend(prop_conflicts)
@@ -415,15 +398,11 @@ class TelegramBot:
                 f"[TelegramBot] Erro na sincronização para user {update.effective_user.id}: {e}",
                 exc_info=True,
             )
-            await update.message.reply_text(
-                "❌ Erro ao sincronizar os calendários. Verifique os logs do sistema."
-            )
+            await update.message.reply_text("❌ Erro ao sincronizar os calendários. Verifique os logs do sistema.")
         finally:
             db.close()
 
-    async def _handle_callback(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ):
+    async def _handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler para botões inline"""
         query = update.callback_query
         await query.answer()
@@ -466,17 +445,14 @@ class TelegramBot:
                 booking = db.query(Booking).filter(Booking.id == booking_id).first()
 
                 if not booking:
-                    await query.edit_message_text(
-                        f"❌ Reserva #{booking_id} não encontrada."
-                    )
+                    await query.edit_message_text(f"❌ Reserva #{booking_id} não encontrada.")
                     return
 
-                await query.edit_message_text(
-                    f"⏳ Gerando documento de autorização para {booking.guest_name}..."
-                )
+                await query.edit_message_text(f"⏳ Gerando documento de autorização para {booking.guest_name}...")
 
                 # Gerar documento
                 from app.services.settings_service import SettingsService
+
                 doc_service = DocumentService()
                 logo_url = SettingsService(db).get_all_settings().get("condoLogoUrl", "")
                 booking_data = {
@@ -506,9 +482,7 @@ class TelegramBot:
                 )
 
                 if not result["success"]:
-                    await query.edit_message_text(
-                        f"❌ Erro ao gerar documento: {result['message']}"
-                    )
+                    await query.edit_message_text(f"❌ Erro ao gerar documento: {result['message']}")
                     return
 
                 filename = result.get("filename", "")
@@ -526,9 +500,7 @@ class TelegramBot:
 
                 # Verificar se email esta configurado
                 email_service = get_email_service(
-                    provider=settings.EMAIL_PROVIDER,
-                    username=settings.EMAIL_FROM,
-                    password=settings.EMAIL_PASSWORD
+                    provider=settings.EMAIL_PROVIDER, username=settings.EMAIL_FROM, password=settings.EMAIL_PASSWORD
                 )
 
                 if not email_service:
@@ -542,19 +514,19 @@ class TelegramBot:
 
                 # Ler arquivo para anexo
                 from pathlib import Path
+
                 doc_path = Path(file_path)
                 if not doc_path.exists():
                     await query.edit_message_text(
-                        f"✅ Documento gerado mas arquivo não encontrado para envio.\n"
-                        f"Caminho: {file_path}"
+                        f"✅ Documento gerado mas arquivo não encontrado para envio.\nCaminho: {file_path}"
                     )
                     return
 
                 file_bytes = doc_path.read_bytes()
 
                 # Enviar email ao condominio
-                check_in_str = booking.check_in_date.strftime('%d/%m/%Y')
-                check_out_str = booking.check_out_date.strftime('%d/%m/%Y')
+                check_in_str = booking.check_in_date.strftime("%d/%m/%Y")
+                check_out_str = booking.check_out_date.strftime("%d/%m/%Y")
 
                 email_result = await email_service.send_email(
                     to=[settings.CONDO_EMAIL],
@@ -570,10 +542,7 @@ class TelegramBot:
                         f"{settings.OWNER_NAME}\n"
                         f"Tel: {settings.OWNER_PHONE}"
                     ),
-                    attachments=[{
-                        "filename": filename,
-                        "content": file_bytes
-                    }]
+                    attachments=[{"filename": filename, "content": file_bytes}],
                 )
 
                 if email_result.get("success"):
@@ -584,7 +553,7 @@ class TelegramBot:
                         f"📄 Documento: {filename}\n"
                         f"📧 Enviado para: {settings.CONDO_EMAIL}\n\n"
                         f"O condomínio receberá a autorização em breve.",
-                        parse_mode="Markdown"
+                        parse_mode="Markdown",
                     )
                     logger.info(f"Authorization sent for booking {booking_id} to {settings.CONDO_EMAIL}")
 
@@ -598,7 +567,7 @@ class TelegramBot:
                     )
                     notif_db.create(
                         type="email",
-                        title=f"Email enviado ao condomínio",
+                        title="Email enviado ao condomínio",
                         message=f"Autorização de {booking.guest_name} enviada para {settings.CONDO_EMAIL}",
                         booking_id=booking_id,
                     )
@@ -622,35 +591,25 @@ class TelegramBot:
 
         except Exception as e:
             logger.error(f"Error approving booking {booking_id}: {e}", exc_info=True)
-            try:
-                await query.edit_message_text(
-                    f"❌ Erro ao processar autorização: {str(e)}"
-                )
-            except Exception:
-                pass
+            with contextlib.suppress(Exception):
+                await query.edit_message_text(f"❌ Erro ao processar autorização: {e!s}")
 
     async def _handle_ignore_booking(self, query, booking_id: int):
         """Processa rejeicao de reserva"""
         try:
             await query.edit_message_text(
-                f"⏭️ Reserva #{booking_id} ignorada.\n"
-                f"Nenhum documento será gerado para esta reserva."
+                f"⏭️ Reserva #{booking_id} ignorada.\nNenhum documento será gerado para esta reserva."
             )
             logger.info(f"Booking {booking_id} ignored by admin")
         except Exception as e:
             logger.error(f"Error ignoring booking {booking_id}: {e}")
 
-    async def _handle_message(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ):
+    async def _handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler para mensagens de texto"""
         if not self._check_admin(update.effective_user.id):
             return
 
-        await update.message.reply_text(
-            "❓ Comando não reconhecido.\n"
-            "Digite /help para ver os comandos disponíveis."
-        )
+        await update.message.reply_text("❓ Comando não reconhecido.\nDigite /help para ver os comandos disponíveis.")
 
     def _get_main_menu_keyboard(self) -> InlineKeyboardMarkup:
         """Retorna teclado do menu principal"""

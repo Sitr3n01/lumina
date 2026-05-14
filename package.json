@@ -1,83 +1,123 @@
 {
-    "name": "lumina-desktop",
-    "version": "0.1.0",
-    "description": "LUMINA - Apartment Management System",
-    "main": "electron/main.js",
-    "private": true,
-    "scripts": {
-        "start": "electron .",
-        "dev": "concurrently -n py,react,electron -c yellow,cyan,green \"npm run dev:python\" \"npm run dev:frontend\" \"npm run dev:electron\"",
-        "dev:python": "cross-env LUMINA_DESKTOP=true python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
-        "dev:frontend": "cd frontend && npm run dev",
-        "dev:electron": "wait-on http-get://127.0.0.1:5173 http-get://127.0.0.1:8000/health && cross-env ELECTRON_DEV=true LUMINA_DEV_BACKEND_PORT=8000 electron .",
-        "build:frontend": "cd frontend && npm run build",
-        "build:python": "pyinstaller --noconfirm lumina.spec",
-        "build:electron": "electron-builder --win",
-        "dist": "npm run build:python && npm run build:frontend && npm run build:electron"
+  "name": "lumina-desktop",
+  "version": "0.1.0",
+  "description": "LUMINA - Apartment Management System",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently -n py,react,electron -c yellow,cyan,green \"npm run dev:python\" \"npm run dev:frontend\" \"npm run dev:electron\"",
+    "dev:python": "cross-env LUMINA_DESKTOP=true python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:electron": "wait-on http-get://127.0.0.1:5173 http-get://127.0.0.1:8000/health && cross-env ELECTRON_DEV=true LUMINA_DEV_BACKEND_PORT=8000 electron .",
+    "build:frontend": "cd frontend && npm run build",
+    "build:python": "pyinstaller --noconfirm lumina.spec",
+    "build:electron": "electron-builder --win",
+    "dist": "npm run build:python && npm run build:frontend && npm run build:electron",
+    "lint:python": "python -m ruff check app/ tests/ scripts/",
+    "lint:frontend": "npx eslint frontend/src/",
+    "format:python": "python -m ruff format app/ tests/ scripts/",
+    "format:check": "python -m ruff format --check app/ tests/ scripts/",
+    "quality": "npm run lint:python && npm run format:check && npm run lint:frontend",
+    "quality:fix": "python -m ruff format app/ tests/ scripts/ && python -m ruff check --fix app/ tests/ scripts/ && npx eslint frontend/src/ --fix",
+    "test": "python -m pytest tests/ -v",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "electron-log": "^5.1.0",
+    "electron-updater": "^6.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.4",
+    "wait-on": "^7.2.0"
+  },
+  "lint-staged": {
+    "app/**/*.py": [
+      "python -m ruff format",
+      "python -m ruff check"
+    ],
+    "tests/**/*.py": [
+      "python -m ruff format",
+      "python -m ruff check"
+    ],
+    "scripts/**/*.py": [
+      "python -m ruff format",
+      "python -m ruff check"
+    ],
+    "frontend/src/**/*.{js,jsx}": [
+      "npx eslint --max-warnings=0"
+    ]
+  },
+  "build": {
+    "appId": "com.lumina.desktop",
+    "productName": "LUMINA",
+    "copyright": "Copyright © 2026 LUMINA",
+    "asar": false,
+    "directories": {
+      "buildResources": "electron/assets",
+      "output": "release"
     },
-    "dependencies": {
-        "electron-log": "^5.1.0",
-        "electron-updater": "^6.1.0"
-    },
-    "devDependencies": {
-        "concurrently": "^8.2.0",
-        "cross-env": "^7.0.3",
-        "electron": "^28.3.3",
-        "electron-builder": "^24.9.0",
-        "wait-on": "^7.2.0"
-    },
-    "build": {
-        "appId": "com.lumina.desktop",
-        "productName": "LUMINA",
-        "copyright": "Copyright © 2026 LUMINA",
-        "asar": false,
-        "directories": {
-            "buildResources": "electron/assets",
-            "output": "release"
-        },
-        "files": [
-            "electron/**/*",
-            "package.json",
-            "!electron/assets/!(tray-icon.*)"
-        ],
-        "extraResources": [
-            {
-                "from": "frontend/dist",
-                "to": "app/frontend/dist",
-                "filter": ["**/*"]
-            },
-            {
-                "from": "dist/lumina-backend",
-                "to": "python-dist/lumina-backend",
-                "filter": ["**/*"]
-            },
-            {
-                "from": "templates",
-                "to": "templates",
-                "filter": ["**/*"]
-            }
-        ],
-        "win": {
-            "target": [
-                {
-                    "target": "nsis",
-                    "arch": ["x64"]
-                }
-            ],
-            "icon": "electron/assets/tray-icon.png",
-            "artifactName": "LUMINA-Setup-A.${version}.exe"
-        },
-        "nsis": {
-            "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
-            "shortcutName": "LUMINA"
-        },
-        "publish": {
-            "provider": "github",
-            "owner": "Sitr3n01",
-            "repo": "AP_Controller"
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!electron/assets/!(tray-icon.*)"
+    ],
+    "extraResources": [
+      {
+        "from": "frontend/dist",
+        "to": "app/frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "dist/lumina-backend",
+        "to": "python-dist/lumina-backend",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "templates",
+        "to": "templates",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
         }
+      ],
+      "icon": "electron/assets/tray-icon.png",
+      "artifactName": "LUMINA-Setup-A.${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LUMINA"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Sitr3n01",
+      "repo": "AP_Controller"
     }
+  }
 }

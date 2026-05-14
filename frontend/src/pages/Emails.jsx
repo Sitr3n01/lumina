@@ -9,8 +9,7 @@ import {
   XCircle,
   Clock,
   Zap,
-  Search,
-  X
+  Search
 } from 'lucide-react';
 import { emailsAPI } from '../services/api';
 import { formatDateTime } from '../utils/formatters';

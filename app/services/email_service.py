@@ -3,20 +3,22 @@
 Serviço universal de email com suporte IMAP/SMTP.
 Compatível com Gmail, Outlook, Yahoo e outros provedores.
 """
+
 import asyncio
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-import aiosmtplib
+from typing import Any
+
 import aioimaplib
-from jinja2 import FileSystemLoader, Template
+import aiosmtplib
+from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
 
 from app.config import settings
-from app.utils.logger import get_logger
 from app.database.session import SessionLocal
+from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -32,7 +34,7 @@ class EmailConfig:
         imap_port: int,
         username: str,
         password: str,
-        use_tls: bool = True
+        use_tls: bool = True,
     ):
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
@@ -55,22 +57,22 @@ class EmailService:
             "smtp_port": 587,
             "imap_host": "imap.gmail.com",
             "imap_port": 993,
-            "use_tls": True
+            "use_tls": True,
         },
         "outlook": {
             "smtp_host": "smtp-mail.outlook.com",
             "smtp_port": 587,
             "imap_host": "outlook.office365.com",
             "imap_port": 993,
-            "use_tls": True
+            "use_tls": True,
         },
         "yahoo": {
             "smtp_host": "smtp.mail.yahoo.com",
             "smtp_port": 587,
             "imap_host": "imap.mail.yahoo.com",
             "imap_port": 993,
-            "use_tls": True
-        }
+            "use_tls": True,
+        },
     }
 
     def __init__(self, config: EmailConfig):
@@ -82,11 +84,7 @@ class EmailService:
 
     @classmethod
     def from_provider(
-        cls,
-        provider: str,
-        username: str,
-        password: str,
-        custom_config: Optional[Dict[str, Any]] = None
+        cls, provider: str, username: str, password: str, custom_config: dict[str, Any] | None = None
     ) -> "EmailService":
         """
         Cria instância a partir de provedor pré-configurado.
@@ -99,15 +97,15 @@ class EmailService:
                 imap_port=int(custom_config.get("imap_port", 993)),
                 username=username,
                 password=password,
-                use_tls=True
+                use_tls=True,
             )
             return cls(config)
 
         if provider.lower() not in cls.PROVIDERS:
             # Fallback to gmail default if unknown, or raise error
             # For robustness, let's try to map generic names
-            provider = "gmail" 
-        
+            provider = "gmail"
+
         provider_config = cls.PROVIDERS[provider.lower()]
         config = EmailConfig(
             smtp_host=provider_config["smtp_host"],
@@ -116,7 +114,7 @@ class EmailService:
             imap_port=provider_config["imap_port"],
             username=username,
             password=password,
-            use_tls=provider_config["use_tls"]
+            use_tls=provider_config["use_tls"],
         )
 
         return cls(config)
@@ -129,25 +127,23 @@ class EmailService:
         template_dir = Path(settings.TEMPLATE_DIR) / "email"
         template_dir.mkdir(parents=True, exist_ok=True)
 
-        return SandboxedEnvironment(
-            loader=FileSystemLoader(str(template_dir)),
-            autoescape=True
-        )
+        return SandboxedEnvironment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
 
     async def send_email(
         self,
-        to: List[str],
+        to: list[str],
         subject: str,
         body: str,
         html: bool = False,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None,
-        attachments: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, Any]:
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Envia email via SMTP."""
         try:
             # Criar mensagem
             import uuid
+
             msg = MIMEMultipart()
             msg["From"] = self.config.username
             msg["To"] = ", ".join(to)
@@ -166,22 +162,16 @@ class EmailService:
             # Adicionar anexos
             if attachments:
                 from app.core.validators import sanitize_filename
+
                 for attachment in attachments:
                     safe_filename = sanitize_filename(attachment["filename"])
                     part = MIMEApplication(attachment["content"])
-                    part.add_header(
-                        "Content-Disposition",
-                        "attachment",
-                        filename=safe_filename
-                    )
+                    part.add_header("Content-Disposition", "attachment", filename=safe_filename)
                     msg.attach(part)
 
             # Enviar email (com timeout de 30s)
             async with aiosmtplib.SMTP(
-                hostname=self.config.smtp_host,
-                port=self.config.smtp_port,
-                use_tls=self.config.use_tls,
-                timeout=30
+                hostname=self.config.smtp_host, port=self.config.smtp_port, use_tls=self.config.use_tls, timeout=30
             ) as smtp:
                 await smtp.login(self.config.username, self.config.password)
 
@@ -195,41 +185,30 @@ class EmailService:
 
             logger.info(f"Email sent successfully to {', '.join(to)}")
 
-            return {
-                "success": True,
-                "message": "Email enviado com sucesso",
-                "message_id": msg.get("Message-ID", "")
-            }
+            return {"success": True, "message": "Email enviado com sucesso", "message_id": msg.get("Message-ID", "")}
 
         except Exception as e:
             logger.error(f"Error sending email: {e}")
-            return {
-                "success": False,
-                "message": "Erro ao enviar email. Verifique as configurações e tente novamente."
-            }
+            return {"success": False, "message": "Erro ao enviar email. Verifique as configurações e tente novamente."}
 
     async def send_template_email(
-        self,
-        to: List[str],
-        subject: str,
-        template_name: str,
-        context: Dict[str, Any],
-        **kwargs
-    ) -> Dict[str, Any]:
+        self, to: list[str], subject: str, template_name: str, context: dict[str, Any], **kwargs
+    ) -> dict[str, Any]:
         """Envia email usando template Jinja2."""
         try:
             import os
+
             safe_template_name = os.path.basename(template_name)
 
-            if safe_template_name != template_name or '..' in template_name:
+            if safe_template_name != template_name or ".." in template_name:
                 return {"success": False, "message": "Nome de template inválido"}
 
             ALLOWED_TEMPLATES = {
-                'booking_confirmation.html',
-                'checkin_reminder.html',
-                'checkout_reminder.html',
-                'payment_receipt.html',
-                'welcome_email.html'
+                "booking_confirmation.html",
+                "checkin_reminder.html",
+                "checkout_reminder.html",
+                "payment_receipt.html",
+                "welcome_email.html",
             }
 
             if safe_template_name not in ALLOWED_TEMPLATES:
@@ -241,47 +220,26 @@ class EmailService:
             template = self.template_env.get_template(safe_template_name)
             html_body = template.render(**sanitized_context)
 
-            return await self.send_email(
-                to=to,
-                subject=subject,
-                body=html_body,
-                html=True,
-                **kwargs
-            )
+            return await self.send_email(to=to, subject=subject, body=html_body, html=True, **kwargs)
 
         except Exception as e:
             logger.error(f"Error sending template email: {e}")
             return {"success": False, "message": "Erro ao renderizar ou enviar template de email."}
 
     async def fetch_emails(
-        self,
-        folder: str = "INBOX",
-        limit: int = 10,
-        unread_only: bool = False,
-        timeout: int = 30
-    ) -> Dict[str, Any]:
+        self, folder: str = "INBOX", limit: int = 10, unread_only: bool = False, timeout: int = 30
+    ) -> dict[str, Any]:
         """Busca emails via IMAP com timeout de segurança."""
         imap = None
         try:
-            imap = aioimaplib.IMAP4_SSL(
-                host=self.config.imap_host,
-                port=self.config.imap_port,
-                timeout=timeout
-            )
+            imap = aioimaplib.IMAP4_SSL(host=self.config.imap_host, port=self.config.imap_port, timeout=timeout)
 
-            await asyncio.wait_for(
-                imap.wait_hello_from_server(), timeout=timeout
-            )
-            await asyncio.wait_for(
-                imap.login(self.config.username, self.config.password),
-                timeout=timeout
-            )
+            await asyncio.wait_for(imap.wait_hello_from_server(), timeout=timeout)
+            await asyncio.wait_for(imap.login(self.config.username, self.config.password), timeout=timeout)
             await asyncio.wait_for(imap.select(folder), timeout=timeout)
 
             search_criteria = "UNSEEN" if unread_only else "ALL"
-            _, data = await asyncio.wait_for(
-                imap.search(search_criteria), timeout=timeout
-            )
+            _, data = await asyncio.wait_for(imap.search(search_criteria), timeout=timeout)
 
             if not data or not data[0]:
                 logger.info(f"No emails found in folder {folder}")
@@ -294,28 +252,27 @@ class EmailService:
             email_ids = email_ids[-limit:]
             emails = []
             for email_id in email_ids:
-                _, msg_data = await asyncio.wait_for(
-                    imap.fetch(email_id, "(RFC822)"), timeout=timeout
-                )
-                emails.append({
-                    "id": email_id.decode(),
-                    "raw": msg_data[0][1].decode(errors="ignore")
-                })
+                _, msg_data = await asyncio.wait_for(imap.fetch(email_id, "(RFC822)"), timeout=timeout)
+                emails.append({"id": email_id.decode(), "raw": msg_data[0][1].decode(errors="ignore")})
 
             return {
                 "success": True,
                 "emails": emails,
                 "count": len(emails),
-                "message": f"{len(emails)} emails encontrados"
+                "message": f"{len(emails)} emails encontrados",
             }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"IMAP operation timed out after {timeout}s")
             return {"success": False, "message": f"Timeout ao conectar ao servidor IMAP ({timeout}s)", "emails": []}
 
         except Exception as e:
             logger.error(f"Error fetching emails: {e}")
-            return {"success": False, "message": "Erro ao buscar emails. Verifique as configurações IMAP.", "emails": []}
+            return {
+                "success": False,
+                "message": "Erro ao buscar emails. Verifique as configurações IMAP.",
+                "emails": [],
+            }
 
         finally:
             if imap:
@@ -327,19 +284,18 @@ class EmailService:
 
 # Helper para criar instância global
 def get_email_service(
-    provider: Optional[str] = None,
-    username: Optional[str] = None,
-    password: Optional[str] = None
-) -> Optional[EmailService]:
+    provider: str | None = None, username: str | None = None, password: str | None = None
+) -> EmailService | None:
     """
     Cria EmailService buscando configurações do Banco de Dados primeiro.
     Fallback para .env ou argumentos.
     """
-    
+
     # 1. Tentar buscar do banco de dados
     db = None
     try:
         from app.services.settings_service import SettingsService
+
         db = SessionLocal()
         settings_service = SettingsService(db)
 

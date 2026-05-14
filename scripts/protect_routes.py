@@ -2,6 +2,7 @@
 """
 Script para adicionar proteção de autenticação em rotas restantes.
 """
+
 import re
 from pathlib import Path
 
@@ -23,20 +24,20 @@ for router_path in routers:
         print(f"[SKIP] {router_path} - arquivo não encontrado")
         continue
 
-    content = file_path.read_text(encoding='utf-8')
+    content = file_path.read_text(encoding="utf-8")
     modified = False
 
     # Padrão para encontrar funções que precisam de proteção
     # Procura por: db: Session = Depends(get_db)\n):
     # E adiciona: ,\n    current_user: User = Depends(get_current_active_user)
 
-    pattern = r'(    db: Session = Depends\(get_db\))\n(\):)'
-    replacement = r'\1,\n    current_user: User = Depends(get_current_active_user)\n\2'
+    pattern = r"(    db: Session = Depends\(get_db\))\n(\):)"
+    replacement = r"\1,\n    current_user: User = Depends(get_current_active_user)\n\2"
 
     new_content = re.sub(pattern, replacement, content)
 
     if new_content != content:
-        file_path.write_text(new_content, encoding='utf-8')
+        file_path.write_text(new_content, encoding="utf-8")
         print(f"[OK] {router_path} - rotas protegidas")
         modified = True
     else:

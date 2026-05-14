@@ -2,13 +2,14 @@
 Utilitários para manipulação de datas e timezones.
 Centraliza lógica de conversão e formatação para o timezone de Lisboa.
 """
+
 from datetime import date, datetime, timedelta
-from typing import Optional
+
 import pytz
 from dateutil import parser
 
 from app.config import settings
-from app.constants import DATE_FORMAT_SHORT, DATE_FORMAT_LONG, DATETIME_FORMAT
+from app.constants import DATE_FORMAT_SHORT
 
 
 def get_timezone():
@@ -42,7 +43,7 @@ def to_local_datetime(dt: datetime) -> datetime:
     return dt.astimezone(get_timezone())
 
 
-def parse_ical_date(date_value) -> Optional[date]:
+def parse_ical_date(date_value) -> date | None:
     """
     Converte valor de data do iCal para objeto date.
 
@@ -102,9 +103,18 @@ def format_date_long(d: date) -> str:
     """
     # Mapeamento de meses em português
     months_pt = {
-        1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
-        5: "maio", 6: "junho", 7: "julho", 8: "agosto",
-        9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"
+        1: "janeiro",
+        2: "fevereiro",
+        3: "março",
+        4: "abril",
+        5: "maio",
+        6: "junho",
+        7: "julho",
+        8: "agosto",
+        9: "setembro",
+        10: "outubro",
+        11: "novembro",
+        12: "dezembro",
     }
 
     return f"{d.day} de {months_pt[d.month]} de {d.year}"
@@ -228,7 +238,7 @@ def dates_overlap(start1: date, end1: date, start2: date, end2: date) -> bool:
     return start1 < end2 and end1 > start2
 
 
-def get_overlap_period(start1: date, end1: date, start2: date, end2: date) -> Optional[tuple[date, date]]:
+def get_overlap_period(start1: date, end1: date, start2: date, end2: date) -> tuple[date, date] | None:
     """
     Calcula o período de sobreposição entre duas reservas.
 

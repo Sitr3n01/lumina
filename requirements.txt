@@ -39,6 +39,9 @@ redis>=5.0.0  # Token blacklist (opcional, usa in-memory se não configurado)
 bandit>=1.9.3  # Security linter
 safety>=3.7.0  # Dependency vulnerability scanner
 
+# Code Quality (Development/CI)
+ruff>=0.8.0  # Fast Python linter + formatter
+
 # =====================================================
 # MVP2 Dependencies (Document Generation)
 # =====================================================

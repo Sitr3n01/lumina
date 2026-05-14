@@ -3,22 +3,27 @@ Sistema de logging centralizado usando Loguru.
 Logs técnicos em inglês, mensagens de usuário em português.
 Inclui sanitização automática de dados sensíveis (tokens, senhas, URLs).
 """
+
+import contextlib
 import re
 import sys
 from pathlib import Path
-from loguru import logger
 
+from loguru import logger
 
 # Padrões sensíveis para redação em logs
 _SENSITIVE_PATTERNS = [
     # Tokens em query strings: ?token=xxx ou &token=xxx
-    (re.compile(r'([\?&](?:token|key|secret|password|api_key|access_token|apikey|auth)=)[^&\s"\']+', re.IGNORECASE), r'\1[REDACTED]'),
+    (
+        re.compile(r'([\?&](?:token|key|secret|password|api_key|access_token|apikey|auth)=)[^&\s"\']+', re.IGNORECASE),
+        r"\1[REDACTED]",
+    ),
     # URLs iCal com tokens longos (ex: /ical/ABC123DEF456.ics)
-    (re.compile(r'(/ical/)[A-Za-z0-9_-]{20,}(\.ics)'), r'\1[REDACTED]\2'),
+    (re.compile(r"(/ical/)[A-Za-z0-9_-]{20,}(\.ics)"), r"\1[REDACTED]\2"),
     # Bearer tokens em headers
-    (re.compile(r'(Bearer\s+)[A-Za-z0-9._-]{20,}', re.IGNORECASE), r'\1[REDACTED]'),
+    (re.compile(r"(Bearer\s+)[A-Za-z0-9._-]{20,}", re.IGNORECASE), r"\1[REDACTED]"),
     # Senhas em strings de conexão (user:password@host)
-    (re.compile(r'(://[^:]+:)[^@]+(@)'), r'\1[REDACTED]\2'),
+    (re.compile(r"(://[^:]+:)[^@]+(@)"), r"\1[REDACTED]\2"),
 ]
 
 
@@ -44,8 +49,7 @@ def _sanitizing_format_file(record):
     """Formata mensagem de arquivo com sanitização."""
     record["extra"]["sanitized_message"] = sanitize_log_message(record["message"])
     return (
-        "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | "
-        "{name}:{function}:{line} - {extra[sanitized_message]}\n{exception}"
+        "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {extra[sanitized_message]}\n{exception}"
     )
 
 
@@ -59,11 +63,9 @@ def setup_logger(log_level: str = "INFO", app_name: str = "Lumina") -> None:
     """
     # Garantir encoding UTF-8 no stdout para evitar UnicodeEncodeError no Windows (CP1252)
     # Usa errors='replace' como fallback: caracteres incodificáveis viram '?' em vez de crash
-    if hasattr(sys.stdout, 'reconfigure'):
-        try:
-            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        except Exception:
-            pass
+    if hasattr(sys.stdout, "reconfigure"):
+        with contextlib.suppress(Exception):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     # Remove handlers padrão do loguru
     logger.remove()

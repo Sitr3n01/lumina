@@ -133,7 +133,7 @@ const Settings = () => {
       '(incluindo chaves de IA configuradas pela interface) e reverter para os dados de fábrica.\n\n' +
       'O aplicativo será reiniciado e voltará à tela do wizard de configuração inicial.\n\n' +
       'Esta ação não pode ser desfeita. Deseja continuar?';
-    let confirmed = false;
+    let confirmed;
     if (window.electronAPI?.showConfirmDialog) {
       confirmed = await window.electronAPI.showConfirmDialog({
         title: 'Hard Reset — Reverter para Fábrica',

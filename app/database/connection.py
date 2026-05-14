@@ -1,6 +1,7 @@
 """
 Gerenciamento de conexão com o banco de dados SQLite.
 """
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -32,7 +33,7 @@ def create_db_engine():
         protocol, rest = masked_url.split("://", 1)
         credentials, host_info = rest.split("@", 1)
         if ":" in credentials:
-            user, password = credentials.split(":", 1)
+            user, _password = credentials.split(":", 1)
             masked_url = f"{protocol}://{user}:***@{host_info}"
         else:
             masked_url = f"{protocol}://***@{host_info}"
@@ -44,7 +45,7 @@ def create_db_engine():
         pool_pre_ping=True,  # Verifica conexão antes de usar
         connect_args={
             "check_same_thread": False,  # Permite uso em múltiplas threads (necessário para FastAPI)
-        }
+        },
     )
 
     logger.info("Database engine created successfully")
@@ -60,11 +61,7 @@ def get_session_factory():
     """
     engine = create_db_engine()
 
-    SessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine
-    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     return SessionLocal
 

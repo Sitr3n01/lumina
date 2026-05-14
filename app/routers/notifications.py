@@ -5,21 +5,21 @@ GET /api/v1/notifications/summary - Resumo para cards bento
 PUT /api/v1/notifications/{id}/read - Marcar como lida
 PUT /api/v1/notifications/read-all - Marcar todas como lidas
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from typing import Optional
 
-from app.database.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
 from app.config import settings
-from app.models.user import User
+from app.database.session import get_db
 from app.middleware.auth import get_current_active_user, get_current_user
-from app.services.notification_db_service import NotificationDBService
+from app.models.user import User
 from app.schemas.notification import (
-    NotificationResponse,
     NotificationListResponse,
+    NotificationResponse,
     NotificationSummaryResponse,
 )
+from app.services.notification_db_service import NotificationDBService
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notifications"])
 
@@ -31,7 +31,7 @@ _optional_bearer = HTTPBearer(auto_error=False)
 def get_summary(
     request: Request,
     db: Session = Depends(get_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(_optional_bearer),
+    credentials: HTTPAuthorizationCredentials | None = Security(_optional_bearer),
 ):
     """Resumo de notificações para os cards bento.
     Em modo desktop, aceita requests de localhost sem auth (usado pelo Electron tray poller).

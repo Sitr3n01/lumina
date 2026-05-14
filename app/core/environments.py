@@ -2,12 +2,14 @@
 """
 Configurações específicas por ambiente (dev, staging, prod).
 """
-from enum import Enum
-from typing import Dict, Any
+
+from enum import StrEnum
+from typing import Any
 
 
-class Environment(str, Enum):
+class Environment(StrEnum):
     """Ambientes disponíveis"""
+
     DEVELOPMENT = "development"
     STAGING = "staging"
     PRODUCTION = "production"
@@ -20,7 +22,7 @@ class EnvironmentConfig:
     """
 
     @staticmethod
-    def get_config(env: str) -> Dict[str, Any]:
+    def get_config(env: str) -> dict[str, Any]:
         """
         Retorna configurações específicas do ambiente.
 
@@ -38,7 +40,6 @@ class EnvironmentConfig:
                 "ACCESS_TOKEN_EXPIRE_MINUTES": 60,  # 1 hora em dev
                 "ENABLE_CONFLICT_NOTIFICATIONS": False,
             },
-
             Environment.STAGING: {
                 "LOG_LEVEL": "INFO",
                 "RATE_LIMIT_ENABLED": True,
@@ -46,22 +47,20 @@ class EnvironmentConfig:
                 "ACCESS_TOKEN_EXPIRE_MINUTES": 30,
                 "ENABLE_CONFLICT_NOTIFICATIONS": True,
             },
-
             Environment.PRODUCTION: {
                 "LOG_LEVEL": "WARNING",
                 "RATE_LIMIT_ENABLED": True,
                 "RATE_LIMIT_PER_MINUTE": 60,
                 "ACCESS_TOKEN_EXPIRE_MINUTES": 30,
                 "ENABLE_CONFLICT_NOTIFICATIONS": True,
-            }
+            },
         }
 
         env_key = Environment(env) if env in [e.value for e in Environment] else Environment.PRODUCTION
         return configs.get(env_key, configs[Environment.PRODUCTION])
 
-
     @staticmethod
-    def get_security_config(env: str) -> Dict[str, Any]:
+    def get_security_config(env: str) -> dict[str, Any]:
         """
         Configurações de segurança específicas por ambiente.
 

@@ -2,18 +2,19 @@
 Script para executar sincronização manual dos calendários.
 Útil para testes e debug durante o desenvolvimento.
 """
-import sys
+
 import asyncio
+import sys
 from pathlib import Path
 
 # Adiciona o diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.database.session import get_db_context
-from app.services.calendar_service import CalendarService
-from app.models.property import Property
 from app.config import settings
-from app.utils.logger import setup_logger, get_logger
+from app.database.session import get_db_context
+from app.models.property import Property
+from app.services.calendar_service import CalendarService
+from app.utils.logger import get_logger, setup_logger
 
 # Configura logging
 setup_logger(log_level=settings.LOG_LEVEL, app_name=settings.APP_NAME)
@@ -23,9 +24,9 @@ logger = get_logger(__name__)
 async def run_manual_sync():
     """Executa sincronização manual de todos os calendários"""
 
-    logger.info("\n" + "="*60)
+    logger.info("\n" + "=" * 60)
     logger.info("MANUAL CALENDAR SYNC - SENTINEL")
-    logger.info("="*60 + "\n")
+    logger.info("=" * 60 + "\n")
 
     try:
         with get_db_context() as db:
@@ -46,9 +47,9 @@ async def run_manual_sync():
 
             # Exibir resumo
             if result["success"]:
-                logger.info("\n" + "="*60)
+                logger.info("\n" + "=" * 60)
                 logger.info("✅ SYNC COMPLETED SUCCESSFULLY!")
-                logger.info("="*60)
+                logger.info("=" * 60)
                 logger.info("\nSummary:")
 
                 stats = result["total_stats"]
@@ -67,12 +68,12 @@ async def run_manual_sync():
                         s = source_result["stats"]
                         logger.info(f"     Added: {s['added']}, Updated: {s['updated']}, Cancelled: {s['cancelled']}")
 
-                logger.info("\n" + "="*60)
+                logger.info("\n" + "=" * 60)
                 logger.info("Next steps:")
                 logger.info("  - Check data/logs/ for detailed logs")
                 logger.info("  - Verify bookings in database")
                 logger.info("  - Start the Telegram bot to interact with data")
-                logger.info("="*60 + "\n")
+                logger.info("=" * 60 + "\n")
 
             else:
                 logger.error("\n❌ SYNC FAILED!")
@@ -90,17 +91,17 @@ async def run_sync_with_stats():
     await run_manual_sync()
 
     # Mostrar estatísticas do banco
-    logger.info("\n" + "="*60)
+    logger.info("\n" + "=" * 60)
     logger.info("DATABASE STATISTICS")
-    logger.info("="*60 + "\n")
+    logger.info("=" * 60 + "\n")
 
     try:
-        from app.models.booking import Booking
-        from app.models.calendar_source import CalendarSource
-        from app.models.sync_log import SyncLog
-        from app.models.booking_conflict import BookingConflict
-        from app.models.sync_action import SyncAction
         from app.core.conflict_detector import ConflictDetector
+        from app.models.booking import Booking
+        from app.models.booking_conflict import BookingConflict
+        from app.models.calendar_source import CalendarSource
+        from app.models.sync_action import SyncAction
+        from app.models.sync_log import SyncLog
         from app.services.sync_action_service import SyncActionService
 
         with get_db_context() as db:
@@ -131,9 +132,11 @@ async def run_sync_with_stats():
 
                 next_bookings = booking_service.get_next_bookings(property_obj.id, limit=3)
                 if next_bookings:
-                    logger.info(f"\n📅 Next Bookings:")
+                    logger.info("\n📅 Next Bookings:")
                     for booking in next_bookings:
-                        logger.info(f"   - {booking.check_in_date}: {booking.guest_name} ({booking.nights_count} nights)")
+                        logger.info(
+                            f"   - {booking.check_in_date}: {booking.guest_name} ({booking.nights_count} nights)"
+                        )
 
                 # Mostrar conflitos ativos
                 conflict_detector = ConflictDetector(db)
@@ -145,8 +148,12 @@ async def run_sync_with_stats():
                         b1 = conflict.booking_1
                         b2 = conflict.booking_2
                         logger.info(f"\n   🚨 Conflict ID {conflict.id} - {conflict.severity.upper()}")
-                        logger.info(f"      {b1.platform.upper()}: {b1.guest_name} ({b1.check_in_date} - {b1.check_out_date})")
-                        logger.info(f"      {b2.platform.upper()}: {b2.guest_name} ({b2.check_in_date} - {b2.check_out_date})")
+                        logger.info(
+                            f"      {b1.platform.upper()}: {b1.guest_name} ({b1.check_in_date} - {b1.check_out_date})"
+                        )
+                        logger.info(
+                            f"      {b2.platform.upper()}: {b2.guest_name} ({b2.check_in_date} - {b2.check_out_date})"
+                        )
                         logger.info(f"      Overlap: {conflict.overlap_nights} night(s)")
 
                 # Mostrar ações pendentes
@@ -161,7 +168,7 @@ async def run_sync_with_stats():
                         if action.action_url:
                             logger.info(f"      URL: {action.action_url}")
 
-            logger.info("\n" + "="*60 + "\n")
+            logger.info("\n" + "=" * 60 + "\n")
 
     except Exception as e:
         logger.error(f"Error getting statistics: {e}")

@@ -2,17 +2,19 @@
 """
 Router para geração e gerenciamento de documentos.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.orm import Session
+
 import io
 
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
+from sqlalchemy.orm import Session
+
 from app.database.session import get_db
-from app.models.user import User
-from app.models.booking import Booking
-from app.models.property import Property
-from app.models.guest import Guest
 from app.middleware.auth import get_current_active_user
+from app.models.booking import Booking
+from app.models.guest import Guest
+from app.models.property import Property
+from app.models.user import User
 from app.services.document_service import DocumentService
 from app.services.settings_service import SettingsService
 from app.utils.logger import get_logger
@@ -20,11 +22,11 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 from app.config import settings
 from app.schemas.document import (
-    GenerateDocumentRequest,
-    GenerateDocumentFromBookingRequest,
-    DocumentResponse,
+    DocumentListItem,
     DocumentListResponse,
-    DocumentListItem
+    DocumentResponse,
+    GenerateDocumentFromBookingRequest,
+    GenerateDocumentRequest,
 )
 
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
@@ -35,7 +37,7 @@ doc_service = DocumentService()
 def generate_document(
     request: GenerateDocumentRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Gera documento de autorização de condomínio com dados personalizados.
@@ -63,17 +65,10 @@ def generate_document(
     )
 
     if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
     # Construir response
-    response = DocumentResponse(
-        success=True,
-        message=result["message"],
-        filename=result.get("filename")
-    )
+    response = DocumentResponse(success=True, message=result["message"], filename=result.get("filename"))
 
     if request.save_to_file:
         response.file_path = result.get("file_path")
@@ -89,7 +84,7 @@ def generate_document(
 def generate_document_from_booking(
     request: GenerateDocumentFromBookingRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Gera documento de autorização a partir de uma reserva existente.
@@ -107,18 +102,14 @@ def generate_document_from_booking(
 
     if not booking:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reserva com ID {request.booking_id} não encontrada"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Reserva com ID {request.booking_id} não encontrada"
         )
 
     # Buscar imóvel
     property_obj = db.query(Property).filter(Property.id == booking.property_id).first()
 
     if not property_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Imóvel da reserva não encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imóvel da reserva não encontrado")
 
     # Buscar hóspede (se existir guest_id)
     guest_data = {}
@@ -146,13 +137,13 @@ def generate_document_from_booking(
     booking_data = {
         "id": booking.id,
         "check_in": booking.check_in_date,  # FIX: Usar check_in_date (não check_in)
-        "check_out": booking.check_out_date  # FIX: Usar check_out_date (não check_out)
+        "check_out": booking.check_out_date,  # FIX: Usar check_out_date (não check_out)
     }
 
     property_data = {
         "name": property_obj.name,
         "address": property_obj.address,
-        "condo_name": getattr(property_obj, 'condo_name', None),
+        "condo_name": getattr(property_obj, "condo_name", None),
         "owner_name": settings.OWNER_NAME,
     }
 
@@ -169,26 +160,19 @@ def generate_document_from_booking(
     )
 
     if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
     return DocumentResponse(
         success=True,
         message=result["message"],
         filename=result.get("filename"),
         file_path=result.get("file_path"),
-        download_url=f"/api/v1/documents/download/{result.get('filename')}"
+        download_url=f"/api/v1/documents/download/{result.get('filename')}",
     )
 
 
 @router.get("/list", response_model=DocumentListResponse)
-def list_documents(
-    limit: int = 20,
-    page: int = 1,
-    current_user: User = Depends(get_current_active_user)
-):
+def list_documents(limit: int = 20, page: int = 1, current_user: User = Depends(get_current_active_user)):
     """
     Lista documentos gerados com paginação.
 
@@ -202,17 +186,12 @@ def list_documents(
     offset = (page - 1) * limit
     documents = doc_service.list_generated_documents(limit=limit, offset=offset)
 
-    return DocumentListResponse(
-        total=len(documents),
-        documents=[DocumentListItem(**doc) for doc in documents]
-    )
+    return DocumentListResponse(total=len(documents), documents=[DocumentListItem(**doc) for doc in documents])
 
 
 @router.get("/download/{filename}")
 def download_document(
-    filename: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    filename: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """
     Faz download de um documento gerado.
@@ -224,9 +203,10 @@ def download_document(
         FileResponse com o documento
     """
     # SECURITY FIX: Validar filename para prevenir path traversal
-    from app.core.validators import sanitize_filename
     import os
     import re
+
+    from app.core.validators import sanitize_filename
 
     # Sanitizar filename
     safe_filename = sanitize_filename(filename)
@@ -234,23 +214,17 @@ def download_document(
     # Verificar se filename foi alterado (tentativa de path traversal)
     if safe_filename != filename:
         logger.warning(f"Path traversal attempt detected: {filename}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nome de arquivo inválido"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nome de arquivo inválido")
 
     # Verificar extensão permitida
-    allowed_extensions = {'.docx', '.pdf', '.txt'}
+    allowed_extensions = {".docx", ".pdf", ".txt"}
     file_ext = os.path.splitext(safe_filename)[1].lower()
     if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tipo de arquivo não permitido"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de arquivo não permitido")
 
     # SECURITY FIX (IDOR): Validar autorização para acessar documento
     # Extrair booking_id do filename (padrão: condo_auth_booking_<id>_timestamp.docx)
-    booking_match = re.search(r'booking_(\d+)', safe_filename)
+    booking_match = re.search(r"booking_(\d+)", safe_filename)
 
     if booking_match:
         booking_id = int(booking_match.group(1))
@@ -260,34 +234,26 @@ def download_document(
 
         if not booking:
             logger.warning(f"IDOR attempt: User {current_user.id} tried to access non-existent booking {booking_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Documento não encontrado"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado")
 
         # Validar que usuário tem permissão
         if not current_user.is_admin:
             logger.warning(f"IDOR attempt: User {current_user.id} tried to access document for booking {booking_id}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Você não tem permissão para acessar este documento"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Você não tem permissão para acessar este documento"
             )
     else:
         # Documentos sem booking_id no nome: apenas admins podem baixar
         if not current_user.is_admin:
             logger.warning(f"Access denied: User {current_user.id} tried to download unlinked document {safe_filename}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Você não tem permissão para acessar este documento"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Você não tem permissão para acessar este documento"
             )
 
     file_path = doc_service.get_document_path(safe_filename)
 
     if not file_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Documento não encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado")
 
     # SECURITY FIX: Verificar que o arquivo está dentro do output_dir
     try:
@@ -296,29 +262,22 @@ def download_document(
 
         if not str(file_path_resolved).startswith(str(output_dir_resolved)):
             logger.error(f"Path traversal blocked: {filename} -> {file_path_resolved}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Acesso negado"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
     except Exception as e:
         logger.error(f"Error resolving path: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao processar arquivo"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar arquivo"
+        ) from None
 
     return FileResponse(
         path=str(file_path_resolved),
         filename=safe_filename,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
 
 @router.delete("/{filename}", status_code=status.HTTP_200_OK)
-def delete_document(
-    filename: str,
-    current_user: User = Depends(get_current_active_user)
-):
+def delete_document(filename: str, current_user: User = Depends(get_current_active_user)):
     """
     Deleta um documento gerado. Apenas admins podem deletar.
 
@@ -331,26 +290,20 @@ def delete_document(
     # SECURITY: Apenas admins podem deletar documentos
     if not current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Apenas administradores podem deletar documentos"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores podem deletar documentos"
         )
 
     # Validar filename
     from app.core.validators import sanitize_filename
+
     safe_filename = sanitize_filename(filename)
     if safe_filename != filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nome de arquivo inválido"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nome de arquivo inválido")
 
     success = doc_service.delete_document(safe_filename)
 
     if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Documento não encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado")
 
     return {"message": "Documento deletado com sucesso"}
 
@@ -359,7 +312,7 @@ def delete_document(
 async def generate_and_download(
     request: GenerateDocumentRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Gera documento e retorna para download imediato (sem salvar em arquivo).
@@ -387,10 +340,7 @@ async def generate_and_download(
     )
 
     if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["message"]
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
     # Retornar como streaming response
     file_bytes = result.get("file_bytes")
@@ -398,19 +348,22 @@ async def generate_and_download(
 
     # FIX: Safe Content-Disposition header with quoted filename
     from urllib.parse import quote
-    safe_filename_encoded = quote(filename, safe='.-_')
+
+    safe_filename_encoded = quote(filename, safe=".-_")
 
     return StreamingResponse(
         io.BytesIO(file_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{safe_filename_encoded}'}
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{safe_filename_encoded}"
+        },
     )
 
 
 @router.post("/analyze-template", status_code=status.HTTP_200_OK)
 async def analyze_template(
     file: UploadFile = File(..., description="Arquivo PDF do template de autorização"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Analisa um PDF template para detectar automaticamente campos de dados.
@@ -427,41 +380,30 @@ async def analyze_template(
     Returns:
         dict com campos detectados, total de páginas e timestamp
     """
-    if not file.filename or not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Apenas arquivos PDF são aceitos (.pdf)"
-        )
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Apenas arquivos PDF são aceitos (.pdf)")
 
-    if file.content_type and file.content_type not in ('application/pdf', 'application/octet-stream'):
+    if file.content_type and file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Content-Type inválido. Envie um arquivo PDF."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Content-Type inválido. Envie um arquivo PDF."
         )
 
     pdf_bytes = await file.read()
 
     if len(pdf_bytes) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Arquivo PDF vazio"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo PDF vazio")
 
     if len(pdf_bytes) > 20 * 1024 * 1024:  # Limite: 20MB
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Arquivo PDF muito grande. Limite: 20MB"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo PDF muito grande. Limite: 20MB")
 
     result = doc_service.analyze_pdf_template(pdf_bytes)
 
     if "error" in result:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["error"]
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["error"])
 
-    logger.info(f"[analyze-template] PDF analisado por {current_user.username}: {result.get('fields_detected', 0)} campos detectados")
+    logger.info(
+        f"[analyze-template] PDF analisado por {current_user.username}: {result.get('fields_detected', 0)} campos detectados"
+    )
 
     return {
         "success": True,
@@ -473,9 +415,7 @@ async def analyze_template(
 
 
 @router.get("/template-map", status_code=status.HTTP_200_OK)
-def get_template_map(
-    current_user: User = Depends(get_current_active_user)
-):
+def get_template_map(current_user: User = Depends(get_current_active_user)):
     """
     Retorna o mapeamento de campos do template personalizado, se existir.
 

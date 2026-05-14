@@ -2,17 +2,18 @@
 Script de inicialização do banco de dados.
 Cria todas as tabelas e insere dados iniciais.
 """
+
 import sys
 from pathlib import Path
 
 # Adiciona o diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.database.session import create_all_tables, get_db_context
-from app.models.property import Property
-from app.models.calendar_source import CalendarSource, PlatformType
 from app.config import settings
-from app.utils.logger import setup_logger, get_logger
+from app.database.session import create_all_tables, get_db_context
+from app.models.calendar_source import CalendarSource, PlatformType
+from app.models.property import Property
+from app.utils.logger import get_logger, setup_logger
 
 # Configura logging
 setup_logger(log_level=settings.LOG_LEVEL, app_name=settings.APP_NAME)
@@ -22,9 +23,9 @@ logger = get_logger(__name__)
 def init_database():
     """Inicializa o banco de dados com estrutura e dados iniciais"""
 
-    logger.info("="*60)
+    logger.info("=" * 60)
     logger.info("SENTINEL - Inicialização do Banco de Dados")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
     try:
         # Criar todas as tabelas
@@ -49,7 +50,7 @@ def init_database():
                     address=settings.PROPERTY_ADDRESS,
                     max_guests=4,
                     condo_name=settings.CONDO_NAME,
-                    condo_admin_name=settings.CONDO_ADMIN_NAME
+                    condo_admin_name=settings.CONDO_ADMIN_NAME,
                 )
                 db.add(property_data)
                 db.flush()  # Garante que o ID está disponível
@@ -62,10 +63,10 @@ def init_database():
                     platform=PlatformType.AIRBNB,
                     ical_url=settings.AIRBNB_ICAL_URL,
                     sync_enabled=True,
-                    sync_frequency_minutes=settings.CALENDAR_SYNC_INTERVAL_MINUTES
+                    sync_frequency_minutes=settings.CALENDAR_SYNC_INTERVAL_MINUTES,
                 )
                 db.add(airbnb_source)
-                logger.info(f"✅ Fonte de calendário criada: Airbnb")
+                logger.info("✅ Fonte de calendário criada: Airbnb")
 
                 # Criar fonte de calendário Booking
                 booking_source = CalendarSource(
@@ -73,18 +74,18 @@ def init_database():
                     platform=PlatformType.BOOKING,
                     ical_url=settings.BOOKING_ICAL_URL,
                     sync_enabled=True,
-                    sync_frequency_minutes=settings.CALENDAR_SYNC_INTERVAL_MINUTES
+                    sync_frequency_minutes=settings.CALENDAR_SYNC_INTERVAL_MINUTES,
                 )
                 db.add(booking_source)
-                logger.info(f"✅ Fonte de calendário criada: Booking.com")
+                logger.info("✅ Fonte de calendário criada: Booking.com")
 
                 db.commit()
                 logger.info("\n✅ Dados iniciais inseridos com sucesso!")
 
         # Resumo
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("RESUMO DA INICIALIZAÇÃO")
-        logger.info("="*60)
+        logger.info("=" * 60)
 
         with get_db_context() as db:
             properties_count = db.query(Property).count()
@@ -93,9 +94,9 @@ def init_database():
             logger.info(f"Propriedades cadastradas: {properties_count}")
             logger.info(f"Fontes de calendário: {sources_count}")
 
-        logger.info("\n" + "="*60)
+        logger.info("\n" + "=" * 60)
         logger.info("✅ BANCO DE DADOS INICIALIZADO COM SUCESSO!")
-        logger.info("="*60)
+        logger.info("=" * 60)
         logger.info("\nPróximos passos:")
         logger.info("  1. Verifique as configurações no arquivo .env")
         logger.info("  2. Inicie o servidor: scripts\\start_server.bat")

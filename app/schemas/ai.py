@@ -1,12 +1,13 @@
 """
 Schemas Pydantic para o módulo de IA.
 """
-from typing import List, Optional
-from pydantic import BaseModel, Field
+
 from datetime import date
 
+from pydantic import BaseModel, Field
 
 # ── Pricing (legado) ──────────────────────────────────────────────────
+
 
 class PriceSuggestion(BaseModel):
     date: date
@@ -16,12 +17,13 @@ class PriceSuggestion(BaseModel):
 
 class AIPricingResponse(BaseModel):
     success: bool
-    suggestions: List[PriceSuggestion] = []
-    message: Optional[str] = None
+    suggestions: list[PriceSuggestion] = []
+    message: str | None = None
     generated_at: str
 
 
 # ── Chat ─────────────────────────────────────────────────────────────
+
 
 class ChatMessage(BaseModel):
     role: str = Field(..., description="'user' ou 'assistant'")
@@ -30,22 +32,23 @@ class ChatMessage(BaseModel):
 
 class AIChatRequest(BaseModel):
     property_id: int = Field(..., description="ID do imóvel para contexto")
-    messages: List[ChatMessage] = Field(..., description="Histórico de mensagens")
+    messages: list[ChatMessage] = Field(..., description="Histórico de mensagens")
 
 
 class AIChatResponse(BaseModel):
     success: bool
-    reply: Optional[str] = None
-    message: Optional[str] = None
+    reply: str | None = None
+    message: str | None = None
 
 
 # ── Test connection ───────────────────────────────────────────────────
+
 
 class AITestRequest(BaseModel):
     provider: str = Field(..., description="anthropic | openai | compatible")
     api_key: str = Field(..., description="API Key para testar")
     model: str = Field(..., description="Nome do modelo")
-    base_url: Optional[str] = Field(None, description="Base URL (para compatible)")
+    base_url: str | None = Field(None, description="Base URL (para compatible)")
 
 
 class AITestResponse(BaseModel):
@@ -56,6 +59,7 @@ class AITestResponse(BaseModel):
 
 
 # ── Settings ─────────────────────────────────────────────────────────
+
 
 class AISettingsResponse(BaseModel):
     provider: str

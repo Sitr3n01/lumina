@@ -2,8 +2,9 @@
 Serviço para gerenciamento de configurações persistentes.
 Faz merge entre configurações do .env e do banco de dados.
 """
-import json
-from typing import Dict, Any, Optional
+
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.config import settings as app_settings
@@ -75,7 +76,7 @@ class SettingsService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_all_settings(self) -> Dict[str, Any]:
+    def get_all_settings(self) -> dict[str, Any]:
         """
         Retorna todas as configurações.
         Merge: .env fornece base, DB sobrescreve campos editáveis.
@@ -104,7 +105,6 @@ class SettingsService:
             "emailPasswordSet": bool(getattr(app_settings, "EMAIL_PASSWORD", "")),
             # Telegram (read-only, exibição apenas)
             "telegramBotToken": self._mask_token(getattr(app_settings, "TELEGRAM_BOT_TOKEN", "") or ""),
-
             # Campos editáveis (defaults do .env, substituídos pelo DB)
             "condoEmail": app_settings.CONDO_EMAIL,
             "maxGuests": 6,
@@ -130,7 +130,7 @@ class SettingsService:
 
         return result
 
-    def update_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def update_settings(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Salva campos editáveis no banco de dados.
         Apenas campos na allowlist são aceitos.
@@ -159,23 +159,19 @@ class SettingsService:
         logger.info(f"[SettingsService] Hard reset: {count} configurações removidas do DB.")
         return count
 
-    def get_setting(self, db_key: str) -> Optional[str]:
+    def get_setting(self, db_key: str) -> str | None:
         """Busca uma configuração específica do DB"""
-        setting = self.db.query(AppSetting).filter(
-            AppSetting.key == db_key
-        ).first()
+        setting = self.db.query(AppSetting).filter(AppSetting.key == db_key).first()
         return setting.value if setting else None
 
-    def _get_all_from_db(self) -> Dict[str, str]:
+    def _get_all_from_db(self) -> dict[str, str]:
         """Busca todas as configurações do DB"""
         settings = self.db.query(AppSetting).all()
         return {s.key: s.value for s in settings}
 
     def _upsert(self, key: str, value: str):
         """Insere ou atualiza uma configuração"""
-        setting = self.db.query(AppSetting).filter(
-            AppSetting.key == key
-        ).first()
+        setting = self.db.query(AppSetting).filter(AppSetting.key == key).first()
 
         if setting:
             setting.value = value
@@ -194,11 +190,11 @@ class SettingsService:
     def _cast_value(value: str, field_type: type) -> Any:
         """Converte valor string do DB para o tipo correto"""
         try:
-            if field_type == bool:
+            if field_type is bool:
                 return value.lower() in ("true", "1", "yes")
-            elif field_type == int:
+            elif field_type is int:
                 return int(value)
-            elif field_type == float:
+            elif field_type is float:
                 return float(value)
             return value
         except (ValueError, AttributeError):

@@ -12,7 +12,7 @@ const Calendar = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate] = useState(new Date());
   const [message, setMessage] = useState(null);
 
   const showMessage = (text, type) => {
@@ -48,6 +48,7 @@ const Calendar = () => {
 
     loadEvents();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate]);
 
   const loadEvents = async () => {

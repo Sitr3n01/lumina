@@ -2,8 +2,10 @@
 """
 Models de usuário e autenticação.
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
 from app.models.base import Base
 
 
@@ -11,6 +13,7 @@ class User(Base):
     """
     Model de usuário para autenticação local.
     """
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -2,15 +2,16 @@
 Serviço de notificações via Telegram.
 Envia alertas sobre conflitos, check-ins, check-outs e eventos importantes.
 """
-from datetime import datetime, timedelta
-from typing import List, Optional
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+
+from datetime import datetime
+
 from telegram.error import TelegramError
 
 from app.config import settings
 from app.models.booking import Booking
 from app.models.booking_conflict import BookingConflict
 from app.utils.logger import get_logger
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = get_logger(__name__)
 
@@ -21,7 +22,7 @@ class NotificationService:
     def __init__(self):
         self.token = settings.TELEGRAM_BOT_TOKEN
         self.admin_ids = settings.admin_user_ids
-        self.bot: Optional[Bot] = None
+        self.bot: Bot | None = None
 
         if self.token and self.token != "":
             self.bot = Bot(token=self.token)
@@ -34,11 +35,9 @@ class NotificationService:
         success = True
         for admin_id in self.admin_ids:
             try:
-                await self.bot.send_message(
-                    chat_id=admin_id, text=message, parse_mode=parse_mode
-                )
-            except TelegramError as e:
-                logger.error(f"[ERR] Erro ao enviar mensagem no Telegram - API ou permissoes falharam.")
+                await self.bot.send_message(chat_id=admin_id, text=message, parse_mode=parse_mode)
+            except TelegramError:
+                logger.error("[ERR] Erro ao enviar mensagem no Telegram - API ou permissoes falharam.")
                 success = False
 
         return success
@@ -54,13 +53,10 @@ class NotificationService:
         for admin_id in self.admin_ids:
             try:
                 await self.bot.send_message(
-                    chat_id=admin_id,
-                    text=message,
-                    parse_mode=parse_mode,
-                    reply_markup=reply_markup
+                    chat_id=admin_id, text=message, parse_mode=parse_mode, reply_markup=reply_markup
                 )
-            except TelegramError as e:
-                logger.error(f"[ERR] Erro ao enviar mensagem com teclado no Telegram - API ou permissoes falharam.")
+            except TelegramError:
+                logger.error("[ERR] Erro ao enviar mensagem com teclado no Telegram - API ou permissoes falharam.")
                 success = False
 
         return success
@@ -85,18 +81,14 @@ class NotificationService:
         # Se tem booking.id, adicionar botoes de aprovacao
         if booking.id:
             message += "\n📝 Deseja autorizar hospedagem no condomínio?"
-            keyboard = InlineKeyboardMarkup([
+            keyboard = InlineKeyboardMarkup(
                 [
-                    InlineKeyboardButton(
-                        "✅ Autorizar",
-                        callback_data=f"approve_booking_{booking.id}"
-                    ),
-                    InlineKeyboardButton(
-                        "❌ Ignorar",
-                        callback_data=f"ignore_booking_{booking.id}"
-                    ),
+                    [
+                        InlineKeyboardButton("✅ Autorizar", callback_data=f"approve_booking_{booking.id}"),
+                        InlineKeyboardButton("❌ Ignorar", callback_data=f"ignore_booking_{booking.id}"),
+                    ]
                 ]
-            ])
+            )
             return await self.send_to_admins_with_keyboard(message, keyboard)
 
         return await self.send_to_admins(message)
@@ -133,7 +125,7 @@ class NotificationService:
 
         return await self.send_to_admins(message)
 
-    async def notify_conflict_detected(self, conflicts: List[BookingConflict]) -> bool:
+    async def notify_conflict_detected(self, conflicts: list[BookingConflict]) -> bool:
         """Notifica sobre conflitos detectados"""
         if not conflicts:
             return True
@@ -162,8 +154,7 @@ class NotificationService:
     async def notify_conflict_resolved(self, conflict: BookingConflict) -> bool:
         """Notifica sobre resolução de conflito"""
         message = (
-            f"✅ **Conflito Resolvido**\n\n"
-            f"📅 {conflict.booking_1.guest_name} vs {conflict.booking_2.guest_name}\n"
+            f"✅ **Conflito Resolvido**\n\n📅 {conflict.booking_1.guest_name} vs {conflict.booking_2.guest_name}\n"
         )
 
         if conflict.resolution_notes:
@@ -171,7 +162,7 @@ class NotificationService:
 
         return await self.send_to_admins(message)
 
-    async def notify_checkin_reminder(self, bookings: List[Booking]) -> bool:
+    async def notify_checkin_reminder(self, bookings: list[Booking]) -> bool:
         """Notifica sobre check-ins próximos (1 dia antes)"""
         if not bookings:
             return True
@@ -190,7 +181,7 @@ class NotificationService:
 
         return await self.send_to_admins(message)
 
-    async def notify_checkout_reminder(self, bookings: List[Booking]) -> bool:
+    async def notify_checkout_reminder(self, bookings: list[Booking]) -> bool:
         """Notifica sobre check-outs de hoje"""
         if not bookings:
             return True
@@ -199,18 +190,13 @@ class NotificationService:
 
         for booking in bookings:
             platform_emoji = self._get_platform_emoji(booking.platform)
-            message += (
-                f"{platform_emoji} **{booking.guest_name}**\n"
-                f"  🕐 Liberar apartamento\n\n"
-            )
+            message += f"{platform_emoji} **{booking.guest_name}**\n  🕐 Liberar apartamento\n\n"
 
         message += "🧹 Prepare o apartamento para limpeza e vistoria!"
 
         return await self.send_to_admins(message)
 
-    async def notify_sync_completed(
-        self, new_count: int, updated_count: int, conflicts_count: int
-    ) -> bool:
+    async def notify_sync_completed(self, new_count: int, updated_count: int, conflicts_count: int) -> bool:
         """Notifica sobre sincronização concluída"""
         if new_count == 0 and updated_count == 0 and conflicts_count == 0:
             return True  # Não notificar se não houve mudanças

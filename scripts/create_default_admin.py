@@ -7,6 +7,7 @@ Password: Admin123!
 Usage:
     python scripts/create_default_admin.py
 """
+
 import sys
 from pathlib import Path
 
@@ -15,9 +16,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy.orm import Session
 
+from app.core.security import get_password_hash
 from app.database.connection import SessionLocal
 from app.models.user import User
-from app.core.security import get_password_hash
 
 
 def create_default_admin():
@@ -67,8 +68,8 @@ def create_default_admin():
         print(f"ID:       {admin_user.id}")
         print(f"Username: {admin_user.username}")
         print(f"Email:    {admin_user.email}")
-        print(f"Senha:    Admin123!")
-        print(f"Admin:    Sim")
+        print("Senha:    Admin123!")
+        print("Admin:    Sim")
         print()
         print("IMPORTANTE: Troque a senha apos o primeiro login!")
         print()
@@ -76,8 +77,9 @@ def create_default_admin():
         return 0
 
     except Exception as e:
-        print(f"\n[ERRO] Erro ao criar administrador: {str(e)}")
+        print(f"\n[ERRO] Erro ao criar administrador: {e!s}")
         import traceback
+
         traceback.print_exc()
         db.rollback()
         return 1

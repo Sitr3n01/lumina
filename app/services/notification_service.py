@@ -2,25 +2,23 @@
 Serviço de notificações.
 Gerencia alertas e notificações para o usuário (Telegram, logs, etc).
 """
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 
+from app.constants import (
+    EMOJI_AIRBNB,
+    EMOJI_BOOKING,
+    EMOJI_CONFLICT,
+    EMOJI_ERROR,
+    EMOJI_NEW,
+    EMOJI_SUCCESS,
+    EMOJI_SYNC,
+    EMOJI_WARNING,
+)
 from app.models.booking import Booking
 from app.models.booking_conflict import BookingConflict
 from app.models.sync_action import SyncAction
 from app.models.sync_log import SyncLog
-from app.utils.logger import get_logger
 from app.utils.date_utils import format_date_range, format_date_short
-from app.constants import (
-    EMOJI_WARNING,
-    EMOJI_SUCCESS,
-    EMOJI_ERROR,
-    EMOJI_CONFLICT,
-    EMOJI_NEW,
-    EMOJI_SYNC,
-    EMOJI_AIRBNB,
-    EMOJI_BOOKING,
-)
+from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -46,6 +44,7 @@ class NotificationService:
         """Lazy init do NotificationDBService"""
         if self._db_service is None and self.db is not None:
             from app.services.notification_db_service import NotificationDBService
+
             self._db_service = NotificationDBService(self.db)
         return self._db_service
 
@@ -62,11 +61,7 @@ class NotificationService:
             except Exception as e:
                 logger.error(f"Failed to persist notification: {e}")
 
-    def notify_sync_completed(
-        self,
-        sync_log: SyncLog,
-        stats: Dict[str, int]
-    ) -> None:
+    def notify_sync_completed(self, sync_log: SyncLog, stats: dict[str, int]) -> None:
         """Notifica sobre conclusão de sincronização."""
         if sync_log.status.value == "success":
             message = self._format_sync_success_message(sync_log, stats)
@@ -78,10 +73,7 @@ class NotificationService:
         logger.info(f"Sync notification: {message}")
         self._persist("sync", title, message)
 
-    def notify_conflict_detected(
-        self,
-        conflicts: List[BookingConflict]
-    ) -> None:
+    def notify_conflict_detected(self, conflicts: list[BookingConflict]) -> None:
         """Notifica sobre conflitos detectados."""
         if not conflicts:
             return
@@ -91,28 +83,19 @@ class NotificationService:
             logger.warning(f"Conflict notification: {message}")
             self._persist("conflict", f"Conflito detectado ({conflict.severity})", message)
 
-    def notify_new_booking(
-        self,
-        booking: Booking
-    ) -> None:
+    def notify_new_booking(self, booking: Booking) -> None:
         """Notifica sobre nova reserva."""
         message = self._format_new_booking_message(booking)
         logger.info(f"New booking notification: {message}")
         self._persist("new_booking", f"Nova reserva - {booking.guest_name}", message, booking_id=booking.id)
 
-    def notify_sync_action_created(
-        self,
-        action: SyncAction
-    ) -> None:
+    def notify_sync_action_created(self, action: SyncAction) -> None:
         """Notifica sobre nova ação de sincronização pendente."""
         message = self._format_sync_action_message(action)
         logger.warning(f"Sync action notification: {message}")
         self._persist("system", "Ação pendente", message)
 
-    def get_pending_actions_summary(
-        self,
-        actions: List[SyncAction]
-    ) -> str:
+    def get_pending_actions_summary(self, actions: list[SyncAction]) -> str:
         """
         Cria resumo de ações pendentes.
 
@@ -137,14 +120,9 @@ class NotificationService:
 
         return message
 
-    def _format_sync_success_message(
-        self,
-        sync_log: SyncLog,
-        stats: Dict[str, int]
-    ) -> str:
+    def _format_sync_success_message(self, sync_log: SyncLog, stats: dict[str, int]) -> str:
         """Formata mensagem de sincronização bem-sucedida"""
         platform = sync_log.calendar_source.platform.value.upper()
-        emoji = EMOJI_AIRBNB if platform == "AIRBNB" else EMOJI_BOOKING
 
         message = f"{EMOJI_SYNC} Sincronização {platform} concluída\n\n"
 
@@ -169,7 +147,7 @@ class NotificationService:
 
         message = f"{EMOJI_ERROR} Erro na sincronização {platform}\n\n"
         message += f"Erro: {sync_log.error_message or 'Erro desconhecido'}\n"
-        message += f"\nVerifique os logs para mais detalhes."
+        message += "\nVerifique os logs para mais detalhes."
 
         return message
 
@@ -184,12 +162,7 @@ class NotificationService:
         emoji1 = EMOJI_AIRBNB if platform1 == "AIRBNB" else EMOJI_BOOKING
         emoji2 = EMOJI_AIRBNB if platform2 == "AIRBNB" else EMOJI_BOOKING
 
-        severity_emoji = {
-            "critical": "🚨",
-            "high": "🔴",
-            "medium": "⚠️",
-            "low": "ℹ️"
-        }.get(conflict.severity, "⚠️")
+        severity_emoji = {"critical": "🚨", "high": "🔴", "medium": "⚠️", "low": "ℹ️"}.get(conflict.severity, "⚠️")
 
         message = f"{severity_emoji} CONFLITO DETECTADO - {conflict.severity.upper()}\n\n"
 
@@ -210,7 +183,6 @@ class NotificationService:
     def _format_new_booking_message(self, booking: Booking) -> str:
         """Formata mensagem de nova reserva"""
         platform = booking.platform.upper()
-        emoji = EMOJI_AIRBNB if platform == "AIRBNB" else EMOJI_BOOKING
 
         message = f"{EMOJI_NEW} Nova Reserva - {platform}\n\n"
         message += f"👤 {booking.guest_name}\n"
@@ -242,10 +214,10 @@ class NotificationService:
 
     def format_dashboard_summary(
         self,
-        current_booking: Optional[Booking],
-        next_bookings: List[Booking],
-        pending_actions: List[SyncAction],
-        active_conflicts: List[BookingConflict]
+        current_booking: Booking | None,
+        next_bookings: list[Booking],
+        pending_actions: list[SyncAction],
+        active_conflicts: list[BookingConflict],
     ) -> str:
         """
         Formata resumo do dashboard para exibição.
@@ -264,12 +236,12 @@ class NotificationService:
 
         # Hóspede atual
         if current_booking:
-            message += f"📍 HÓSPEDE ATUAL\n"
+            message += "📍 HÓSPEDE ATUAL\n"
             message += f"   {current_booking.guest_name}\n"
             message += f"   Check-out: {format_date_short(current_booking.check_out_date)}\n"
             message += f"   Plataforma: {current_booking.platform.upper()}\n\n"
         else:
-            message += f"📍 Apartamento VAZIO\n\n"
+            message += "📍 Apartamento VAZIO\n\n"
 
         # Próximas reservas
         if next_bookings:
@@ -279,7 +251,7 @@ class NotificationService:
                 message += f"   {emoji} {format_date_short(booking.check_in_date)}: {booking.guest_name}\n"
             message += "\n"
         else:
-            message += f"📅 Nenhuma reserva futura\n\n"
+            message += "📅 Nenhuma reserva futura\n\n"
 
         # Conflitos
         if active_conflicts:

@@ -2,9 +2,10 @@
 Configuração centralizada da aplicação usando Pydantic Settings.
 Carrega variáveis do arquivo .env e valida tipos.
 """
+
 import os
 from pathlib import Path
-from typing import List
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,8 +30,12 @@ class Settings(BaseSettings):
     TELEGRAM_ADMIN_USER_IDS: str = Field(default="", description="IDs de usuários admin separados por vírgula")
 
     # === CALENDÁRIOS ===
-    AIRBNB_ICAL_URL: str = Field(default="https://www.airbnb.com/calendar/ical/XXXXXXX.ics", description="URL do feed iCal do Airbnb")
-    BOOKING_ICAL_URL: str = Field(default="https://admin.booking.com/hotel/hoteladmin/ical/XXXXXXX.ics", description="URL do feed iCal do Booking")
+    AIRBNB_ICAL_URL: str = Field(
+        default="https://www.airbnb.com/calendar/ical/XXXXXXX.ics", description="URL do feed iCal do Airbnb"
+    )
+    BOOKING_ICAL_URL: str = Field(
+        default="https://admin.booking.com/hotel/hoteladmin/ical/XXXXXXX.ics", description="URL do feed iCal do Booking"
+    )
     CALENDAR_SYNC_INTERVAL_MINUTES: int = 30
 
     # === EMAIL UNIVERSAL (IMAP/SMTP) - MVP2 ===
@@ -92,7 +97,7 @@ class Settings(BaseSettings):
     # === SEGURANÇA ===
     SECRET_KEY: str = Field(
         default="",  # FIX: Sem default fraco, força configuração
-        description="Chave secreta para JWT - OBRIGATÓRIA em produção"
+        description="Chave secreta para JWT - OBRIGATÓRIA em produção",
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -124,30 +129,25 @@ class Settings(BaseSettings):
 
             # Validar comprimento mínimo
             if len(v) < 32:
-                raise ValueError(
-                    f"SECRET_KEY muito curta ({len(v)} caracteres). "
-                    f"Mínimo requerido: 32 caracteres"
-                )
+                raise ValueError(f"SECRET_KEY muito curta ({len(v)} caracteres). Mínimo requerido: 32 caracteres")
 
         # Em desenvolvimento ou desktop, gerar uma aleatória se não configurada
-        if env in ["development", "testing", "desktop"]:
-            if not v or v == "CHANGE_THIS_SECRET_KEY_IN_PRODUCTION":
-                v = secrets.token_urlsafe(32)
-                print(f"[WARNING] SECRET_KEY não configurada. Usando temporária para {env}.")
-                print(f"[INFO] Para uso permanente, adicione ao .env: SECRET_KEY={v}")
+        if env in ["development", "testing", "desktop"] and (not v or v == "CHANGE_THIS_SECRET_KEY_IN_PRODUCTION"):
+            v = secrets.token_urlsafe(32)
+            print(f"[WARNING] SECRET_KEY não configurada. Usando temporária para {env}.")
+            print(f"[INFO] Para uso permanente, adicione ao .env: SECRET_KEY={v}")
 
         return v
 
     # Redis para Token Blacklist (opcional, usa in-memory se não configurado)
     REDIS_URL: str = Field(
-        default="",
-        description="URL do Redis (ex: redis://localhost:6379/0). Deixe vazio para usar in-memory"
+        default="", description="URL do Redis (ex: redis://localhost:6379/0). Deixe vazio para usar in-memory"
     )
 
     # === CORS ===
     CORS_ORIGINS: str = Field(
         default="http://localhost:3000,http://localhost:5173",
-        description="Origins permitidas para CORS (separadas por vírgula)"
+        description="Origins permitidas para CORS (separadas por vírgula)",
     )
 
     # === RATE LIMITING ===
@@ -155,30 +155,30 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
 
     model_config = SettingsConfigDict(
-        env_file=os.environ.get('LUMINA_ENV_FILE', '.env'),
+        env_file=os.environ.get("LUMINA_ENV_FILE", ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"  # Ignora variáveis extras no .env
+        extra="ignore",  # Ignora variáveis extras no .env
     )
 
     @field_validator("TELEGRAM_ADMIN_USER_IDS")
     @classmethod
-    def parse_admin_ids(cls, v: str) -> List[int]:
+    def parse_admin_ids(cls, v: str) -> list[int]:
         """Converte string de IDs separados por vírgula em lista de inteiros"""
         if not v or v.strip() == "":
             return []
         try:
             return [int(id.strip()) for id in v.split(",") if id.strip()]
-        except ValueError:
-            raise ValueError("TELEGRAM_ADMIN_USER_IDS deve conter números separados por vírgula")
+        except ValueError as err:
+            raise ValueError("TELEGRAM_ADMIN_USER_IDS deve conter números separados por vírgula") from err
 
     @property
-    def admin_user_ids(self) -> List[int]:
+    def admin_user_ids(self) -> list[int]:
         """Retorna lista de IDs de administradores"""
         return self.parse_admin_ids(self.TELEGRAM_ADMIN_USER_IDS)
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Retorna lista de origins permitidas para CORS"""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
@@ -220,7 +220,7 @@ class Settings(BaseSettings):
         """Cria diretórios necessários se não existirem.
         No modo desktop, usa LUMINA_DATA_DIR como diretório base.
         """
-        base = Path(os.environ.get('LUMINA_DATA_DIR', '.'))
+        base = Path(os.environ.get("LUMINA_DATA_DIR", "."))
         directories = [
             base / "data",
             base / "data" / "downloads",

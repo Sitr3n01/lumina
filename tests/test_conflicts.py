@@ -1,5 +1,3 @@
-import pytest
-
 def test_get_conflicts_empty(client, auth_headers):
     response = client.get("/api/conflicts/?property_id=1", headers=auth_headers)
     assert response.status_code == 200

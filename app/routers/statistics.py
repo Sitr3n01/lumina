@@ -1,19 +1,19 @@
 """
 Router de API para estatísticas e dashboard.
 """
-from fastapi import APIRouter, Depends, Query, BackgroundTasks
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
-from app.services.booking_service import BookingService
-from app.services.statistics_service import StatisticsService
 from app.core.conflict_detector import ConflictDetector
-from app.services.sync_action_service import SyncActionService
-from app.services.notification_service import NotificationService
-from app.models.booking import Booking, BookingStatus
-from app.models.sync_action import SyncAction
-from app.models.user import User
+from app.database.session import get_db
 from app.middleware.auth import get_current_active_user
+from app.models.booking import BookingStatus
+from app.models.user import User
+from app.services.booking_service import BookingService
+from app.services.notification_service import NotificationService
+from app.services.statistics_service import StatisticsService
+from app.services.sync_action_service import SyncActionService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/statistics", tags=["Statistics"])
 def get_dashboard(
     property_id: int = Query(..., description="ID do imóvel"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retorna dados completos do dashboard.
@@ -33,7 +33,7 @@ def get_dashboard(
     booking_service = BookingService(db)
     conflict_detector = ConflictDetector(db)
     sync_action_service = SyncActionService(db)
-    notification_service = NotificationService(db)
+    NotificationService(db)
 
     # Reserva atual
     current_booking = booking_service.get_current_booking(property_id)
@@ -42,10 +42,10 @@ def get_dashboard(
     next_bookings = booking_service.get_next_bookings(property_id, limit=5)
 
     # Conflitos ativos
-    active_conflicts = conflict_detector.get_active_conflicts(property_id)
+    conflict_detector.get_active_conflicts(property_id)
 
     # Ações pendentes
-    pending_actions = sync_action_service.get_pending_actions(property_id)
+    sync_action_service.get_pending_actions(property_id)
 
     # Estatísticas de reservas
     booking_stats = booking_service.get_booking_statistics(property_id)
@@ -60,6 +60,7 @@ def get_dashboard(
     current = None
     if current_booking:
         from app.utils.date_utils import today_local
+
         today = today_local()
         nights_remaining = (current_booking.check_out_date - today).days
 
@@ -68,20 +69,22 @@ def get_dashboard(
             "guest_name": current_booking.guest_name,
             "check_out_date": current_booking.check_out_date.isoformat(),
             "platform": current_booking.platform,
-            "nights_remaining": max(0, nights_remaining)  # Não pode ser negativo
+            "nights_remaining": max(0, nights_remaining),  # Não pode ser negativo
         }
 
     # Formatar próximas reservas
     upcoming = []
     for booking in next_bookings:
-        upcoming.append({
-            "id": booking.id,
-            "guest_name": booking.guest_name,
-            "check_in_date": booking.check_in_date.isoformat(),
-            "check_out_date": booking.check_out_date.isoformat(),
-            "nights_count": booking.nights_count,
-            "platform": booking.platform
-        })
+        upcoming.append(
+            {
+                "id": booking.id,
+                "guest_name": booking.guest_name,
+                "check_in_date": booking.check_in_date.isoformat(),
+                "check_out_date": booking.check_out_date.isoformat(),
+                "nights_count": booking.nights_count,
+                "platform": booking.platform,
+            }
+        )
 
     # Dashboard completo
     dashboard = {
@@ -93,8 +96,8 @@ def get_dashboard(
         "alerts": {
             "critical_conflicts": conflict_summary.get("critical", 0),
             "critical_actions": action_summary.get("critical", 0),
-            "total_pending": action_summary.get("pending", 0)
-        }
+            "total_pending": action_summary.get("pending", 0),
+        },
     }
 
     return dashboard
@@ -105,12 +108,13 @@ def get_occupancy_stats(
     property_id: int = Query(..., description="ID do imóvel"),
     months: int = Query(6, ge=1, le=12, description="Número de meses para análise"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retorna estatísticas de ocupação.
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
+
     from app.utils.date_utils import today_local
 
     booking_service = BookingService(db)
@@ -122,7 +126,7 @@ def get_occupancy_stats(
     bookings = booking_service.get_bookings_in_period(
         property_id,
         start_date,
-        today + timedelta(days=30)  # Incluir próximo mês
+        today + timedelta(days=30),  # Incluir próximo mês
     )
 
     # Calcular noites ocupadas por mês
@@ -137,7 +141,7 @@ def get_occupancy_stats(
 
             if month_key not in monthly_data:
                 # FIX: Calcular número real de dias do mês (não hardcoded 30)
-                year, month = map(int, month_key.split('-'))
+                year, month = map(int, month_key.split("-"))
                 days_in_month = calendar.monthrange(year, month)[1]
 
                 monthly_data[month_key] = {
@@ -146,7 +150,7 @@ def get_occupancy_stats(
                     "total_nights": days_in_month,  # FIX: Usar dias reais do mês
                     "bookings_count": 0,
                     "airbnb_nights": 0,
-                    "booking_nights": 0
+                    "booking_nights": 0,
                 }
 
             monthly_data[month_key]["occupied_nights"] += 1
@@ -166,10 +170,7 @@ def get_occupancy_stats(
 
     # Calcular taxa de ocupação
     for month_data in monthly_data.values():
-        month_data["occupancy_rate"] = round(
-            (month_data["occupied_nights"] / month_data["total_nights"]) * 100,
-            1
-        )
+        month_data["occupancy_rate"] = round((month_data["occupied_nights"] / month_data["total_nights"]) * 100, 1)
 
     # Ordenar por mês
     sorted_data = sorted(monthly_data.values(), key=lambda x: x["month"])
@@ -178,12 +179,11 @@ def get_occupancy_stats(
         "months": sorted_data,
         "summary": {
             "average_occupancy": round(
-                sum(m["occupancy_rate"] for m in sorted_data) / len(sorted_data) if sorted_data else 0,
-                1
+                sum(m["occupancy_rate"] for m in sorted_data) / len(sorted_data) if sorted_data else 0, 1
             ),
             "total_bookings": sum(m["bookings_count"] for m in sorted_data),
-            "total_nights": sum(m["occupied_nights"] for m in sorted_data)
-        }
+            "total_nights": sum(m["occupied_nights"] for m in sorted_data),
+        },
     }
 
 
@@ -192,25 +192,22 @@ def get_revenue_stats(
     property_id: int = Query(..., description="ID do imóvel"),
     months: int = Query(6, ge=1, le=24, description="Número de meses para análise"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retorna receita mensal como array para alimentar o BarChart do frontend.
     Cada item: {month, total_revenue, airbnb_revenue, booking_revenue}.
     """
-    from app.utils.date_utils import today_local
     from datetime import timedelta
+
+    from app.utils.date_utils import today_local
 
     booking_service = BookingService(db)
 
     today = today_local()
     start_date = today - timedelta(days=months * 30)
 
-    bookings = booking_service.get_bookings_in_period(
-        property_id,
-        start_date,
-        today + timedelta(days=30)
-    )
+    bookings = booking_service.get_bookings_in_period(property_id, start_date, today + timedelta(days=30))
 
     # Agrupar receita por mês
     monthly: dict = {}
@@ -248,25 +245,22 @@ def get_platform_stats(
     property_id: int = Query(..., description="ID do imóvel"),
     months: int = Query(6, ge=1, le=24, description="Número de meses para análise"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Retorna reservas e receita agrupadas por plataforma.
     Cada item: {platform, bookings_count, total_revenue}.
     """
-    from app.utils.date_utils import today_local
     from datetime import timedelta
+
+    from app.utils.date_utils import today_local
 
     booking_service = BookingService(db)
 
     today = today_local()
     start_date = today - timedelta(days=months * 30)
 
-    bookings = booking_service.get_bookings_in_period(
-        property_id,
-        start_date,
-        today + timedelta(days=30)
-    )
+    bookings = booking_service.get_bookings_in_period(property_id, start_date, today + timedelta(days=30))
 
     platforms: dict = {}
     for b in bookings:
@@ -308,10 +302,11 @@ def get_monthly_report(
 
     if send_email:
         try:
-            from app.services.email_service import get_email_service as _get_email_svc
+            import asyncio
+
             from app.config import settings as app_settings
             from app.models.property import Property
-            import asyncio
+            from app.services.email_service import get_email_service as _get_email_svc
 
             property_obj = db.query(Property).filter(Property.id == property_id).first()
             property_name = property_obj.name if property_obj else "Imóvel"
@@ -322,6 +317,7 @@ def get_monthly_report(
                 owner_email = app_settings.OWNER_EMAIL
 
                 if owner_email:
+
                     async def _send():
                         return await email_service.send_email(
                             to=[owner_email],
@@ -332,7 +328,7 @@ def get_monthly_report(
 
                     try:
                         loop = asyncio.get_running_loop()
-                        loop.create_task(_send())
+                        loop.create_task(_send())  # noqa: RUF006
                     except RuntimeError:
                         asyncio.run(_send())
 

@@ -2,16 +2,17 @@
 Detector de conflitos entre reservas.
 Identifica sobreposições de datas e reservas duplicadas entre Airbnb e Booking.
 """
-from datetime import date, datetime
-from typing import List, Dict, Any, Tuple, Optional
+
+from datetime import date
+from typing import Any
+
 from sqlalchemy import and_
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.booking import Booking, BookingStatus
 from app.models.booking_conflict import BookingConflict, ConflictType
-from app.models.sync_action import TargetPlatform
+from app.utils.date_utils import get_overlap_period
 from app.utils.logger import get_logger
-from app.utils.date_utils import dates_overlap, get_overlap_period
 
 logger = get_logger(__name__)
 
@@ -22,7 +23,7 @@ class ConflictDetector:
     def __init__(self, db: Session):
         self.db = db
 
-    def detect_all_conflicts(self, property_id: int) -> List[BookingConflict]:
+    def detect_all_conflicts(self, property_id: int) -> list[BookingConflict]:
         """
         Detecta todos os conflitos de um imóvel.
         Verifica sobreposições e duplicatas.
@@ -67,7 +68,7 @@ class ConflictDetector:
         logger.info(f"Detected {len(conflicts)} conflicts")
         return conflicts
 
-    def check_booking_conflict(self, booking: Booking) -> List[BookingConflict]:
+    def check_booking_conflict(self, booking: Booking) -> list[BookingConflict]:
         """
         Verifica se uma reserva específica conflita com outras.
         Útil ao adicionar/atualizar uma reserva.
@@ -85,7 +86,7 @@ class ConflictDetector:
             property_id=booking.property_id,
             check_in=booking.check_in_date,
             check_out=booking.check_out_date,
-            exclude_booking_id=booking.id
+            exclude_booking_id=booking.id,
         )
 
         conflicts = []
@@ -106,11 +107,7 @@ class ConflictDetector:
 
         return conflicts
 
-    def _check_booking_pair(
-        self,
-        booking1: Booking,
-        booking2: Booking
-    ) -> Optional[BookingConflict]:
+    def _check_booking_pair(self, booking1: Booking, booking2: Booking) -> BookingConflict | None:
         """
         Verifica conflito entre um par de reservas.
 
@@ -122,7 +119,6 @@ class ConflictDetector:
             BookingConflict se houver conflito, None caso contrário
         """
         # Verificar se são da mesma plataforma ou plataformas diferentes
-        same_platform = booking1.platform == booking2.platform
 
         # Verificar sobreposição de datas
         if not booking1.overlaps_with(booking2.check_in_date, booking2.check_out_date):
@@ -130,10 +126,7 @@ class ConflictDetector:
 
         # Calcular período de sobreposição
         overlap = get_overlap_period(
-            booking1.check_in_date,
-            booking1.check_out_date,
-            booking2.check_in_date,
-            booking2.check_out_date
+            booking1.check_in_date, booking1.check_out_date, booking2.check_in_date, booking2.check_out_date
         )
 
         if not overlap:
@@ -156,16 +149,19 @@ class ConflictDetector:
             conflict_type=conflict_type,
             overlap_start=overlap_start,
             overlap_end=overlap_end,
-            resolved=False
+            resolved=False,
         )
 
         # FIX: Tratar race condition com IntegrityError
         from sqlalchemy.exc import IntegrityError
+
         try:
             self.db.add(conflict)
             self.db.commit()
             self.db.refresh(conflict)
-            logger.info(f"Conflict registered: ID={conflict.id}, type={conflict_type.value}, severity={conflict.severity}")
+            logger.info(
+                f"Conflict registered: ID={conflict.id}, type={conflict_type.value}, severity={conflict.severity}"
+            )
         except IntegrityError:
             # Race condition: outro request já criou este conflito
             self.db.rollback()
@@ -201,8 +197,12 @@ class ConflictDetector:
             return False
 
         # FIX: Validar que datas existem antes de calcular diferença
-        if not booking1.check_in_date or not booking2.check_in_date or \
-           not booking1.check_out_date or not booking2.check_out_date:
+        if (
+            not booking1.check_in_date
+            or not booking2.check_in_date
+            or not booking1.check_out_date
+            or not booking2.check_out_date
+        ):
             return False  # Não pode ser duplicata se tem datas incompletas
 
         # Verificar datas
@@ -220,16 +220,11 @@ class ConflictDetector:
         first_name1 = name1.split()[0] if name1 else ""
         first_name2 = name2.split()[0] if name2 else ""
 
-        names_similar = (
-            name1 == name2 or
-            first_name1 == first_name2 or
-            name1 in name2 or
-            name2 in name1
-        )
+        names_similar = name1 == name2 or first_name1 == first_name2 or name1 in name2 or name2 in name1
 
         return dates_match and names_similar
 
-    def _get_active_bookings(self, property_id: int) -> List[Booking]:
+    def _get_active_bookings(self, property_id: int) -> list[Booking]:
         """
         Busca todas as reservas confirmadas de um imóvel.
 
@@ -239,20 +234,16 @@ class ConflictDetector:
         Returns:
             Lista de reservas confirmadas
         """
-        return self.db.query(Booking).filter(
-            and_(
-                Booking.property_id == property_id,
-                Booking.status == BookingStatus.CONFIRMED
-            )
-        ).order_by(Booking.check_in_date).all()
+        return (
+            self.db.query(Booking)
+            .filter(and_(Booking.property_id == property_id, Booking.status == BookingStatus.CONFIRMED))
+            .order_by(Booking.check_in_date)
+            .all()
+        )
 
     def _get_overlapping_bookings(
-        self,
-        property_id: int,
-        check_in: date,
-        check_out: date,
-        exclude_booking_id: int = None
-    ) -> List[Booking]:
+        self, property_id: int, check_in: date, check_out: date, exclude_booking_id: int = None
+    ) -> list[Booking]:
         """
         Busca reservas que se sobrepõem a um período.
 
@@ -270,7 +261,7 @@ class ConflictDetector:
                 Booking.property_id == property_id,
                 Booking.status == BookingStatus.CONFIRMED,
                 Booking.check_in_date < check_out,
-                Booking.check_out_date > check_in
+                Booking.check_out_date > check_in,
             )
         )
 
@@ -279,11 +270,7 @@ class ConflictDetector:
 
         return query.all()
 
-    def _get_existing_conflict(
-        self,
-        booking_id_1: int,
-        booking_id_2: int
-    ) -> Optional[BookingConflict]:
+    def _get_existing_conflict(self, booking_id_1: int, booking_id_2: int) -> BookingConflict | None:
         """
         Verifica se já existe conflito registrado entre duas reservas.
 
@@ -295,23 +282,23 @@ class ConflictDetector:
             BookingConflict existente ou None
         """
         # Conflito pode estar em qualquer ordem
-        return self.db.query(BookingConflict).filter(
-            and_(
-                BookingConflict.resolved == False,
-                (
-                    and_(
-                        BookingConflict.booking_id_1 == booking_id_1,
-                        BookingConflict.booking_id_2 == booking_id_2
-                    ) |
-                    and_(
-                        BookingConflict.booking_id_1 == booking_id_2,
-                        BookingConflict.booking_id_2 == booking_id_1
-                    )
+        return (
+            self.db.query(BookingConflict)
+            .filter(
+                and_(
+                    BookingConflict.resolved == False,
+                    (
+                        and_(BookingConflict.booking_id_1 == booking_id_1, BookingConflict.booking_id_2 == booking_id_2)
+                        | and_(
+                            BookingConflict.booking_id_1 == booking_id_2, BookingConflict.booking_id_2 == booking_id_1
+                        )
+                    ),
                 )
             )
-        ).first()
+            .first()
+        )
 
-    def get_active_conflicts(self, property_id: int) -> List[BookingConflict]:
+    def get_active_conflicts(self, property_id: int) -> list[BookingConflict]:
         """
         Retorna conflitos ativos (não resolvidos) de um imóvel.
 
@@ -323,24 +310,15 @@ class ConflictDetector:
         """
         # Buscar conflitos via join com bookings
         # Usar selectinload para carregar booking_1 e booking_2 de uma vez (evita N+1)
-        return self.db.query(BookingConflict).join(
-            Booking,
-            BookingConflict.booking_id_1 == Booking.id
-        ).options(
-            selectinload(BookingConflict.booking_1),
-            selectinload(BookingConflict.booking_2)
-        ).filter(
-            and_(
-                Booking.property_id == property_id,
-                BookingConflict.resolved == False
-            )
-        ).all()
+        return (
+            self.db.query(BookingConflict)
+            .join(Booking, BookingConflict.booking_id_1 == Booking.id)
+            .options(selectinload(BookingConflict.booking_1), selectinload(BookingConflict.booking_2))
+            .filter(and_(Booking.property_id == property_id, BookingConflict.resolved == False))
+            .all()
+        )
 
-    def resolve_conflict(
-        self,
-        conflict_id: int,
-        resolution_notes: str
-    ) -> Optional[BookingConflict]:
+    def resolve_conflict(self, conflict_id: int, resolution_notes: str) -> BookingConflict | None:
         """
         Marca um conflito como resolvido.
 
@@ -351,9 +329,7 @@ class ConflictDetector:
         Returns:
             Conflito resolvido ou None
         """
-        conflict = self.db.query(BookingConflict).filter(
-            BookingConflict.id == conflict_id
-        ).first()
+        conflict = self.db.query(BookingConflict).filter(BookingConflict.id == conflict_id).first()
 
         if not conflict:
             logger.warning(f"Conflict {conflict_id} not found")
@@ -366,7 +342,7 @@ class ConflictDetector:
         logger.info(f"[OK] Conflict {conflict_id} resolved: {resolution_notes}")
         return conflict
 
-    def get_conflict_summary(self, property_id: int) -> Dict[str, Any]:
+    def get_conflict_summary(self, property_id: int) -> dict[str, Any]:
         """
         Retorna resumo de conflitos.
 
@@ -393,7 +369,7 @@ class ConflictDetector:
             "medium": medium,
             "low": low,
             "duplicates": duplicates,
-            "overlaps": overlaps
+            "overlaps": overlaps,
         }
 
     def auto_resolve_cancelled_conflicts(self, property_id: int) -> int:

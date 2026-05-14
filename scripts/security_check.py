@@ -3,9 +3,9 @@
 SENTINEL - Security Check Script
 Executa Bandit (code linter) e Safety (dependency checker)
 """
-import sys
+
 import subprocess
-from pathlib import Path
+import sys
 
 
 def run_bandit():
@@ -18,14 +18,19 @@ def run_bandit():
     try:
         result = subprocess.run(
             [
-                "python", "-m", "bandit",
-                "-r", "app/",  # Recursivo na pasta app
+                "python",
+                "-m",
+                "bandit",
+                "-r",
+                "app/",  # Recursivo na pasta app
                 "-ll",  # Apenas LOW e acima
-                "-f", "screen",  # Formato para terminal
-                "--exclude", "app/tests/"  # Excluir testes
+                "-f",
+                "screen",  # Formato para terminal
+                "--exclude",
+                "app/tests/",  # Excluir testes
             ],
             capture_output=True,
-            text=True
+            text=True,
         )
 
         print(result.stdout)
@@ -61,20 +66,14 @@ def run_safety():
 
     try:
         # Nota: safety check foi movido para safety scan no v3+
-        result = subprocess.run(
-            [
-                "python", "-m", "safety",
-                "check",
-                "--json"
-            ],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["python", "-m", "safety", "check", "--json"], capture_output=True, text=True)
 
         # Safety retorna JSON, vamos formatar
-        if "No known security vulnerabilities found" in result.stdout or \
-           "No known security vulnerabilities reported" in result.stdout or \
-           result.returncode == 0:
+        if (
+            "No known security vulnerabilities found" in result.stdout
+            or "No known security vulnerabilities reported" in result.stdout
+            or result.returncode == 0
+        ):
             print("[OK] Nenhuma vulnerabilidade conhecida em dependencias!")
             return True
         else:

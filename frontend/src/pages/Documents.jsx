@@ -16,7 +16,7 @@ import {
   Plus,
   Minus
 } from 'lucide-react';
-import { documentsAPI, bookingsAPI } from '../services/api';
+import { documentsAPI } from '../services/api';
 import { formatDateTimeFull } from '../utils/formatters';
 import './Documents.css';
 
@@ -116,7 +116,7 @@ const Documents = () => {
   };
 
   const handleDelete = async (filename) => {
-    let confirmed = false;
+    let confirmed;
 
     if (window.electronAPI) {
       confirmed = await window.electronAPI.showConfirmDialog({

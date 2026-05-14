@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BarChart, Wallet, Calendar, AlertTriangle,
   ArrowUpRight, ArrowDownRight, RefreshCw, CheckCircle,
-  User, Clock, FileText, Send, X
+  User, Clock, Send, X
 } from 'lucide-react';
 import { statisticsAPI, bookingsAPI, conflictsAPI, notificationsAPI } from '../services/api';
 import { usePropertyId } from '../contexts/PropertyContext';
@@ -136,6 +136,7 @@ const Dashboard = () => {
 
     loadDashboard();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // formatDate → usando formatDateShort de ../utils/formatters

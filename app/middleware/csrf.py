@@ -7,13 +7,16 @@ Proteção contra Cross-Site Request Forgery para endpoints críticos.
 Nota: Como usamos JWT em headers (não cookies), o risco de CSRF é reduzido.
 No entanto, mantemos proteção adicional para endpoints que modificam dados.
 """
-from fastapi import Request, HTTPException, status
+
+import hashlib
+import hmac
+import secrets
+from collections.abc import Callable
+
+from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Callable
-import secrets
-import hmac
-import hashlib
+
 from app.config import settings
 
 
@@ -37,7 +40,7 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
         "/",
         "/docs",
         "/redoc",
-        "/openapi.json"
+        "/openapi.json",
     ]
 
     # Métodos HTTP que requerem CSRF protection
@@ -70,7 +73,7 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
         # (previne ataques de sites maliciosos que tentam fazer requests)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF validation failed. Authentication required for data modification."
+            detail="CSRF validation failed. Authentication required for data modification.",
         )
 
     def _is_exempt(self, path: str) -> bool:
@@ -92,11 +95,7 @@ def generate_csrf_token(secret_key: str = None) -> str:
     token = secrets.token_urlsafe(32)
 
     # Assinar token com HMAC
-    signature = hmac.new(
-        secret.encode(),
-        token.encode(),
-        hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(secret.encode(), token.encode(), hashlib.sha256).hexdigest()
 
     return f"{token}.{signature}"
 
@@ -117,11 +116,7 @@ def validate_csrf_token(token: str, secret_key: str = None) -> bool:
         token_value, signature = token.rsplit(".", 1)
 
         # Verificar assinatura
-        expected_signature = hmac.new(
-            secret.encode(),
-            token_value.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        expected_signature = hmac.new(secret.encode(), token_value.encode(), hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(signature, expected_signature)
 

@@ -3,10 +3,12 @@
 Middleware para adicionar headers de segurança nas respostas HTTP.
 Protege contra ataques XSS, clickjacking, MIME sniffing, etc.
 """
+
+from collections.abc import Callable
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Callable
 
 from app.config import settings
 from app.core.environments import EnvironmentConfig
