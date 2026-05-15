@@ -281,6 +281,6 @@ apartment_rental_manager/
 
 - [Documentação da API](docs/architecture/API_DOCUMENTATION.md)
 - [Estado do Projeto](docs/LUMINA_PROJECT_STATE.md)
-- [Oportunidades de Melhoria](IMPROVEMENTS.md)
+- [Oportunidades de Melhoria](../roadmap.md)
 - [Issues / Bug Reports](https://github.com/Sitr3n01/apartment_rental_manager/issues)
 - [Releases](https://github.com/Sitr3n01/apartment_rental_manager/releases)

@@ -124,7 +124,7 @@ copy .env.example .env
 npm run dev
 ```
 
-`npm run dev` inicia backend, frontend Vite e Electron em paralelo. Setup detalhado, troubleshooting e variaveis de configuracao: [`DEV_SETUP.md`](DEV_SETUP.md).
+`npm run dev` inicia backend, frontend Vite e Electron em paralelo. Setup detalhado, troubleshooting e variaveis de configuracao: [`docs/development/setup.md`](docs/development/setup.md).
 
 Gerar `SECRET_KEY`:
 
@@ -153,7 +153,7 @@ Cobertura atual: 35 testes (autenticacao, middleware JWT, parser de plataformas)
 | **A.0.3.0** | Integracao Gmail API, importacao de historico, exportacao |
 | **Beta** | Cobertura de testes 80%+, CI/CD, code signing |
 
-Roadmap completo: [`IMPROVEMENTS.md`](IMPROVEMENTS.md).
+Roadmap completo: [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
@@ -161,7 +161,7 @@ Roadmap completo: [`IMPROVEMENTS.md`](IMPROVEMENTS.md).
 
 1. Fork o repositorio
 2. Crie uma branch para sua feature: `git checkout -b feature/minha-feature`
-3. Siga as convencoes do projeto descritas em [`CLAUDE.md`](CLAUDE.md)
+3. Siga as convencoes do projeto descritas no README e na documentacao de arquitetura
 4. Escreva testes para sua mudanca quando aplicavel
 5. Abra um Pull Request
 
@@ -173,13 +173,12 @@ Bugs e pedidos de feature: [Issues](https://github.com/Sitr3n01/apartment_rental
 
 | Documento | Descricao |
 |-----------|-----------|
-| [`DEV_SETUP.md`](DEV_SETUP.md) | Guia completo de setup para desenvolvimento |
+| [`docs/development/setup.md`](docs/development/setup.md) | Guia completo de setup para desenvolvimento |
 | [`docs/LUMINA_PROJECT_STATE.md`](docs/LUMINA_PROJECT_STATE.md) | Estado completo do projeto, arquitetura, modulos |
 | [`docs/architecture/API_DOCUMENTATION.md`](docs/architecture/API_DOCUMENTATION.md) | Documentacao completa da API REST |
 | [`docs/architecture/ARQUITETURA_GERAL.md`](docs/architecture/ARQUITETURA_GERAL.md) | Decisoes de arquitetura, diagramas e estrutura de diretorios |
 | [`docs/guides/GUIA_USO_DIARIO.md`](docs/guides/GUIA_USO_DIARIO.md) | Guia de uso diario para usuarios finais |
-| [`IMPROVEMENTS.md`](IMPROVEMENTS.md) | Roadmap e melhorias planejadas |
-| [`CLAUDE.md`](CLAUDE.md) | Instrucoes para agentes de IA (manutencao do codigo) |
+| [`docs/roadmap.md`](docs/roadmap.md) | Roadmap e melhorias planejadas |
 
 ---
 

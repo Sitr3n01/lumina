@@ -239,7 +239,6 @@ app.whenReady()
 
 ### Removidos:
 - `legacy/web-deployment/` - **13 arquivos** de Docker/nginx/systemd (modo web legado arquivado)
-- `GEMINI.md` - instrucoes removidas
 - `electron-builder.yml` - substituido por config em `package.json`
 - `pyproject.toml` - substituido por `lumina.spec` (PyInstaller)
 

@@ -100,9 +100,21 @@ logs/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# === CLAUDE CODE ===
-.claude/settings.json
-.claude/worktrees/
+# === LOCAL AI TOOLING ===
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.agent/
+.agents/
+.claude/
+.codex/
+.cursor/
+.continue/
+.aider*
+
+# Root-level planning notes should live under docs/
+/DEV_SETUP.md
+/IMPROVEMENTS.md
 
 # === TESTES (arquivos gerados) ===
 test.db
