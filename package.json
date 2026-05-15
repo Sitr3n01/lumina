@@ -117,7 +117,7 @@
     "publish": {
       "provider": "github",
       "owner": "Sitr3n01",
-      "repo": "AP_Controller"
+      "repo": "apartment_rental_manager"
     }
   }
 }

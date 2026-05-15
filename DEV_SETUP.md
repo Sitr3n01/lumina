@@ -21,12 +21,12 @@
 - Nenhum outro software necessário
 
 ### Passos
-1. Acesse a página de [Releases](https://github.com/Sitr3n01/AP_Controller/releases)
+1. Acesse a página de [Releases](https://github.com/Sitr3n01/apartment_rental_manager/releases)
 2. Baixe o arquivo `LUMINA-Setup-A.0.1.0.exe` (ou `.zip` portátil)
 3. Execute o instalador e siga os passos
 4. Na primeira execução, o **Wizard de Configuração** abrirá automaticamente para guiar você pela configuração inicial
 
-> **Nota Alpha:** Esta é uma versão de testes. Recomendamos manter backups dos seus dados. Relate bugs em [Issues](https://github.com/Sitr3n01/AP_Controller/issues).
+> **Nota Alpha:** Esta é uma versão de testes. Recomendamos manter backups dos seus dados. Relate bugs em [Issues](https://github.com/Sitr3n01/apartment_rental_manager/issues).
 
 ---
 
@@ -52,8 +52,8 @@ npm --version       # 10+
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/Sitr3n01/AP_Controller.git
-cd AP_Controller
+git clone https://github.com/Sitr3n01/apartment_rental_manager.git
+cd apartment_rental_manager
 ```
 
 ---
@@ -221,7 +221,7 @@ O instalador gerado estará em `release/`.
 ## 🗂️ Estrutura do Projeto
 
 ```
-AP_Controller/
+apartment_rental_manager/
   app/                  # Backend FastAPI (Python)
     api/v1/             # Endpoints auth, health
     core/               # Sync, conflict detection, security
@@ -282,5 +282,5 @@ AP_Controller/
 - [Documentação da API](docs/architecture/API_DOCUMENTATION.md)
 - [Estado do Projeto](docs/LUMINA_PROJECT_STATE.md)
 - [Oportunidades de Melhoria](IMPROVEMENTS.md)
-- [Issues / Bug Reports](https://github.com/Sitr3n01/AP_Controller/issues)
-- [Releases](https://github.com/Sitr3n01/AP_Controller/releases)
+- [Issues / Bug Reports](https://github.com/Sitr3n01/apartment_rental_manager/issues)
+- [Releases](https://github.com/Sitr3n01/apartment_rental_manager/releases)

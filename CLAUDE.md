@@ -133,7 +133,7 @@ raiz/
 
 ## Regras de Commits
 
-- Branch: `feature/electron-migration`
+- Branch principal: `main`
 - Prefixos: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`
 - Mensagens em ingles
 - Um commit por mudanca logica
@@ -178,8 +178,8 @@ BUILD.bat
 - OS: Windows 11
 - Python: 3.11+ (testado ate 3.13)
 - Node.js: 20+
-- Repo: `C:\Users\zegil\Documents\GitHub\AP_Controller`
-- Branch principal: `feature/electron-migration`
+- Repo: `apartment_rental_manager` (GitHub: `Sitr3n01/apartment_rental_manager`)
+- Branch principal: `main`
 
 ## Arquitetura do Electron — Conceitos Criticos
 

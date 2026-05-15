@@ -89,8 +89,7 @@ TELEGRAM_ADMIN_USER_IDS=123456789,987654321
 Execute o script de instalação:
 
 ```bash
-# Windows (via CMD ou PowerShell)
-cd C:\Users\zegil\Documents\GitHub\AP_Controller
+# Windows (via CMD ou PowerShell) — execute na raiz do repositorio apartment_rental_manager
 pip install python-telegram-bot
 
 # Ou reinstale todas as dependências

@@ -23,7 +23,7 @@ python --version
 
 REM Verificar se está no diretório correto
 if not exist "app\" (
-    echo [ERRO] Script deve ser executado da raiz do projeto AP_Controller
+    echo [ERRO] Script deve ser executado da raiz do projeto apartment_rental_manager
     pause
     exit /b 1
 )
