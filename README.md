@@ -17,6 +17,12 @@
 
 ---
 
+## Status
+
+Release Alpha A.0.1.0, distribuída como instalador Windows: backend, banco e interface rodam na máquina do usuário, sem servidor externo. O repositório está em desenvolvimento ativo — as faixas de versão planejadas estão no [Roadmap](#roadmap).
+
+---
+
 > Aplicativo desktop **all-in-one** para proprietários no Airbnb e Booking.com. Sincroniza calendários iCal, detecta conflitos entre plataformas, gera documentos de condomínio em `.docx`, envia notificações por Telegram e e-mail, e exibe um dashboard com ocupação e receita — tudo rodando **localmente**, sem servidores externos.
 
 ---
