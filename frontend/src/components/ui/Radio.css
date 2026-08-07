@@ -1,0 +1,199 @@
+@layer lm.components {
+  .lm-radio {
+    /* Mesmas medidas do Checkbox — os dois aparecem lado a lado em formulário e
+       qualquer diferença de 1px salta aos olhos. */
+    --_size: calc(var(--lm-space-16) + var(--lm-space-2));
+    --_target: max(var(--lm-target-min-size), var(--lm-density-control));
+    --_lead: max(var(--lm-space-0), calc((var(--lm-type-body-md-line) - var(--_size)) / 2));
+
+    display: inline-grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--lm-space-12);
+    align-items: start;
+  }
+
+  .lm-radio__input {
+    --_ink: var(--lm-color-on-surface);
+    /* A borda é a única fronteira do controle: 3:1 por WCAG 1.4.11. */
+    --_outline: var(--lm-color-outline-interactive);
+
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    place-content: center;
+    inline-size: var(--_size);
+    block-size: var(--_size);
+    margin: 0;
+    margin-block-start: var(--_lead);
+    border: 1px solid var(--_outline);
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-radio__input:checked {
+    --_ink: var(--lm-color-primary);
+    --_outline: var(--lm-color-primary);
+  }
+
+  /* --- Camada de estado (idêntica ao Checkbox) --- */
+
+  .lm-radio__input::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--_target);
+    block-size: var(--_target);
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    translate: -50% -50%;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-radio:hover:not([data-disabled]) .lm-radio__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-radio__input:focus-visible::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-focus) * 100%),
+      transparent
+    );
+  }
+
+  .lm-radio:active:not([data-disabled]) .lm-radio__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  /* --- Ponto central --- */
+
+  .lm-radio__input::after {
+    content: '';
+    inline-size: calc(var(--_size) / 2);
+    block-size: calc(var(--_size) / 2);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--_ink);
+    scale: 0;
+    transition: scale var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-radio__input:checked::after {
+    scale: 1;
+  }
+
+  /* --- Desabilitado --- */
+
+  .lm-radio__input:disabled {
+    --_ink: var(--lm-color-on-surface-disabled);
+    --_outline: var(--lm-color-outline-variant);
+    cursor: not-allowed;
+  }
+
+  .lm-radio__label {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    color: var(--lm-color-on-surface);
+    cursor: pointer;
+  }
+
+  .lm-radio__description {
+    grid-column: 2;
+    grid-row: 2;
+    margin-block-start: var(--lm-space-2);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-radio[data-disabled] .lm-radio__label,
+  .lm-radio[data-disabled] .lm-radio__description {
+    color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* --- Grupo --- */
+
+  .lm-radio-group {
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-inline-size: 0; /* fieldset tem min-inline-size: min-content por padrão */
+  }
+
+  .lm-radio-group__legend {
+    padding: 0;
+    margin-block-end: var(--lm-space-8);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+    color: var(--lm-color-on-surface);
+  }
+
+  .lm-radio-group__description {
+    margin-block-end: var(--lm-space-12);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-radio-group__options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-12);
+  }
+
+  .lm-radio-group[data-orientation='horizontal'] .lm-radio-group__options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: var(--lm-space-24);
+  }
+
+  .lm-radio-group__error {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-4);
+    margin-block-start: var(--lm-space-8);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+    color: var(--lm-color-error);
+  }
+
+  .lm-radio-group__error > svg {
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  /* Em contraste forçado a cor de preenchimento é descartada; a marca precisa
+     existir como forma para continuar visível. */
+  @media (forced-colors: active) {
+    .lm-radio__input {
+      border-color: ButtonBorder;
+    }
+
+    .lm-radio__input:checked::after {
+      background-color: Highlight;
+    }
+  }
+}

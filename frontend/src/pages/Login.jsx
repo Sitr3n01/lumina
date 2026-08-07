@@ -1,17 +1,27 @@
-import { useState, useEffect } from 'react';
-import { LogIn, UserPlus, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Button, Card, Checkbox, IconButton, Progress, TextField } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
+import './Login.css';
 
+/**
+ * Entrada da aplicação. Duas telas no mesmo componente: `setup` no primeiro
+ * acesso, `login` depois.
+ *
+ * A tela vive FORA do shell — sem rail, sem app bar. Não há para onde navegar
+ * antes de entrar, e oferecer navegação inerte seria mentir sobre o estado.
+ */
 const Login = () => {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState(null); // null = carregando, 'login' | 'setup'
+  const [mode, setMode] = useState(null); // null = ainda perguntando ao servidor
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(
-    localStorage.getItem('lumina_remember_login') !== 'false'
+    localStorage.getItem('lumina_remember_login') !== 'false',
   );
+  const primeiroCampoRef = useRef(null);
 
   const [form, setForm] = useState({
     username: localStorage.getItem('lumina_last_username') || '',
@@ -20,12 +30,18 @@ const Login = () => {
     full_name: '',
   });
 
-  // Verificar se e primeiro acesso ao montar
   useEffect(() => {
-    authAPI.checkSetup()
+    authAPI
+      .checkSetup()
       .then(({ needs_setup }) => setMode(needs_setup ? 'setup' : 'login'))
-      .catch(() => setMode('login')); // fallback para login em caso de erro
+      .catch(() => setMode('login'));
   }, []);
+
+  // O foco vai para o primeiro campo assim que a tela existe. `autoFocus` no JSX
+  // não serve: o campo só é montado depois da resposta do servidor.
+  useEffect(() => {
+    if (mode) primeiroCampoRef.current?.focus();
+  }, [mode]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -44,12 +60,8 @@ const Login = () => {
 
     try {
       if (mode === 'login') {
-        // Salvar preferência e username antes de logar
-        if (rememberMe) {
-          localStorage.setItem('lumina_last_username', form.username);
-        } else {
-          localStorage.removeItem('lumina_last_username');
-        }
+        if (rememberMe) localStorage.setItem('lumina_last_username', form.username);
+        else localStorage.removeItem('lumina_last_username');
         await login({ username: form.username, password: form.password });
       } else {
         await register({
@@ -61,24 +73,26 @@ const Login = () => {
       }
     } catch (err) {
       const msg = err.response?.data?.detail;
-      if (Array.isArray(msg)) {
-        setError(msg.map((e) => e.msg).join('. '));
-      } else {
-        setError(msg || 'Erro ao processar. Verifique os dados e tente novamente.');
-      }
+      setError(
+        Array.isArray(msg)
+          ? msg.map((x) => x.msg).join('. ')
+          : msg || 'Erro ao processar. Verifique os dados e tente novamente.',
+      );
+      // Falhou: o foco volta ao primeiro campo, senão fica preso no botão e o
+      // usuário de teclado precisa navegar de trás para frente para corrigir.
+      primeiroCampoRef.current?.focus();
     } finally {
       setLoading(false);
     }
   };
 
-  // Skeleton de carregamento: card com spinner (sem flash de tela vazia)
   if (mode === null) {
     return (
-      <div className="login-screen">
-        <div className="login-card glass-card" style={{ textAlign: 'center', padding: '48px 32px' }}>
-          <div className="login-title">LUMINA</div>
-          <RefreshCw size={24} className="spin" style={{ color: 'var(--primary)', marginTop: 24 }} />
-        </div>
+      <div className="login">
+        <Card variant="elevated" className="login__card">
+          <p className="login__marca">LUMINA</p>
+          <Progress variant="circular" aria-label="Verificando a configuração" />
+        </Card>
       </div>
     );
   }
@@ -86,160 +100,103 @@ const Login = () => {
   const isSetup = mode === 'setup';
 
   return (
-    <div className="login-screen">
-      <div className="login-card glass-card">
-        <div className="login-header">
-          <h1 className="login-title">LUMINA</h1>
-          <p className="subtitle">
+    <div className="login">
+      <Card variant="elevated" className="login__card" as="section">
+        <header className="login__cabecalho">
+          <h1 className="login__marca">LUMINA</h1>
+          <p className="login__apoio">
             {isSetup
-              ? 'Primeiro acesso — crie sua conta de administrador'
+              ? 'Primeiro acesso — crie a conta de administrador'
               : 'Bem-vindo de volta'}
           </p>
-        </div>
+        </header>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-field">
-            <label className="label">Username</label>
-            <input
-              className="input"
-              type="text"
-              name="username"
-              value={form.username}
-              onChange={handleChange}
-              placeholder={isSetup ? 'Escolha um username' : 'Username ou email'}
-              required
-              autoComplete="username"
-              autoFocus
-            />
-          </div>
+        <form className="login__form" onSubmit={handleSubmit} noValidate>
+          <TextField
+            ref={primeiroCampoRef}
+            label={isSetup ? 'Nome de usuário' : 'Usuário'}
+            name="username"
+            value={form.username}
+            onChange={handleChange}
+            required
+            autoComplete="username"
+            placeholder={isSetup ? 'Escolha um nome de usuário' : 'Usuário ou e-mail'}
+          />
 
-          {isSetup && (
+          {isSetup ? (
             <>
-              <div className="form-field">
-                <label className="label">Email</label>
-                <input
-                  className="input"
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="seu@email.com"
-                  required
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="label">Nome completo <span style={{ color: 'var(--text-disable)' }}>(opcional)</span></label>
-                <input
-                  className="input"
-                  type="text"
-                  name="full_name"
-                  value={form.full_name}
-                  onChange={handleChange}
-                  placeholder="Seu nome"
-                />
-              </div>
-            </>
-          )}
-
-          <div className="form-field">
-            <label className="label">Senha</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="input"
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
+              <TextField
+                label="E-mail"
+                type="email"
+                name="email"
+                value={form.email}
                 onChange={handleChange}
-                placeholder={isSetup ? 'Mín. 8 chars, 1 maiúscula, 1 número' : 'Sua senha'}
                 required
-                autoComplete={isSetup ? 'new-password' : 'current-password'}
-                style={{ paddingRight: '40px' }}
+                autoComplete="email"
+                placeholder="voce@exemplo.com"
               />
-              <button
-                type="button"
+              <TextField
+                label="Nome completo"
+                name="full_name"
+                value={form.full_name}
+                onChange={handleChange}
+                help="Opcional. Aparece nos documentos gerados."
+                autoComplete="name"
+              />
+            </>
+          ) : null}
+
+          <TextField
+            label="Senha"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            autoComplete={isSetup ? 'new-password' : 'current-password'}
+            help={isSetup ? 'Mínimo de 8 caracteres, com 1 maiúscula e 1 número.' : undefined}
+            trailingAction={
+              // Sem `tabIndex={-1}`. A versão anterior tinha, o que tornava o
+              // botão impossível de alcançar por teclado — justamente para quem
+              // mais precisa conferir o que digitou.
+              <IconButton
+                density="compact"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword((v) => !v)}
-                style={{
-                  position: 'absolute', right: '10px', top: '50%',
-                  transform: 'translateY(-50%)', background: 'none',
-                  border: 'none', cursor: 'pointer', color: 'var(--text-disable)',
-                  padding: 0, display: 'flex',
-                }}
-                tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          {!isSetup && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => handleRememberMeChange(e.target.checked)}
-                style={{ width: 'auto', cursor: 'pointer' }}
-              />
-              <label htmlFor="rememberMe" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', margin: 0 }}>
-                Manter sessão ativa
-              </label>
-            </div>
-          )}
-
-          {error && (
-            <div className="message message-error" style={{ margin: 0 }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-            style={{ width: '100%', justifyContent: 'center', marginTop: '4px' }}
-          >
-            {loading
-              ? <RefreshCw size={16} className="spin" />
-              : isSetup
-                ? <><UserPlus size={16} /> Criar conta</>
-                : <><LogIn size={16} /> Entrar</>
+                {showPassword ? <EyeOff /> : <Eye />}
+              </IconButton>
             }
-          </button>
+          />
 
+          {!isSetup ? (
+            <Checkbox
+              checked={rememberMe}
+              onChange={(e) => handleRememberMeChange(e.target.checked)}
+            >
+              Manter sessão ativa
+            </Checkbox>
+          ) : null}
+
+          {error ? (
+            // `role="alert"` porque a mensagem aparece DEPOIS da ação e precisa
+            // ser anunciada sem que o usuário vá procurá-la.
+            <p className="login__erro" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <Button
+            type="submit"
+            fullWidth
+            loading={loading}
+            icon={isSetup ? <UserPlus /> : <LogIn />}
+          >
+            {isSetup ? 'Criar conta' : 'Entrar'}
+          </Button>
         </form>
-      </div>
-
-      <style>{`
-        .login-screen {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #101922;
-          padding: 24px;
-        }
-        .login-card {
-          width: 100%;
-          max-width: 400px;
-        }
-        .login-header {
-          text-align: center;
-          margin-bottom: 28px;
-        }
-        .login-title {
-          font-size: 28px;
-          font-weight: 800;
-          color: var(--primary);
-          letter-spacing: 3px;
-          margin: 0 0 8px;
-        }
-        .login-form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-      `}</style>
+      </Card>
     </div>
   );
 };

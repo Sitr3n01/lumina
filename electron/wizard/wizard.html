@@ -4,9 +4,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sem fonts.googleapis.com: a tipografia agora é a do sistema, e a política
+         deixou de permitir uma origem externa que não é mais usada. -->
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:;" />
+        content="default-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
     <title>LUMINA - Configuração Inicial</title>
+    <!-- Os mesmos tokens do aplicativo, gerados. Precisa vir ANTES de wizard.css,
+         que só faz a ponte dos nomes antigos para eles. -->
+    <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="wizard.css" />
 </head>
 
@@ -42,28 +47,28 @@
 
                             <div class="welcome-features">
                                 <div class="feature-item">
-                                    <div class="feature-icon">📅</div>
+                                    <div class="feature-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="15" height="13.5" rx="2"/><path d="M2.5 8h15M6.5 2.5v3M13.5 2.5v3"/></svg></div>
                                     <div class="feature-text">
                                         <strong>Calendários Sync</strong>
                                         <span>Airbnb e Booking.com</span>
                                     </div>
                                 </div>
                                 <div class="feature-item">
-                                    <div class="feature-icon">⚡</div>
+                                    <div class="feature-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 2 4 11h5l-1 7 7-9h-5z"/></svg></div>
                                     <div class="feature-text">
                                         <strong>Conflitos</strong>
                                         <span>Detecção automática</span>
                                     </div>
                                 </div>
                                 <div class="feature-item">
-                                    <div class="feature-icon">📄</div>
+                                    <div class="feature-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 2.5h6l4 4V17.5H5z"/><path d="M11 2.5v4h4"/></svg></div>
                                     <div class="feature-text">
                                         <strong>Documentos</strong>
                                         <span>Geração automática</span>
                                     </div>
                                 </div>
                                 <div class="feature-item">
-                                    <div class="feature-icon">📧</div>
+                                    <div class="feature-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="m2.5 6 7.5 5 7.5-5"/></svg></div>
                                     <div class="feature-text">
                                         <strong>Emails</strong>
                                         <span>Envio automatizado</span>
@@ -76,7 +81,7 @@
                     <!-- STEP 2: Dados do Imóvel -->
                     <div class="wizard-step" data-step="2">
                         <div class="step-header">
-                            <h2 class="step-title">🏠 Dados do Imóvel</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8.5 10 3l7 5.5V16a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 16z"/></svg> Dados do Imóvel</h2>
                             <p class="step-description">Informações sobre o apartamento que será gerenciado.</p>
                         </div>
                         <div class="form-grid">
@@ -112,7 +117,7 @@
                     <!-- STEP 3: Dados do Proprietário -->
                     <div class="wizard-step" data-step="3">
                         <div class="step-header">
-                            <h2 class="step-title">👤 Dados do Proprietário</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="6.5" r="3"/><path d="M3.5 17c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/></svg> Dados do Proprietário</h2>
                             <p class="step-description">Informações do proprietário para uso nos documentos gerados.</p>
                         </div>
                         <div class="form-grid">
@@ -149,7 +154,7 @@
                     <!-- STEP 4: Calendários -->
                     <div class="wizard-step" data-step="4">
                         <div class="step-header">
-                            <h2 class="step-title">📅 Calendários</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="15" height="13.5" rx="2"/><path d="M2.5 8h15M6.5 2.5v3M13.5 2.5v3"/></svg> Calendários</h2>
                             <p class="step-description">URLs dos calendários iCal do Airbnb e Booking.com. Você pode pular e
                                 configurar depois.</p>
                         </div>
@@ -198,7 +203,7 @@
                     <!-- STEP 5: Email -->
                     <div class="wizard-step" data-step="5">
                         <div class="step-header">
-                            <h2 class="step-title">📧 Configuração de Email</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="m2.5 6 7.5 5 7.5-5"/></svg> Configuração de Email</h2>
                             <p class="step-description">Para envio de notificações e documentos por email. Você pode pular e
                                 configurar depois.</p>
                         </div>
@@ -252,7 +257,7 @@
 
                             <div>
                                 <button class="btn btn-secondary" onclick="testEmail()" id="testEmailBtn">
-                                    🔌 Testar Conexão
+                                    <svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 2.5v5M13 2.5v5"/><path d="M4.5 7.5h11v2a5.5 5.5 0 0 1-11 0z"/><path d="M10 15v3"/></svg> Testar Conexão
                                 </button>
                                 <div id="email_test" style="margin-top:8px;"></div>
                             </div>
@@ -262,7 +267,7 @@
                     <!-- STEP 6: Conta Admin -->
                     <div class="wizard-step" data-step="6">
                         <div class="step-header">
-                            <h2 class="step-title">🔐 Conta Administrador</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="8.5" width="12" height="9" rx="2"/><path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5"/></svg> Conta Administrador</h2>
                             <p class="step-description">Crie sua conta de acesso ao sistema. Você poderá criar mais usuários
                                 depois.</p>
                         </div>
@@ -302,7 +307,7 @@
                     <!-- STEP 7: Template de Condomínio (PDF upload + análise inteligente) -->
                     <div class="wizard-step" data-step="7">
                         <div class="step-header">
-                            <h2 class="step-title">📋 Template de Autorização</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="3.5" width="11" height="14" rx="2"/><path d="M7.5 2h5v3h-5z"/><path d="M7.5 9h5M7.5 12.5h5"/></svg> Template de Autorização</h2>
                             <p class="step-description">
                                 Faça upload do PDF do seu modelo de autorização de hospedagem.
                                 O LUMINA analisará automaticamente os campos e configurará o template.
@@ -320,7 +325,7 @@
                                  ondragover="event.preventDefault(); this.classList.add('drag-over')"
                                  ondragleave="this.classList.remove('drag-over')"
                                  ondrop="handlePdfDrop(event)">
-                                <div class="pdf-drop-icon">📄</div>
+                                <div class="pdf-drop-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 2.5h6l4 4V17.5H5z"/><path d="M11 2.5v4h4"/></svg></div>
                                 <p class="pdf-drop-title">Arraste seu PDF aqui</p>
                                 <p class="pdf-drop-sub">ou</p>
                                 <button type="button" class="btn btn-secondary btn-sm"
@@ -333,11 +338,11 @@
                             <!-- Estado: arquivo selecionado / processando -->
                             <div class="pdf-status-area" id="pdfStatusArea" style="display:none;">
                                 <div class="pdf-file-info" id="pdfFileInfo">
-                                    <span class="pdf-file-icon">📄</span>
+                                    <span class="pdf-file-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 2.5h6l4 4V17.5H5z"/><path d="M11 2.5v4h4"/></svg></span>
                                     <span class="pdf-file-name" id="pdfFileName"></span>
                                     <span class="pdf-file-size" id="pdfFileSize"></span>
                                     <button type="button" class="btn btn-ghost btn-sm"
-                                            onclick="clearPdfSelection()" title="Remover">✕</button>
+                                            onclick="clearPdfSelection()" title="Remover"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
                                 </div>
 
                                 <!-- Barra de progresso de leitura -->
@@ -349,7 +354,7 @@
                                 <!-- Resultado da análise -->
                                 <div class="pdf-analysis-result" id="pdfAnalysisResult" style="display:none;">
                                     <div class="pdf-analysis-header">
-                                        <span class="pdf-analysis-icon" id="pdfAnalysisIcon">✅</span>
+                                        <span class="pdf-analysis-icon" id="pdfAnalysisIcon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 10.5 4 4 8-9"/></svg></span>
                                         <strong id="pdfAnalysisTitle">Template salvo!</strong>
                                     </div>
                                     <div class="pdf-fields-grid" id="pdfFieldsGrid">
@@ -413,7 +418,7 @@
                     <!-- STEP 8: Revisão e Confirmação -->
                     <div class="wizard-step" data-step="8">
                         <div class="step-header">
-                            <h2 class="step-title">✅ Revisão Final</h2>
+                            <h2 class="step-title"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 10.5 4 4 8-9"/></svg> Revisão Final</h2>
                             <p class="step-description">Confirme as informações antes de salvar e iniciar o sistema.</p>
                         </div>
 
@@ -424,7 +429,7 @@
                         <!-- Credenciais de acesso — exibidas para o usuário guardar -->
                         <div class="credentials-card" id="credentialsSummary" style="display:none;">
                             <div class="cred-header">
-                                <span class="cred-icon">🔑</span>
+                                <span class="cred-icon"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6.5" cy="13.5" r="3.5"/><path d="m9 11 8-8M14 6l2 2"/></svg></span>
                                 <div>
                                     <h4>Suas Credenciais de Acesso</h4>
                                     <p>Guarde essas informações — você precisará delas ao reabrir o LUMINA.</p>
@@ -438,7 +443,7 @@
                             <div class="cred-row">
                                 <span class="cred-label">Senha</span>
                                 <code class="cred-value cred-password" id="credPassword"></code>
-                                <button class="btn-copy btn-ghost-sm" onclick="toggleCredPassword(this)" title="Mostrar/ocultar senha">👁</button>
+                                <button class="btn-copy btn-ghost-sm" onclick="toggleCredPassword(this)" title="Mostrar/ocultar senha"><svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10Z"/><circle cx="10" cy="10" r="2.5"/></svg></button>
                                 <button class="btn-copy" onclick="copyCredential('credPassword', this)" title="Copiar senha">Copiar</button>
                             </div>
                         </div>
@@ -451,14 +456,14 @@
                 <!-- ===== FOOTER DE NAVEGAÇÃO (dentro do card) ===== -->
                 <div class="wizard-footer">
                     <button class="btn btn-secondary" id="btnBack" onclick="wizardBack()" style="display:none;">
-                        ← Anterior
+                        <svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 10H4"/><path d="m9 5-5 5 5 5"/></svg> Anterior
                     </button>
                     <div class="footer-right">
                         <button class="btn btn-ghost" id="btnSkip" onclick="wizardSkip()" style="display:none;">
                             Pular
                         </button>
                         <button class="btn btn-primary btn-lg" id="btnNext" onclick="wizardNext()">
-                            Começar →
+                            Começar <svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 10h12"/><path d="m11 5 5 5-5 5"/></svg>
                         </button>
                     </div>
                 </div>

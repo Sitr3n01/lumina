@@ -1,0 +1,132 @@
+/* =============================================================
+   LUMINA — Base de elementos
+   Camada: lm.base
+   Especifica: 03-acessibilidade.md §3 (foco) e §8 (movimento),
+               01-fundamentos.md §4 (tipografia)
+   ============================================================= */
+
+@layer lm.base {
+  html {
+    block-size: 100%;
+    /* `color-scheme` vem dos tokens semânticos e muda com o tema.
+       É ele que faz o <select> nativo do Electron pintar certo. */
+  }
+
+  body {
+    min-block-size: 100%;
+    background-color: var(--lm-color-background);
+    color: var(--lm-color-on-surface);
+    font-family: var(--lm-font-sans);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--lm-font-mono);
+    font-size: var(--lm-type-code-size);
+    line-height: var(--lm-type-code-line);
+  }
+
+  /* --- Anel de foco -------------------------------------------------
+     Envolto em :where() para ter especificidade ZERO: qualquer
+     componente sobrescreve sem precisar de !important, e o anel nunca
+     "gruda" numa regra mais específica que o autor não esperava.
+
+     O par abaixo é indivisível. Sem a segunda regra, o navegador
+     desenha o anel também no clique de mouse — que foi exatamente a
+     motivação errada que levou ao `* { outline: none }` original. */
+  :where(a[href], area, button, input, label[for], select, summary, textarea, [tabindex]):focus-visible {
+    outline: var(--lm-focus-ring-width) solid var(--lm-focus-ring-color);
+    outline-offset: var(--lm-focus-ring-offset);
+  }
+
+  :where(a[href], area, button, input, label[for], select, summary, textarea, [tabindex]):focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* A app bar é fixa. Sem isto, um alvo alcançado por Tab pode parar
+     debaixo dela — WCAG 2.4.11 (Focus Not Obscured). */
+  :where(a[href], area, button, input, select, summary, textarea, [tabindex]) {
+    scroll-margin-block-start: calc(var(--lm-app-bar-height) + var(--lm-space-16));
+    scroll-margin-block-end: var(--lm-space-16);
+  }
+
+  /* Em contraste forçado o anel do sistema é melhor que o nosso:
+     ele é garantidamente distinto do fundo escolhido pelo usuário. */
+  @media (forced-colors: active) {
+    :where(a[href], button, input, select, summary, textarea, [tabindex]):focus-visible {
+      outline: 3px solid Highlight;
+    }
+  }
+
+  /* --- Alvo mínimo --------------------------------------------------
+     WCAG 2.5.8: 24x24 CSS. Aplicado via pseudo-elemento para não
+     inflar o desenho do controle — um chip de 32px continua com 32px
+     de pintura e ganha só área de toque. */
+  :where(button, a[href], [role='button'], summary) {
+    position: relative;
+  }
+
+  /* --- Movimento reduzido -------------------------------------------
+     O único !important legítimo do sistema. Mora em lm.base — camada
+     precoce — e por isso vence o !important de qualquer camada
+     posterior: para declarações important a ordem das camadas se
+     inverte. `1ms` em vez de `0s` porque eventos `transitionend` e
+     `animationend` precisam continuar disparando. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      transition-delay: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* --- Barra de rolagem ---------------------------------------------- */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--lm-color-outline-variant) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    inline-size: 8px;
+    block-size: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--lm-color-outline-variant);
+    border-radius: var(--lm-radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--lm-color-outline);
+  }
+
+  /* --- Seleção de texto ---------------------------------------------- */
+  ::selection {
+    background: var(--lm-color-primary-container);
+    color: var(--lm-color-on-primary-container);
+  }
+
+  /* --- Placeholder ---------------------------------------------------- */
+  ::placeholder {
+    color: var(--lm-color-on-surface-variant);
+    opacity: 1; /* Firefox aplica 0.54 por padrão e reprova contraste. */
+  }
+}

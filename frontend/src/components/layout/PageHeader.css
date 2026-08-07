@@ -1,0 +1,53 @@
+@layer lm.layout {
+  .lm-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+    margin-block-end: var(--lm-space-24);
+  }
+
+  .lm-page-header__faixa {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--lm-space-16);
+    flex-wrap: wrap;
+  }
+
+  .lm-page-header__apoio {
+    /* Medida de leitura. Texto de apoio esticado numa tela de 1600px obriga o
+       olho a varrer a largura toda para uma frase de uma linha. */
+    max-inline-size: var(--lm-form-column-max-width);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  .lm-page-header__acoes {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    /* Empurra as ações para a direita mesmo sem texto de apoio, e mantém a
+       ordem visual quando a faixa quebra em duas linhas. */
+    margin-inline-start: auto;
+  }
+
+  .lm-page-header__filtros {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--lm-space-8);
+  }
+
+  @media (max-width: 599px) {
+    .lm-page-header__acoes {
+      inline-size: 100%;
+      margin-inline-start: 0;
+    }
+
+    .lm-page-header__acoes > * {
+      flex: 1;
+    }
+  }
+}

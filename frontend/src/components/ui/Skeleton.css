@@ -1,0 +1,71 @@
+@layer lm.components {
+  .lm-skeleton {
+    display: block;
+    border-radius: var(--lm-skeleton-radius);
+    background-color: var(--lm-skeleton-bg);
+
+    /* O brilho é UMA imagem de fundo com o dobro da largura da caixa, deslocada por
+       `background-position`. Animar posição de fundo não toca layout nem pintura de
+       filhos — um pseudo-elemento correndo por cima custaria composição a cada quadro
+       em listas de dezenas de skeletons. */
+    background-image: linear-gradient(
+      90deg,
+      var(--lm-skeleton-bg) 0%,
+      var(--lm-skeleton-sheen) 50%,
+      var(--lm-skeleton-bg) 100%
+    );
+    background-size: 200% 100%;
+    animation: lm-skeleton-sheen var(--lm-skeleton-duration) linear infinite;
+  }
+
+  /* Com fundo de 200%, a posição 100% põe o brilho na borda de início e 0% na de fim:
+     o sentido da varredura é o da leitura. */
+  @keyframes lm-skeleton-sheen {
+    from {
+      background-position-x: 100%;
+    }
+
+    to {
+      background-position-x: 0%;
+    }
+  }
+
+  .lm-skeleton[data-variant='text'] {
+    inline-size: 100%;
+    /* Altura da linha que vai substituí-lo: quando o texto chega, nada pula. */
+    block-size: var(--lm-type-body-md-line);
+  }
+
+  .lm-skeleton[data-variant='circle'] {
+    inline-size: var(--lm-density-control);
+    block-size: var(--lm-density-control);
+    border-radius: var(--lm-radius-full);
+    flex-shrink: 0;
+  }
+
+  .lm-skeleton[data-variant='rect'] {
+    inline-size: 100%;
+    block-size: var(--lm-density-row);
+  }
+
+  .lm-skeleton-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-8);
+  }
+
+  /* Parágrafo real não fecha a última linha na margem. Sem isto o bloco vira um
+     retângulo perfeito, que não se parece com texto nenhum. */
+  .lm-skeleton-group > .lm-skeleton:last-child {
+    inline-size: 60%;
+  }
+
+  /* Sem movimento o desenho fica estático — nada de pulsar. O skeleton não é o canal
+     de "estou carregando": esse papel é da região com `aria-busy`. */
+  @media (prefers-reduced-motion: reduce) {
+    .lm-skeleton {
+      background-image: none;
+      animation: none;
+    }
+  }
+}

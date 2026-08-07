@@ -85,6 +85,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     /**
      * Minimiza a janela principal
      */
+    /**
+     * Informa ao processo principal qual tema está pintado agora.
+     *
+     * Duas coisas do Electron ficam FORA do React e por isso não seguem o CSS:
+     * a cor com que a janela se pinta antes do primeiro quadro e durante o
+     * redimensionamento, e o tema dos diálogos nativos (salvar arquivo,
+     * confirmação). Sem este canal, um app em tema claro pisca escuro ao abrir e
+     * abre um "Salvar como" escuro.
+     *
+     * @param {'light'|'dark'} tema  O tema RESOLVIDO, nunca 'system'.
+     * @param {string} corDeFundo    Cor da superfície, em hexadecimal.
+     */
+    setTheme: (tema, corDeFundo) => ipcRenderer.send('theme:set', tema, corDeFundo),
+
     minimize: () => ipcRenderer.send('window:minimize'),
 
     /**

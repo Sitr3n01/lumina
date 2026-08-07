@@ -1,0 +1,149 @@
+@layer lm.components {
+  .lm-snackbar-region {
+    position: fixed;
+    inset-block-end: var(--lm-space-16);
+    inset-inline: var(--lm-space-16);
+    z-index: var(--lm-z-toast);
+    display: flex;
+    justify-content: center;
+
+    /* A região atravessa toda a faixa inferior da janela e engoliria o clique de
+       qualquer controle ali embaixo. Só o snackbar em si recebe ponteiro. */
+    pointer-events: none;
+  }
+
+  /* Em compact o snackbar ocupa a faixa inteira e fica centralizado; a partir de
+     medium ele encosta na borda inicial, onde não cobre a ação primária. */
+  @media (min-width: 600px) {
+    .lm-snackbar-region {
+      justify-content: flex-start;
+    }
+  }
+
+  .lm-snackbar {
+    --_accent: transparent;
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    min-block-size: var(--lm-density-control);
+    min-inline-size: var(--lm-snackbar-min-width);
+    max-inline-size: var(--lm-snackbar-max-width);
+    padding-block: var(--lm-space-12);
+    padding-inline: var(--lm-space-16);
+    border-radius: var(--lm-snackbar-radius);
+    background-color: var(--lm-snackbar-bg);
+    color: var(--lm-snackbar-label);
+    box-shadow: var(--lm-snackbar-shadow);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    pointer-events: auto;
+    animation: lm-snackbar-enter var(--lm-duration-emphasized) var(--lm-easing-decelerate);
+  }
+
+  /* Exceção documentada em 05-componentes.md §17 ao "só min-width" de
+     02-layout.md §2.3: a 320px de viewport sobram 288px depois das margens de
+     16px, contra 344px de largura mínima — 56px de estouro, rolagem horizontal
+     e reprovação de WCAG 1.4.10. A regra desliga um piso, e piso só se desliga
+     por cima; por isso `max-width` aqui e em nenhum outro lugar. */
+  @media (max-width: 599px) {
+    .lm-snackbar {
+      min-inline-size: 0;
+      inline-size: 100%;
+    }
+  }
+
+  .lm-snackbar__label {
+    min-inline-size: 0;
+  }
+
+  /* --- Variantes -----------------------------------------------------------
+     A faixa é redundante, nunca o único canal: o significado está no texto da
+     mensagem. Sobre a superfície invertida, os tokens `*-container` são os
+     únicos com luminosidade compatível. */
+
+  .lm-snackbar[data-variant='success'],
+  .lm-snackbar[data-variant='error'] {
+    padding-inline-start: calc(var(--lm-space-16) + var(--lm-space-4));
+  }
+
+  .lm-snackbar[data-variant='success'] {
+    --_accent: var(--lm-color-success-container);
+  }
+
+  .lm-snackbar[data-variant='error'] {
+    --_accent: var(--lm-color-error-container);
+  }
+
+  .lm-snackbar[data-variant='success']::before,
+  .lm-snackbar[data-variant='error']::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--lm-space-4);
+    border-start-start-radius: var(--lm-snackbar-radius);
+    border-end-start-radius: var(--lm-snackbar-radius);
+    background-color: var(--_accent);
+  }
+
+  /* --- Ação ---------------------------------------------------------------- */
+
+  .lm-snackbar__action {
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    min-block-size: var(--lm-target-min-size);
+    padding-block: var(--lm-space-4);
+    padding-inline: var(--lm-space-8);
+    border: none;
+    border-radius: var(--lm-radius-xs);
+    background-color: transparent;
+    color: var(--lm-snackbar-action);
+    font-family: inherit;
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-snackbar__action:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-snackbar-action) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-snackbar__action:active {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-snackbar-action) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  /* Uma das duas exceções do README §5: sobre superfície invertida o anel
+     primário mede 2,02:1 e some. Só a cor muda; largura e recuo continuam
+     vindo de base.css. */
+  .lm-snackbar__action:focus-visible {
+    outline-color: var(--lm-focus-ring-color-inverse);
+  }
+
+  @keyframes lm-snackbar-enter {
+    from {
+      opacity: 0;
+      transform: translateY(var(--lm-space-16));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

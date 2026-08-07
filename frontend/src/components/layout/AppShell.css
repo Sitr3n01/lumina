@@ -1,0 +1,77 @@
+@layer lm.layout {
+  .lm-shell {
+    display: flex;
+    block-size: 100vh;
+    overflow: hidden;
+    background-color: var(--lm-color-background);
+  }
+
+  .lm-shell__coluna {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* `min-inline-size: 0` num filho de flex é o que permite a coluna encolher
+       abaixo do seu conteúdo. Sem isto uma tabela larga estica o shell inteiro e
+       a página passa a rolar na horizontal. */
+    min-inline-size: 0;
+  }
+
+  .lm-shell__conteudo {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--lm-space-24) var(--lm-space-32);
+    /* Medida máxima da coluna de conteúdo. Numa janela de 2560px, uma linha de
+       texto de ponta a ponta é ilegível — e o LUMINA roda em desktop. */
+    scroll-padding-block-start: var(--lm-space-16);
+  }
+
+  .lm-shell__conteudo:focus {
+    outline: none;
+  }
+
+  .lm-shell__conteudo > * {
+    max-inline-size: 1440px;
+  }
+
+  @media (min-width: 1600px) {
+    .lm-shell__conteudo {
+      padding-inline: var(--lm-space-48);
+    }
+  }
+
+  @media (max-width: 839px) {
+    .lm-shell__conteudo {
+      padding: var(--lm-space-20) var(--lm-space-20);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .lm-shell__conteudo {
+      padding: var(--lm-space-16);
+    }
+  }
+
+  /* --- Pular para o conteúdo ---
+     Fora da tela até receber foco. `clip-path` em vez de `display: none` porque
+     um elemento escondido não é focável, e a regra existe justamente para ser
+     alcançada pelo primeiro Tab. */
+  .lm-shell__pular {
+    position: absolute;
+    inset-block-start: var(--lm-space-8);
+    inset-inline-start: var(--lm-space-8);
+    z-index: var(--lm-z-critical);
+    padding: var(--lm-space-12) var(--lm-space-16);
+    border-radius: var(--lm-radius-sm);
+    background-color: var(--lm-color-primary);
+    color: var(--lm-color-on-primary);
+    font-size: var(--lm-type-label-lg-size);
+    font-weight: var(--lm-type-label-lg-weight);
+    text-decoration: none;
+    transform: translateY(calc(-100% - var(--lm-space-16)));
+    transition: transform var(--lm-duration-fast) var(--lm-easing-decelerate);
+  }
+
+  .lm-shell__pular:focus-visible {
+    transform: translateY(0);
+  }
+}

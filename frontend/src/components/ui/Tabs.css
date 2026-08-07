@@ -1,0 +1,131 @@
+@layer lm.components {
+  .lm-tabs {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+
+  .lm-tabs__list {
+    display: flex;
+    align-items: stretch;
+    gap: var(--lm-space-4);
+    /* A régua atravessa a largura toda e o indicador da aba ativa se sobrepõe a
+       ela: é o que amarra a aba ao painel abaixo. */
+    border-block-end: 1px solid var(--lm-color-divider);
+    /* Abas demais rolam DENTRO da própria faixa; a página nunca rola na
+       horizontal — WCAG 1.4.10. */
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .lm-tabs__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lm-tabs__tab {
+    --_ink: var(--lm-color-on-surface-variant);
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    flex-shrink: 0;
+    block-size: var(--lm-density-control);
+    padding-inline: var(--lm-space-16);
+    border: none;
+    border-radius: var(--lm-radius-sm) var(--lm-radius-sm) 0 0;
+    background-color: transparent;
+    color: var(--_ink);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      color var(--lm-duration-fast) var(--lm-easing-standard),
+      background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-tabs__tab:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-tabs__tab[aria-selected='true'] {
+    --_ink: var(--lm-color-primary);
+  }
+
+  .lm-tabs__tab:disabled {
+    --_ink: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* Indicador: a aba ativa não se distingue só pela cor — a barra é forma, e
+     forma sobrevive ao daltonismo e ao contraste forçado. Cresce por scaleX para
+     animar sem recalcular layout. */
+  .lm-tabs__tab::after {
+    content: '';
+    position: absolute;
+    inset-inline: var(--lm-space-8);
+    inset-block-end: 0;
+    block-size: var(--lm-space-2);
+    border-radius: var(--lm-radius-full) var(--lm-radius-full) 0 0;
+    background-color: var(--lm-color-primary);
+    scale: 0 1;
+    transition: scale var(--lm-duration-standard) var(--lm-easing-emphasized);
+  }
+
+  .lm-tabs__tab[aria-selected='true']::after {
+    scale: 1 1;
+  }
+
+  .lm-tabs__icon {
+    display: inline-flex;
+  }
+
+  .lm-tabs__icon > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-tabs__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lm-badge-min-width);
+    padding-inline: var(--lm-badge-padding-inline);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-secondary-container);
+    color: var(--lm-color-on-secondary-container);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+  }
+
+  .lm-tabs__panel {
+    padding-block-start: var(--lm-space-24);
+    min-inline-size: 0;
+  }
+
+  /* O painel só recebe anel quando o foco chega nele de fato — ele é
+     `tabIndex={0}` para ser rolável por teclado, não para ser uma parada de Tab
+     visível a cada clique. */
+  .lm-tabs__panel:focus {
+    outline: none;
+  }
+
+  .lm-tabs__panel:focus-visible {
+    outline: var(--lm-focus-ring-width) solid var(--lm-focus-ring-color);
+    outline-offset: var(--lm-focus-ring-offset);
+  }
+
+  @media (forced-colors: active) {
+    .lm-tabs__tab[aria-selected='true']::after {
+      background-color: Highlight;
+    }
+  }
+}

@@ -1,0 +1,209 @@
+@layer lm.components {
+  .lm-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    inline-size: 100%;
+  }
+
+  /* --- Rótulo -------------------------------------------------------------- */
+
+  .lm-field__label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--lm-space-4);
+    color: var(--lm-field-label);
+    font-size: var(--lm-type-label-md-size);
+    line-height: var(--lm-type-label-md-line);
+    font-weight: var(--lm-type-label-md-weight);
+    letter-spacing: var(--lm-type-label-md-tracking);
+  }
+
+  /* Cor de metadado, não de erro: "obrigatório" descreve o campo, não denuncia
+     um problema — pintá-lo de vermelho gastaria o sinal de erro antes da hora. */
+  .lm-field__required {
+    color: var(--lm-field-help);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+  }
+
+  /* --- Caixa e controle ---------------------------------------------------- */
+
+  /* Só ancora os ícones absolutos. A borda e o fundo ficam no próprio controle,
+     para que o anel de foco de base.css continue circundando o que o usuário
+     realmente focou — envolver o controle numa caixa pintada colocaria o anel
+     dentro dela. */
+  .lm-field__box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+  }
+
+  .lm-field__control {
+    /* Mesmo par de camada de estado do Button: todo estado deriva destes dois. */
+    --_container: var(--lm-field-bg);
+    --_content: var(--lm-field-text);
+    --_border: var(--lm-field-border);
+
+    inline-size: 100%;
+    block-size: var(--lm-field-height);
+    padding-inline: var(--lm-field-padding-inline);
+    border: 1px solid var(--_border);
+    border-radius: var(--lm-field-radius);
+    background-color: var(--_container);
+    color: var(--_content);
+    font-family: inherit;
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+
+    /* Propriedades nomeadas, nunca `all`: `all` animaria também altura e
+       padding, e o campo trepidaria a cada mudança de estado. */
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      border-color var(--lm-duration-fast) var(--lm-easing-standard),
+      box-shadow var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-field__control::placeholder {
+    color: var(--lm-field-placeholder);
+  }
+
+  .lm-field__control[data-multiline] {
+    block-size: auto;
+    min-block-size: calc(var(--lm-field-height) * 2);
+    padding-block: var(--lm-space-12);
+  }
+
+  /* --- Estados ------------------------------------------------------------- */
+
+  .lm-field__control:hover:not(:disabled) {
+    --_border: var(--lm-field-border-hover);
+
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  /* `:focus`, não `:focus-visible`: a borda grossa diz "é aqui que eu digito" e
+     vale também para quem chegou de mouse. O anel externo é o outro sinal, vem
+     de base.css e só aparece no teclado — os dois não são redundantes (05 §3).
+     A espessura extra sai de sombra interna porque engrossar `border-width`
+     reflui o conteúdo e o texto pula um pixel de lado no momento do foco. */
+  .lm-field__control:focus {
+    --_border: var(--lm-field-border-focus);
+
+    box-shadow: inset 0 0 0 calc(var(--lm-field-border-width-focus) - 1px) var(--_border);
+  }
+
+  .lm-field[data-invalid] .lm-field__control {
+    --_border: var(--lm-field-border-error);
+  }
+
+  .lm-field[data-disabled] .lm-field__control {
+    /* Container por token de estado e não por `opacity`: opacidade sobre a
+       superfície derrubaria o texto para menos de 3:1. */
+    --_container: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-disabled-container) * 100%),
+      transparent
+    );
+    --_content: var(--lm-field-disabled-text);
+    --_border: var(--lm-field-disabled-border);
+
+    cursor: not-allowed;
+  }
+
+  .lm-field[data-disabled] .lm-field__label,
+  .lm-field[data-disabled] .lm-field__required,
+  .lm-field[data-disabled] .lm-field__help,
+  .lm-field[data-disabled] .lm-field__icon {
+    color: var(--lm-field-disabled-text);
+  }
+
+  /* --- Ícones --------------------------------------------------------------- */
+
+  .lm-field__icon {
+    position: absolute;
+    inset-block: 0;
+    display: inline-flex;
+    align-items: center;
+    color: var(--lm-field-label);
+    /* O ícone cobre parte do controle; sem isto o clique morre nele e o campo
+       não recebe foco nem cursor. */
+    pointer-events: none;
+  }
+
+  .lm-field__icon--leading {
+    inset-inline-start: var(--lm-space-12);
+  }
+
+  .lm-field__icon--trailing {
+    inset-inline-end: var(--lm-space-12);
+  }
+
+  .lm-field__icon > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-field__box:has(.lm-field__icon--leading) .lm-field__control {
+    padding-inline-start: calc(var(--lm-space-12) + var(--lm-icon-md) + var(--lm-space-8));
+  }
+
+  .lm-field__box:has(.lm-field__icon--trailing) .lm-field__control {
+    padding-inline-end: calc(var(--lm-space-12) + var(--lm-icon-md) + var(--lm-space-8));
+  }
+
+  /* --- Ação no fim do campo ------------------------------------------------
+     Ao contrário de `__icon`, recebe eventos: é um controle de verdade
+     (revelar senha, limpar). Fica sobre o campo, então o texto precisa de
+     recuo para não passar por baixo dele. */
+
+  .lm-field__acao {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--lm-space-4);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .lm-field__box:has(.lm-field__acao) .lm-field__control {
+    padding-inline-end: calc(var(--lm-density-control) + var(--lm-space-4));
+  }
+
+  /* --- Ajuda e erro --------------------------------------------------------- */
+
+  .lm-field__help,
+  .lm-field__error {
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    font-weight: var(--lm-type-body-sm-weight);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .lm-field__help {
+    color: var(--lm-field-help);
+  }
+
+  .lm-field__error {
+    display: flex;
+    /* `flex-start` para que o ícone acompanhe a primeira linha quando a
+       mensagem quebra em duas. */
+    align-items: flex-start;
+    gap: var(--lm-space-4);
+    color: var(--lm-field-error-text);
+  }
+
+  .lm-field__error > svg {
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+    flex-shrink: 0;
+  }
+}

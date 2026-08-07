@@ -1,204 +1,89 @@
-import { X, Calendar, User, Users, DollarSign, MapPin, Clock } from 'lucide-react';
+import { User, Mail, Phone, Users, LogIn, LogOut, Moon, Wallet, Hash, CheckCircle } from 'lucide-react';
+import { Chip, Dialog } from './ui';
 import { formatDateFull } from '../utils/formatters';
 import './EventModal.css';
 
+const PLATAFORMAS = {
+  airbnb: 'Airbnb',
+  booking: 'Booking.com',
+  manual: 'Manual',
+};
+
+/**
+ * Detalhes de uma reserva.
+ *
+ * Antes era `<div className="modal-overlay">` — sem foco preso, sem Escape, sem
+ * devolução de foco ao gatilho e sem travar a rolagem do fundo. E o CSS próprio
+ * (`EventModal.css`) era CÓDIGO MORTO: redeclarava `.modal-*`, que o `global.css`
+ * vencia por chegar depois na cascata. Agora é `<Dialog>`, que traz os quatro.
+ */
 const EventModal = ({ event, onClose }) => {
   if (!event) return null;
 
-  // formatDate → usando formatDateFull de ../utils/formatters
+  const plataforma = (event.platform || 'manual').toLowerCase();
 
-  const getPlatformColor = (platform) => {
-    const colors = {
-      airbnb: 'danger',
-      booking: 'info',
-      manual: 'secondary',
-    };
-    return colors[platform] || 'secondary';
-  };
-
-  const getPlatformName = (platform) => {
-    const names = {
-      airbnb: 'Airbnb',
-      booking: 'Booking.com',
-      manual: 'Manual',
-    };
-    return names[platform] || platform;
-  };
+  const itens = [
+    { icone: User, rotulo: 'Hóspede', valor: event.guest_name },
+    { icone: Mail, rotulo: 'E-mail', valor: event.guest_email },
+    { icone: Phone, rotulo: 'Telefone', valor: event.guest_phone },
+    { icone: Users, rotulo: 'Hóspedes', valor: event.guest_count || 1 },
+    {
+      icone: LogIn,
+      rotulo: 'Check-in',
+      valor: formatDateFull(event.check_in_date || event.check_in),
+    },
+    {
+      icone: LogOut,
+      rotulo: 'Check-out',
+      valor: formatDateFull(event.check_out_date || event.check_out),
+    },
+    {
+      icone: Moon,
+      rotulo: 'Duração',
+      valor: event.nights_count
+        ? `${event.nights_count} noite${event.nights_count > 1 ? 's' : ''}`
+        : null,
+    },
+    {
+      icone: Wallet,
+      rotulo: 'Total',
+      valor: event.total_price
+        ? `R$ ${Number(event.total_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : null,
+    },
+    { icone: Hash, rotulo: 'Identificador externo', valor: event.external_id, mono: true },
+    { icone: CheckCircle, rotulo: 'Situação', valor: event.status },
+  ].filter((i) => i.valor !== null && i.valor !== undefined && i.valor !== '');
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <h2>Detalhes da Reserva</h2>
-            <span className={`badge badge-${getPlatformColor(event.platform)}`}>
-              {getPlatformName(event.platform)}
-            </span>
-          </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
+    <Dialog open title="Detalhes da reserva" onClose={onClose} dismissible>
+      <Chip
+        variant="assist"
+        className="evt__plataforma"
+        data-plataforma={plataforma}
+        label={PLATAFORMAS[plataforma] || event.platform}
+      />
 
-        <div className="modal-body">
-          <div className="event-detail-section">
-            <div className="detail-item">
-              <div className="detail-icon">
-                <User size={18} />
-              </div>
-              <div className="detail-content">
-                <span className="detail-label">Hóspede</span>
-                <span className="detail-value">{event.guest_name}</span>
-              </div>
+      {/* `<dl>` e não uma pilha de divs: rótulo e valor formam pares, e é isso
+          que o leitor de tela precisa para ler "Check-in, 12 de agosto". */}
+      <dl className="evt">
+        {itens.map((item) => {
+          const Icone = item.icone;
+          return (
+            <div className="evt__item" key={item.rotulo}>
+              <span className="evt__icone">
+                <Icone aria-hidden="true" focusable="false" />
+              </span>
+              <dt className="evt__rotulo">{item.rotulo}</dt>
+              <dd className="evt__valor" data-mono={item.mono || undefined}>
+                {item.valor}
+              </dd>
             </div>
-
-            {event.guest_email && (
-              <div className="detail-item">
-                <div className="detail-icon">
-                  <MapPin size={18} />
-                </div>
-                <div className="detail-content">
-                  <span className="detail-label">Email</span>
-                  <span className="detail-value">{event.guest_email}</span>
-                </div>
-              </div>
-            )}
-
-            {event.guest_phone && (
-              <div className="detail-item">
-                <div className="detail-icon">
-                  <Clock size={18} />
-                </div>
-                <div className="detail-content">
-                  <span className="detail-label">Telefone</span>
-                  <span className="detail-value">{event.guest_phone}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="detail-item">
-              <div className="detail-icon">
-                <Users size={18} />
-              </div>
-              <div className="detail-content">
-                <span className="detail-label">Número de Hóspedes</span>
-                <span className="detail-value">{event.guest_count || 1}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="event-detail-section">
-            <h3 className="section-subtitle">Período</h3>
-
-            <div className="detail-item">
-              <div className="detail-icon">
-                <Calendar size={18} />
-              </div>
-              <div className="detail-content">
-                <span className="detail-label">Check-in</span>
-                <span className="detail-value">
-                  {formatDateFull(event.check_in_date)}
-                </span>
-              </div>
-            </div>
-
-            <div className="detail-item">
-              <div className="detail-icon">
-                <Calendar size={18} />
-              </div>
-              <div className="detail-content">
-                <span className="detail-label">Check-out</span>
-                <span className="detail-value">
-                  {formatDateFull(event.check_out_date)}
-                </span>
-              </div>
-            </div>
-
-            <div className="detail-item">
-              <div className="detail-icon">
-                <Clock size={18} />
-              </div>
-              <div className="detail-content">
-                <span className="detail-label">Duração</span>
-                <span className="detail-value">
-                  {event.nights_count} {event.nights_count === 1 ? 'noite' : 'noites'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {event.total_price && (
-            <div className="event-detail-section">
-              <h3 className="section-subtitle">Valor</h3>
-
-              <div className="detail-item">
-                <div className="detail-icon">
-                  <DollarSign size={18} />
-                </div>
-                <div className="detail-content">
-                  <span className="detail-label">Total</span>
-                  <span className="detail-value price">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: event.currency || 'BRL'
-                    }).format(event.total_price)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {event.external_id && (
-            <div className="event-detail-section">
-              <h3 className="section-subtitle">Informações Técnicas</h3>
-
-              <div className="detail-item">
-                <div className="detail-content">
-                  <span className="detail-label">ID Externo</span>
-                  <span className="detail-value code">{event.external_id}</span>
-                </div>
-              </div>
-
-              <div className="detail-item">
-                <div className="detail-content">
-                  <span className="detail-label">Status</span>
-                  <span className={`badge badge-${getStatusColor(event.status)}`}>
-                    {getStatusName(event.status)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
+          );
+        })}
+      </dl>
+    </Dialog>
   );
-};
-
-const getStatusColor = (status) => {
-  const colors = {
-    confirmed: 'success',
-    cancelled: 'danger',
-    completed: 'secondary',
-    blocked: 'warning',
-  };
-  return colors[status] || 'secondary';
-};
-
-const getStatusName = (status) => {
-  const names = {
-    confirmed: 'Confirmada',
-    cancelled: 'Cancelada',
-    completed: 'Concluída',
-    blocked: 'Bloqueada',
-  };
-  return names[status] || status;
 };
 
 export default EventModal;

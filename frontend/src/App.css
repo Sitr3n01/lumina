@@ -1,40 +1,46 @@
-/* ============================================================
-   LUMINA - App Layout v2
-   Structure: flex-column — header + nav + scrollable main
-   ============================================================ */
+/* Layout da aplicação. Reestruturado pelo shell de navegação; o que sobra aqui é
+   o casco e o estado de arranque. */
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  background: #101922;
-}
-
-.main-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px 40px;
-  background: #101922;
-  scrollbar-width: thin;
-  scrollbar-color: #23303d transparent;
-}
-
-.main-content::-webkit-scrollbar { width: 6px; }
-.main-content::-webkit-scrollbar-track { background: transparent; }
-.main-content::-webkit-scrollbar-thumb {
-  background: #23303d;
-  border-radius: 3px;
-}
-
-@media (min-width: 2000px) {
-  .main-content {
-    padding: 32px 60px;
+@layer lm.layout {
+  .app {
+    display: flex;
+    flex-direction: column;
+    block-size: 100vh;
+    overflow: hidden;
+    background-color: var(--lm-color-background);
   }
-}
 
-@media (max-width: 768px) {
   .main-content {
-    padding: 20px 16px;
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--lm-space-32) var(--lm-space-40);
+    background-color: var(--lm-color-background);
+  }
+
+  @media (min-width: 1600px) {
+    .main-content {
+      padding-inline: var(--lm-space-64);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .main-content {
+      padding: var(--lm-space-20) var(--lm-space-16);
+    }
+  }
+
+  /* Tela de arranque, antes de saber se há sessão. */
+  .app-boot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    block-size: 100vh;
+    background-color: var(--lm-color-background);
+  }
+
+  .app-boot__icon {
+    inline-size: var(--lm-icon-xl);
+    block-size: var(--lm-icon-xl);
+    color: var(--lm-color-primary);
   }
 }

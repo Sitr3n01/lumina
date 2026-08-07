@@ -45,6 +45,20 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * NOTA SOBRE A BARRA FINAL nas rotas de coleção.
+ *
+ * O FastAPI registra estas rotas com barra e responde 307 sem ela — apontando
+ * para uma URL ABSOLUTA em 127.0.0.1:8000. Atrás do proxy do Vite a página está
+ * em localhost:5173, então o redirecionamento cruza origem e o navegador
+ * descarta o cabeçalho Authorization por especificação. O 401 resultante caía no
+ * interceptor abaixo, que dispara `auth:logout`: o aplicativo expulsava o
+ * usuário poucos segundos depois de ele entrar.
+ *
+ * Com a barra não há redirecionamento nenhum — e uma ida e volta a menos por
+ * chamada, em qualquer ambiente.
+ */
+
 // ========== AUTH ==========
 export const authAPI = {
   login: (data) => api.post('/v1/auth/login', data).then((r) => r.data),
@@ -56,9 +70,9 @@ export const authAPI = {
 
 // ========== BOOKINGS ==========
 export const bookingsAPI = {
-  getAll: (params = {}) => api.get('/bookings', { params }),
+  getAll: (params = {}) => api.get('/bookings/', { params }),
   getById: (id) => api.get(`/bookings/${id}`),
-  create: (data) => api.post('/bookings', data),
+  create: (data) => api.post('/bookings/', data),
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
   getUpcoming: (params = {}) => api.get('/bookings/upcoming', { params }),
@@ -73,7 +87,7 @@ export const calendarAPI = {
 
 // ========== CONFLICTS ==========
 export const conflictsAPI = {
-  getAll: (params) => api.get('/conflicts', { params }),
+  getAll: (params) => api.get('/conflicts/', { params }),
   getSummary: (propertyId) => api.get('/conflicts/summary', { params: { property_id: propertyId } }),
   resolve: (id, notes) => api.post(`/conflicts/${id}/resolve`, { resolution_notes: notes }),
   detect: (propertyId) => api.post('/conflicts/detect', null, { params: { property_id: propertyId } }),
@@ -98,7 +112,7 @@ export const statisticsAPI = {
 
 // ========== SYNC ACTIONS ==========
 export const syncActionsAPI = {
-  getAll: (params) => api.get('/sync-actions', { params }),
+  getAll: (params) => api.get('/sync-actions/', { params }),
   markDone: (id) => api.post(`/sync-actions/${id}/mark-done`),
   dismiss: (id) => api.post(`/sync-actions/${id}/dismiss`),
 };
@@ -132,14 +146,20 @@ export const emailsAPI = {
 
 // ========== SETTINGS ==========
 export const settingsAPI = {
-  getAll: () => api.get('/v1/settings'),
-  update: (data) => api.put('/v1/settings', data),
+  getAll: () => api.get('/v1/settings/'),
+  update: (data) => api.put('/v1/settings/', data),
   reset: () => api.post('/v1/settings/reset'),
 };
 
 // ========== NOTIFICATIONS ==========
 export const notificationsAPI = {
-  getAll: (params = {}) => api.get('/v1/notifications', { params }),
+  // A BARRA FINAL importa. Sem ela o FastAPI responde 307 apontando para uma URL
+  // ABSOLUTA em 127.0.0.1:8000; atrás do proxy do Vite a página está em
+  // localhost:5173, então o redirecionamento cruza origem e o navegador descarta
+  // o cabeçalho Authorization. O resultado era 401 e, pelo interceptor de erro,
+  // logout global — o aplicativo expulsava o usuário logo após entrar.
+  // Com a barra, não há redirecionamento algum, em nenhum ambiente.
+  getAll: (params = {}) => api.get('/v1/notifications/', { params }),
   getSummary: () => api.get('/v1/notifications/summary'),
   markAsRead: (id) => api.put(`/v1/notifications/${id}/read`),
   markAllAsRead: () => api.put('/v1/notifications/read-all'),

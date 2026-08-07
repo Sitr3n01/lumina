@@ -1,0 +1,39 @@
+@layer lm.components {
+  /* `appearance: none` remove apenas o desenho do gatilho fechado. O popup segue
+     sendo o do sistema e continua obedecendo ao `color-scheme` do tema — que é a
+     razão inteira de este componente não ser um listbox customizado. */
+  /* Prefixado por `.lm-field` para vencer o `padding-inline` do controle base sem
+     depender de qual folha o bundler emitiu primeiro. */
+  .lm-field .lm-select__control {
+    appearance: none;
+    padding-inline-end: calc(
+      var(--lm-field-padding-inline) + var(--lm-icon-md) + var(--lm-space-8)
+    );
+    cursor: pointer;
+  }
+
+  .lm-field[data-disabled] .lm-select__control {
+    cursor: not-allowed;
+  }
+
+  .lm-select__chevron {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--lm-space-12);
+    display: inline-flex;
+    align-items: center;
+    color: var(--lm-field-label);
+    /* O chevron fica por cima do <select>; sem isto ele engoliria o clique que
+       deveria abrir a lista. */
+    pointer-events: none;
+  }
+
+  .lm-select__chevron > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-field[data-disabled] .lm-select__chevron {
+    color: var(--lm-field-disabled-text);
+  }
+}

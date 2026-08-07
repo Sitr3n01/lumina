@@ -1,0 +1,169 @@
+@layer lm.components {
+  .lm-switch {
+    --_track-inline: var(--lm-space-48);
+    --_track-block: calc(var(--lm-space-24) + var(--lm-space-4));
+    --_thumb: var(--lm-space-20);
+    --_target: max(var(--lm-target-min-size), var(--lm-density-control));
+
+    display: grid;
+    /* Rótulo à esquerda, controle à direita: em lista de ajustes o olho desce
+       pela coluna de estados, e todos os switches ficam alinhados. */
+    grid-template-columns: 1fr auto;
+    column-gap: var(--lm-space-16);
+    align-items: center;
+  }
+
+  .lm-switch__label {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    color: var(--lm-color-on-surface);
+    cursor: pointer;
+  }
+
+  .lm-switch__description {
+    grid-column: 1;
+    grid-row: 2;
+    margin-block-start: var(--lm-space-2);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-switch__input {
+    --_track: var(--lm-color-surface-container-highest);
+    --_outline: var(--lm-color-outline-interactive);
+    --_thumb-color: var(--lm-color-outline);
+    --_ink: var(--lm-color-on-surface);
+
+    position: relative;
+    grid-column: 2;
+    grid-row: 1 / -1;
+    inline-size: var(--_track-inline);
+    block-size: var(--_track-block);
+    margin: 0;
+    border: 1px solid var(--_outline);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--_track);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition:
+      background-color var(--lm-duration-standard) var(--lm-easing-standard),
+      border-color var(--lm-duration-standard) var(--lm-easing-standard);
+  }
+
+  .lm-switch__input:checked {
+    --_track: var(--lm-color-primary);
+    --_outline: var(--lm-color-primary);
+    --_thumb-color: var(--lm-color-on-primary);
+    --_ink: var(--lm-color-primary);
+  }
+
+  /* --- Alça ---------------------------------------------------------------
+     Ligado ela cresce, além de andar: a diferença de tamanho sobrevive ao
+     contraste forçado e ao daltonismo, onde a cor sozinha não sobrevive. */
+
+  .lm-switch__input::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: var(--lm-space-4);
+    inline-size: calc(var(--_thumb) * 0.7);
+    block-size: calc(var(--_thumb) * 0.7);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--_thumb-color);
+    translate: 0 -50%;
+    transition:
+      translate var(--lm-duration-standard) var(--lm-easing-emphasized),
+      inline-size var(--lm-duration-fast) var(--lm-easing-standard),
+      block-size var(--lm-duration-fast) var(--lm-easing-standard),
+      background-color var(--lm-duration-standard) var(--lm-easing-standard);
+  }
+
+  .lm-switch__input:checked::after {
+    inline-size: var(--_thumb);
+    block-size: var(--_thumb);
+    /* Deslocamento pela largura útil da trilha, não por um px escolhido: assim
+       a alça continua encostando na borda se a densidade mudar o tamanho. */
+    translate: calc(var(--_track-inline) - var(--_thumb) - var(--lm-space-12)) -50%;
+  }
+
+  /* --- Camada de estado --- */
+
+  .lm-switch__input::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: var(--lm-space-12);
+    inline-size: var(--_target);
+    block-size: var(--_target);
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    translate: -50% -50%;
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      inset-inline-start var(--lm-duration-standard) var(--lm-easing-emphasized);
+    pointer-events: none;
+  }
+
+  .lm-switch__input:checked::before {
+    inset-inline-start: calc(var(--_track-inline) - var(--lm-space-12));
+  }
+
+  .lm-switch:hover:not([data-disabled]) .lm-switch__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-switch__input:focus-visible::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-focus) * 100%),
+      transparent
+    );
+  }
+
+  .lm-switch:active:not([data-disabled]) .lm-switch__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  /* --- Desabilitado --- */
+
+  .lm-switch__input:disabled {
+    --_track: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-disabled-container) * 100%),
+      transparent
+    );
+    --_outline: var(--lm-color-outline-variant);
+    --_thumb-color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  .lm-switch[data-disabled] .lm-switch__label,
+  .lm-switch[data-disabled] .lm-switch__description {
+    color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  @media (forced-colors: active) {
+    .lm-switch__input {
+      border-color: ButtonBorder;
+    }
+
+    .lm-switch__input:checked::after {
+      background-color: Highlight;
+    }
+  }
+}

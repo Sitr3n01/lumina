@@ -1,0 +1,121 @@
+@layer lm.components {
+  .lm-icon-button {
+    /* Mesmo mecanismo do Button: cada variante declara só este par e todos os
+       estados derivam dele por color-mix. */
+    --_container: transparent;
+    --_content: var(--lm-icon-button-color);
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-button-size);
+    block-size: var(--lm-icon-button-size);
+    padding: var(--lm-space-0);
+    border: none;
+    border-radius: var(--lm-icon-button-radius);
+    background-color: var(--_container);
+    color: var(--_content);
+    font-family: inherit;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      box-shadow var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* Alvo mínimo de 24x24 (WCAG 2.5.8) sem inflar o desenho: `padding` empurraria
+     o ícone e mudaria a pintura, então a área extra mora no pseudo-elemento.
+     O `min()` deixa o inset negativo APENAS quando o desenho ficou menor que o
+     mínimo — no padrão de 40px ele vale zero e nada se estende. */
+  .lm-icon-button::after {
+    content: '';
+    position: absolute;
+    inset: min(
+      var(--lm-space-0),
+      calc((var(--lm-icon-button-size) - var(--lm-target-min-size)) / 2)
+    );
+    border-radius: inherit;
+  }
+
+  /* --- Variantes --------------------------------------------------------- */
+
+  .lm-icon-button[data-variant='filled'] {
+    --_container: var(--lm-color-primary);
+    --_content: var(--lm-color-on-primary);
+  }
+
+  .lm-icon-button[data-variant='tonal'] {
+    --_container: var(--lm-color-secondary-container);
+    --_content: var(--lm-color-on-secondary-container);
+  }
+
+  .lm-icon-button[data-variant='outlined'] {
+    --_container: transparent;
+    --_content: var(--lm-icon-button-color);
+    /* Sem contêiner pintado a borda é o único limite do controle, logo precisa
+       de 3:1 — WCAG 1.4.11. `outline-variant` (1,62:1) reprovaria aqui. */
+    box-shadow: inset 0 0 0 1px var(--lm-color-outline-interactive);
+  }
+
+  /* --- Seleção -------------------------------------------------------------
+     Contêiner tonal OU camada `--lm-state-selected`, nunca os dois: aqui é
+     contêiner, então o par é apenas trocado. */
+
+  .lm-icon-button[data-selected] {
+    --_container: var(--lm-icon-button-selected-bg);
+    --_content: var(--lm-icon-button-selected-color);
+  }
+
+  /* --- Estados ------------------------------------------------------------- */
+
+  .lm-icon-button:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-icon-button:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-pressed) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-icon-button:disabled {
+    --_container: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-disabled-container) * 100%),
+      transparent
+    );
+    --_content: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  .lm-icon-button[data-variant='standard']:disabled,
+  .lm-icon-button[data-variant='outlined']:disabled {
+    --_container: transparent;
+  }
+
+  .lm-icon-button[data-variant='outlined']:disabled {
+    box-shadow: inset 0 0 0 1px var(--lm-color-outline-variant);
+  }
+
+  /* --- Partes -------------------------------------------------------------- */
+
+  .lm-icon-button__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .lm-icon-button__icon > svg {
+    inline-size: var(--lm-icon-button-icon-size);
+    block-size: var(--lm-icon-button-icon-size);
+  }
+}

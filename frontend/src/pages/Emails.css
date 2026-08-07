@@ -1,288 +1,255 @@
-.emails-page {
-  padding: 32px;
-  max-width: 1400px;
-}
+@layer lm.overrides {
+  /* `.checkbox-field` com `flex-direction: column` morava aqui e brigava com o
+     `row !important` de global.css. Com o primitivo Checkbox o conflito deixa de
+     existir: não há mais duas folhas disputando a mesma classe. */
 
-.emails-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 32px;
-}
-
-.emails-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.emails-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-}
-
-/* Tab icons */
-.tabs .tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Send Email Form */
-.email-form {
-  max-width: 700px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
-}
-
-.checkbox-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-/* Inbox */
-.inbox-section {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.inbox-filters {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.filter-input {
-  width: 80px;
-}
-
-.email-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.email-card {
-  padding: 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  transition: all var(--transition-normal);
-  cursor: default;
-}
-
-.email-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.email-card.unread {
-  font-weight: 600;
-  border-left: 3px solid var(--primary);
-  background: var(--bg-tertiary);
-}
-
-.email-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.email-sender {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.email-date {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.email-subject {
-  font-size: 15px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.email-preview {
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Automation */
-.automation-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
-}
-
-.automation-card {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.automation-title {
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-}
-
-.automation-description {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.field-help {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-/* Connection */
-.connection-section {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.connection-info {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.connection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.connection-card {
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.connection-card.success {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: var(--success);
-}
-
-.connection-card.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--danger);
-}
-
-.connection-icon {
-  margin-bottom: 4px;
-}
-
-.connection-card h3 {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.connection-status-text {
-  font-size: 14px;
-}
-
-.connection-message {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-  .emails-page {
-    padding: 20px;
-  }
-
-  .emails-content {
-    padding: 20px;
-  }
-
-  .inbox-filters {
+  .eml {
+    display: flex;
     flex-direction: column;
-    align-items: stretch;
   }
 
-  .filter-input {
-    width: 100%;
+  /* --- Envio --- */
+
+  .eml-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-form-row-gap);
+    max-inline-size: var(--lm-form-column-max-width);
   }
 
-  .automation-grid {
-    grid-template-columns: 1fr;
+  .eml-form__acao {
+    display: flex;
+    justify-content: flex-start;
   }
 
-  .connection-grid {
-    grid-template-columns: 1fr;
+  /* --- Caixa de entrada --- */
+
+  .eml-inbox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
   }
 
-  .email-form {
-    max-width: 100%;
+  .eml-inbox__filtros {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--lm-space-12);
+  }
+
+  .eml-lista {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-8);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .eml-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    padding: var(--lm-space-16);
+  }
+
+  .eml-item[data-nao-lido] {
+    background-color: var(--lm-color-surface-container-high);
+  }
+
+  .eml-item__topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--lm-space-12);
+  }
+
+  .eml-item__remetente {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .eml-item__data {
+    flex-shrink: 0;
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eml-item__assunto {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  .eml-item__previa {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+    /* Duas linhas de prévia e corta: a lista precisa manter o ritmo vertical
+       para que o olho desça pelos remetentes. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .eml-item__novo {
+    align-self: flex-start;
+    margin-block-start: var(--lm-space-4);
+    padding: var(--lm-space-2) var(--lm-space-8);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-primary-container);
+    color: var(--lm-color-on-primary-container);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-transform: uppercase;
+  }
+
+  /* --- Automações --- */
+
+  .eml-automacoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--lm-space-16);
+    align-items: start;
+  }
+
+  .eml-auto {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+    padding: var(--lm-space-20);
+    block-size: 100%;
+  }
+
+  .eml-auto__topo {
+    display: flex;
+    gap: var(--lm-space-12);
+  }
+
+  .eml-auto__icone {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-space-40);
+    block-size: var(--lm-space-40);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-secondary-container);
+    color: var(--lm-color-on-secondary-container);
+  }
+
+  .eml-auto__icone > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .eml-auto__titulo {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+  }
+
+  .eml-auto__descricao {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .eml-auto__acao {
+    margin-block-start: auto;
+  }
+
+  /* --- Conexão --- */
+
+  .eml-conexao {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--lm-space-16);
+    max-inline-size: var(--lm-form-column-max-width);
+  }
+
+  .eml-conexao__nota {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  .eml-conexao__lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--lm-space-12);
+    inline-size: 100%;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .eml-status {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-12);
+    padding: var(--lm-space-16);
+    border-inline-start: var(--lm-space-4) solid var(--lm-color-error);
+  }
+
+  .eml-status[data-ok] {
+    border-inline-start-color: var(--lm-color-success);
+  }
+
+  .eml-status__icone {
+    display: grid;
+    place-items: center;
+    inline-size: var(--lm-space-40);
+    block-size: var(--lm-space-40);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-error-container);
+    color: var(--lm-color-on-error-container);
+  }
+
+  .eml-status[data-ok] .eml-status__icone {
+    background-color: var(--lm-color-success-container);
+    color: var(--lm-color-on-success-container);
+  }
+
+  .eml-status__icone > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .eml-status__rotulo {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .eml-status__valor {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+  }
+
+  .eml-conexao__mensagem {
+    max-inline-size: 100%;
   }
 }

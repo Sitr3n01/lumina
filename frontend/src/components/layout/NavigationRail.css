@@ -1,0 +1,220 @@
+@layer lm.layout {
+  .lm-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    flex-shrink: 0;
+    block-size: 100%;
+    padding: var(--lm-space-12) var(--lm-space-8);
+    background-color: var(--lm-navigation-surface);
+    border-inline-end: 1px solid var(--lm-color-divider);
+    overflow-y: auto;
+  }
+
+  .lm-nav[data-forma='rail'] {
+    inline-size: var(--lm-navigation-rail-width);
+    align-items: center;
+  }
+
+  .lm-nav[data-forma='expanded'] {
+    inline-size: var(--lm-navigation-rail-width-expanded);
+  }
+
+  .lm-nav__marca {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    block-size: var(--lm-app-bar-height);
+    margin-block-end: var(--lm-space-8);
+    color: var(--lm-color-primary);
+    font-size: var(--lm-type-title-sm-size);
+    font-weight: var(--lm-type-title-sm-weight);
+    /* Espaçamento largo é o que faz uma palavra curta em caixa-alta ler como
+       marca e não como rótulo gritado. */
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .lm-nav__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .lm-nav__item {
+    display: contents;
+  }
+
+  .lm-nav__link {
+    --_ink: var(--lm-navigation-item-label);
+
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+    border: none;
+    background-color: transparent;
+    color: var(--_ink);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    cursor: pointer;
+    transition: color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-nav__link[aria-current='page'] {
+    --_ink: var(--lm-navigation-item-label-selected);
+  }
+
+  /* --- Pílula do indicador -------------------------------------------------
+     É ela que recebe a cor de selecionado, e não o item inteiro: a mancha fica
+     do tamanho do ícone, o rótulo continua legível sobre a superfície normal, e
+     o estado sobrevive ao contraste forçado porque é forma, não só cor. */
+
+  .lm-nav__indicator {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-navigation-indicator-width);
+    block-size: var(--lm-navigation-indicator-height);
+    border-radius: var(--lm-navigation-item-radius);
+    background-color: transparent;
+    transition: background-color var(--lm-duration-standard) var(--lm-easing-emphasized);
+  }
+
+  .lm-nav__link[aria-current='page'] .lm-nav__indicator {
+    background-color: var(--lm-navigation-item-bg-selected);
+  }
+
+  .lm-nav__link:hover:not([aria-current='page']) .lm-nav__indicator {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-nav__link:active .lm-nav__indicator {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  .lm-nav__icon {
+    inline-size: var(--lm-icon-lg);
+    block-size: var(--lm-icon-lg);
+  }
+
+  .lm-nav__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* --- Forma: rail estreito (rótulo sob o ícone) --- */
+
+  .lm-nav__link[data-forma='rail'] {
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    padding-block: var(--lm-space-8);
+    border-radius: var(--lm-radius-md);
+    text-align: center;
+  }
+
+  .lm-nav__link[data-forma='rail'] .lm-nav__label {
+    font-size: var(--lm-type-label-md-size);
+    line-height: var(--lm-type-label-md-line);
+    letter-spacing: var(--lm-type-label-md-tracking);
+    max-inline-size: 100%;
+  }
+
+  /* --- Forma: rail expandido e gaveta (rótulo ao lado) --- */
+
+  .lm-nav__link[data-forma='expanded'],
+  .lm-nav__link[data-forma='drawer'] {
+    gap: var(--lm-space-12);
+    min-block-size: var(--lm-navigation-item-height);
+    padding-inline: var(--lm-space-12);
+    border-radius: var(--lm-navigation-item-radius);
+  }
+
+  /* No formato largo a pílula cobre a linha inteira: com o rótulo ao lado do
+     ícone, colorir só o ícone deixaria o item selecionado ambíguo. */
+  .lm-nav__link[data-forma='expanded'][aria-current='page'],
+  .lm-nav__link[data-forma='drawer'][aria-current='page'] {
+    background-color: var(--lm-navigation-item-bg-selected);
+  }
+
+  .lm-nav__link[data-forma='expanded'][aria-current='page'] .lm-nav__indicator,
+  .lm-nav__link[data-forma='drawer'][aria-current='page'] .lm-nav__indicator {
+    background-color: transparent;
+  }
+
+  .lm-nav__link[data-forma='expanded']:hover:not([aria-current='page']),
+  .lm-nav__link[data-forma='drawer']:hover:not([aria-current='page']) {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-nav__link[data-forma='expanded']:hover .lm-nav__indicator,
+  .lm-nav__link[data-forma='drawer']:hover .lm-nav__indicator {
+    background-color: transparent;
+  }
+
+  /* --- Gaveta modal --- */
+
+  .lm-nav--drawer {
+    /* `margin` zero e `inset` explícito: o <dialog> vem centralizado por padrão,
+       e a gaveta precisa encostar na borda de início. */
+    inset: 0 auto 0 0;
+    margin: 0;
+    inline-size: min(var(--lm-navigation-drawer-width), 85vw);
+    max-block-size: none;
+    border: none;
+    border-start-end-radius: var(--lm-radius-xl);
+    border-end-end-radius: var(--lm-radius-xl);
+    padding: var(--lm-space-12);
+    background-color: var(--lm-color-surface-container-low);
+    color: var(--lm-color-on-surface);
+    box-shadow: var(--lm-elevation-3);
+  }
+
+  .lm-nav--drawer:not([open]) {
+    display: none;
+  }
+
+  .lm-nav--drawer[open] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    animation: lm-nav-drawer-in var(--lm-duration-emphasized) var(--lm-easing-decelerate);
+  }
+
+  .lm-nav--drawer::backdrop {
+    background-color: var(--lm-scrim-color);
+    opacity: var(--lm-scrim-opacity);
+  }
+
+  @keyframes lm-nav-drawer-in {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .lm-nav__link[aria-current='page'] .lm-nav__indicator,
+    .lm-nav__link[data-forma='expanded'][aria-current='page'],
+    .lm-nav__link[data-forma='drawer'][aria-current='page'] {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+  }
+}

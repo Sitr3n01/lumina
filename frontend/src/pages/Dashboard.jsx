@@ -1,92 +1,82 @@
 import { useEffect, useState } from 'react';
 import {
-  BarChart, Wallet, Calendar, AlertTriangle,
-  ArrowUpRight, ArrowDownRight, RefreshCw, CheckCircle,
-  User, Clock, Send, X
+  BarChart,
+  Wallet,
+  Calendar,
+  AlertTriangle,
+  RefreshCw,
+  CheckCircle,
+  Clock,
+  Send,
+  FileText,
+  Mail,
 } from 'lucide-react';
+import {
+  Button,
+  Card,
+  Chip,
+  ConfirmDialog,
+  DataTable,
+  EmptyState,
+  Skeleton,
+  useSnackbar,
+} from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
 import { statisticsAPI, bookingsAPI, conflictsAPI, notificationsAPI } from '../services/api';
 import { usePropertyId } from '../contexts/PropertyContext';
 import { formatDateShort, formatRelativeTime } from '../utils/formatters';
 import './Dashboard.css';
 
-const StatCard = ({ title, value, trend, trendValue, icon: Icon, extraAction }) => (
-  <div className="glass-card stat-card">
-    <div className="stat-header">
-      <span>{title}</span>
-      <Icon size={20} />
-    </div>
-    <div className="stat-value">{value}</div>
-    {trendValue && (
-      <div className="stat-footer">
-        <span className={trend === 'up' ? 'trend-up' : 'trend-down'}>
-          {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-          {trendValue}
-        </span>
-        <span style={{ color: 'var(--text-muted)' }}>vs mês passado</span>
-      </div>
-    )}
-    {extraAction}
-  </div>
-);
-
-const NOTIFICATION_ICONS = {
-  new_booking: { icon: CheckCircle, color: 'var(--success)' },
-  booking_update: { icon: Calendar, color: 'var(--info)' },
-  booking_cancel: { icon: AlertTriangle, color: 'var(--warning)' },
-  conflict: { icon: AlertTriangle, color: 'var(--danger)' },
-  sync: { icon: RefreshCw, color: 'var(--success)' },
-  document: { icon: User, color: '#8b5cf6' },
-  email: { icon: User, color: '#06b6d4' },
-  system: { icon: Clock, color: 'var(--secondary)' },
-};
-
-// formatTime → usando formatRelativeTime de ../utils/formatters
-
-// Modal Component
-const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, isLoading }) => {
-  if (!isOpen) return null;
+/** Cartão de indicador. O número é o conteúdo; o rótulo apenas o nomeia — daí a
+ *  diferença brutal de tamanho entre os dois. */
+function Indicador({ rotulo, valor, icone: Icone, tom, nota, acao }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-        <div className="modal-header">
-          <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        </div>
-        <div className="modal-body">
-          <p style={{ color: 'var(--text-muted)', lineHeight: '1.5' }}>{message}</p>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose} disabled={isLoading}>Cancelar</button>
-          <button className="btn btn-primary" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? 'Enviando...' : 'Confirmar Envio'}
-          </button>
-        </div>
+    <Card variant="outlined" className="dash-kpi" data-tom={tom}>
+      <div className="dash-kpi__topo">
+        <span className="dash-kpi__rotulo">{rotulo}</span>
+        <Icone className="dash-kpi__icone" aria-hidden="true" focusable="false" />
       </div>
-    </div>
+      <p className="dash-kpi__valor">{valor}</p>
+      {nota ? <p className="dash-kpi__nota">{nota}</p> : null}
+      {acao ? <div className="dash-kpi__acao">{acao}</div> : null}
+    </Card>
   );
+}
+
+/** Ícone e papel de cor por tipo de atividade. O papel é semântico, não uma cor:
+ *  a mesma chave serve ao ícone e ao token, e nada aqui é hexadecimal. */
+const ATIVIDADE = {
+  new_booking: { icone: CheckCircle, papel: 'success' },
+  booking_update: { icone: Calendar, papel: 'info' },
+  booking_cancel: { icone: AlertTriangle, papel: 'warning' },
+  conflict: { icone: AlertTriangle, papel: 'error' },
+  sync: { icone: RefreshCw, papel: 'success' },
+  document: { icone: FileText, papel: 'tertiary' },
+  email: { icone: Mail, papel: 'info' },
+  system: { icone: Clock, papel: 'neutral' },
 };
+
+const COLUNAS = [
+  { key: 'guest', header: 'Hóspede' },
+  { key: 'platform', header: 'Plataforma' },
+  { key: 'period', header: 'Período' },
+  { key: 'status', header: 'Situação' },
+];
 
 const Dashboard = () => {
   const { propertyId } = usePropertyId();
+  const { show } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     occupancyRate: 0,
     totalRevenue: 0,
     activeBookings: 0,
-    conflicts: 0
+    conflicts: 0,
   });
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
-
-  // Modal state
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [sendingReport, setSendingReport] = useState(false);
-  const [message, setMessage] = useState(null);
-
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 4000);
-  };
+  const [confirmarEnvio, setConfirmarEnvio] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,8 +85,15 @@ const Dashboard = () => {
       setLoading(true);
       try {
         const results = await Promise.allSettled([
-          statisticsAPI.getMonthlyReport(propertyId, new Date().getMonth() + 1, new Date().getFullYear()),
-          bookingsAPI.getUpcoming({ limit: 5 }),
+          statisticsAPI.getMonthlyReport(
+            propertyId,
+            new Date().getMonth() + 1,
+            new Date().getFullYear(),
+          ),
+          // `property_id` é obrigatório neste endpoint. Sem ele a resposta é 422
+          // e a lista de check-ins ficava permanentemente vazia — como o erro caía
+          // num `Promise.allSettled`, nada aparecia no console nem na tela.
+          bookingsAPI.getUpcoming({ property_id: propertyId, limit: 5 }),
           conflictsAPI.getSummary(propertyId),
           notificationsAPI.getAll({ limit: 5 }),
         ]);
@@ -105,7 +102,7 @@ const Dashboard = () => {
 
         if (results[0].status === 'fulfilled') {
           const data = results[0].value.data;
-          setStats(prev => ({
+          setStats((prev) => ({
             ...prev,
             occupancyRate: data.occupancy_rate || 0,
             totalRevenue: data.total_revenue || 0,
@@ -114,18 +111,16 @@ const Dashboard = () => {
         }
         if (results[1].status === 'fulfilled') {
           const data = results[1].value.data;
-          setUpcomingBookings(Array.isArray(data) ? data.slice(0, 5) : (data.items || []).slice(0, 5));
+          setUpcomingBookings(
+            Array.isArray(data) ? data.slice(0, 5) : (data.items || []).slice(0, 5),
+          );
         }
         if (results[2].status === 'fulfilled') {
           const data = results[2].value.data;
-          setStats(prev => ({
-            ...prev,
-            conflicts: data.active_conflicts ?? data.total ?? 0,
-          }));
+          setStats((prev) => ({ ...prev, conflicts: data.active_conflicts ?? data.total ?? 0 }));
         }
         if (results[3].status === 'fulfilled') {
-          const data = results[3].value.data;
-          setRecentActivity((data.items || []).slice(0, 5));
+          setRecentActivity((results[3].value.data.items || []).slice(0, 5));
         }
       } catch (err) {
         if (!cancelled) console.error('Dashboard load error:', err);
@@ -135,186 +130,166 @@ const Dashboard = () => {
     };
 
     loadDashboard();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // formatDate → usando formatDateShort de ../utils/formatters
-
-  const handleSendReportClick = () => {
-    setShowEmailModal(true);
-  };
-
   const handleConfirmSendReport = async () => {
-    setSendingReport(true);
+    setEnviando(true);
     try {
-      const today = new Date();
-      await statisticsAPI.getMonthlyReport(propertyId, today.getMonth() + 1, today.getFullYear(), true);
-      showMessage('Relatório enviado com sucesso!', 'success');
-      setShowEmailModal(false);
+      const hoje = new Date();
+      await statisticsAPI.getMonthlyReport(
+        propertyId,
+        hoje.getMonth() + 1,
+        hoje.getFullYear(),
+        true,
+      );
+      show('Relatório enviado.');
+      setConfirmarEnvio(false);
     } catch (error) {
       console.error('Error sending report:', error);
-      showMessage('Erro ao enviar relatório. Verifique as configurações de email.', 'error');
+      show('Falha ao enviar o relatório. Confira as configurações de e-mail.', {
+        variant: 'error',
+      });
     } finally {
-      setSendingReport(false);
+      setEnviando(false);
     }
   };
 
+  const semConflitos = stats.conflicts === 0;
+
+  const linhas = upcomingBookings.map((b, i) => ({
+    id: b.id ?? i,
+    guest: b.guest_name || 'Hóspede',
+    platform: (
+      <Chip variant="assist" label={b.platform || 'Manual'} />
+    ),
+    period: `${formatDateShort(b.check_in_date || b.check_in)} – ${formatDateShort(
+      b.check_out_date || b.check_out,
+    )}`,
+    status: b.status || 'Confirmado',
+  }));
+
+  // Esqueleto com a MESMA grade do conteúdo real: um spinner solto no meio da
+  // tela faz tudo saltar de posição quando os dados chegam.
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="loading-state">
-          <RefreshCw size={32} className="spin" />
-          <p>Carregando dashboard...</p>
+      <div className="dash">
+        <div className="dash-grade" aria-busy="true" aria-label="Carregando o painel">
+          {[0, 1, 2, 3].map((i) => (
+            <Card key={i} variant="outlined" className="dash-kpi">
+              <Skeleton variant="text" />
+              <Skeleton variant="rect" />
+            </Card>
+          ))}
+          <Card variant="outlined" className="dash-principal">
+            <Skeleton variant="text" lines={5} />
+          </Card>
+          <Card variant="outlined" className="dash-lateral">
+            <Skeleton variant="text" lines={4} />
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="welcome-text">
-          <h1>Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Resumo do sistema Lumina</p>
-        </div>
-        <div className="date-badge">
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </div>
-      </header>
+    <div className="dash">
+      <PageHeader
+        description={`Resumo de ${new Date().toLocaleDateString('pt-BR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}.`}
+        actions={
+          <Button variant="outlined" icon={<Send />} onClick={() => setConfirmarEnvio(true)}>
+            Enviar relatório do mês
+          </Button>
+        }
+      />
 
-      {message && (
-        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-          <span>{message.text}</span>
-        </div>
-      )}
+      <div className="dash-grade">
+        <Indicador rotulo="Ocupação" valor={`${Math.round(stats.occupancyRate)}%`} icone={BarChart} />
+        <Indicador
+          rotulo="Receita do mês"
+          valor={`R$ ${Number(stats.totalRevenue).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+          })}`}
+          icone={Wallet}
+        />
+        <Indicador rotulo="Reservas ativas" valor={stats.activeBookings} icone={Calendar} />
 
-      <div className="bento-grid">
-        {/* KPI Cards */}
-        <StatCard
-          title="Ocupação"
-          value={`${Math.round(stats.occupancyRate)}%`}
-          trend="up"
-          icon={BarChart}
-        />
-        <StatCard
-          title="Receita Mensal"
-          value={`R$ ${Number(stats.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-          trend="up"
-          icon={Wallet}
-          extraAction={
-            <button
-              className="btn btn-secondary"
-              onClick={handleSendReportClick}
-              style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
-            >
-              <Send size={14} />
-              Enviar Relatório
-            </button>
-          }
-        />
-        <StatCard
-          title="Reservas Ativas"
-          value={stats.activeBookings}
-          icon={Calendar}
+        {/* Conflitos: o tom vem do dado, mas a cor NUNCA carrega a informação
+            sozinha — o ícone e a frase abaixo dizem o mesmo. */}
+        <Indicador
+          rotulo="Conflitos"
+          valor={stats.conflicts}
+          icone={semConflitos ? CheckCircle : AlertTriangle}
+          tom={semConflitos ? 'ok' : 'alerta'}
+          nota={semConflitos ? 'Nenhum conflito em aberto' : 'Há pendências para resolver'}
         />
 
-        {/* Conflict alert card */}
-        <div className="glass-card stat-card" style={{
-          borderColor: stats.conflicts > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)',
-          background: stats.conflicts > 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)'
-        }}>
-          <div className="stat-header" style={{ color: stats.conflicts > 0 ? 'var(--danger)' : 'var(--success)' }}>
-            <span>Conflitos</span>
-            <AlertTriangle size={20} />
-          </div>
-          <div className="stat-value" style={{ color: stats.conflicts > 0 ? 'var(--danger)' : 'var(--success)' }}>
-            {stats.conflicts}
-          </div>
-          <div className="stat-footer">
-            <span style={{ color: stats.conflicts > 0 ? 'var(--danger)' : 'var(--success)', fontSize: '12px' }}>
-              {stats.conflicts > 0 ? 'Resolver pendências' : 'Nenhum conflito'}
-            </span>
-          </div>
-        </div>
+        <Card variant="outlined" className="dash-principal" as="section">
+          <h2 className="dash-titulo">Próximos check-ins</h2>
+          <DataTable
+            caption="Próximos check-ins"
+            columns={COLUNAS}
+            rows={linhas}
+            rowKey={(r) => r.id}
+            empty={{
+              icon: <Calendar />,
+              title: 'Nenhum check-in próximo',
+              description: 'Sincronize os calendários para ver as chegadas aqui.',
+            }}
+          />
+        </Card>
 
-        {/* Upcoming bookings table */}
-        <div className="glass-card main-chart-section">
-          <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Próximos Check-ins</h3>
-          {upcomingBookings.length > 0 ? (
-            <table>
-              <thead>
-                <tr>
-                  <th>Hóspede</th>
-                  <th>Plataforma</th>
-                  <th>Data</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingBookings.map((b, i) => (
-                  <tr key={b.id || i}>
-                    <td>{b.guest_name || 'Hóspede'}</td>
-                    <td>
-                      <span className={`badge badge-${(b.platform || 'manual').toLowerCase()}`}>
-                        {b.platform || 'Manual'}
-                      </span>
-                    </td>
-                    <td>{formatDateShort(b.check_in_date || b.check_in)} - {formatDateShort(b.check_out_date || b.check_out)}</td>
-                    <td>{b.status || 'Confirmado'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="empty-state" style={{ padding: '40px 20px' }}>
-              <Calendar size={32} />
-              <p>Nenhum check-in próximo</p>
-            </div>
-          )}
-        </div>
-
-        {/* Activity feed */}
-        <div className="glass-card side-feed-section">
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>Atividade Recente</h3>
-
+        <Card variant="outlined" className="dash-lateral" as="section">
+          <h2 className="dash-titulo">Atividade recente</h2>
           {recentActivity.length > 0 ? (
-            <div className="activity-feed">
+            <ul className="dash-feed" role="list">
               {recentActivity.map((item, i) => {
-                const cfg = NOTIFICATION_ICONS[item.type] || NOTIFICATION_ICONS.system;
-                const Icon = cfg.icon;
+                const cfg = ATIVIDADE[item.type] || ATIVIDADE.system;
+                const Icone = cfg.icone;
                 return (
-                  <div className="feed-item" key={item.id || i}>
-                    <div className="feed-icon" style={{ color: cfg.color }}>
-                      <Icon size={18} />
+                  <li className="dash-feed__item" key={item.id || i}>
+                    <span className="dash-feed__icone" data-papel={cfg.papel}>
+                      <Icone aria-hidden="true" focusable="false" />
+                    </span>
+                    <div className="dash-feed__corpo">
+                      <p className="dash-feed__titulo">{item.title}</p>
+                      <p className="dash-feed__texto">{item.message}</p>
+                      <p className="dash-feed__tempo">{formatRelativeTime(item.created_at)}</p>
                     </div>
-                    <div className="feed-content">
-                      <h4>{item.title}</h4>
-                      <p>{item.message}</p>
-                      <div className="feed-time">{formatRelativeTime(item.created_at)}</div>
-                    </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           ) : (
-            <div className="empty-state" style={{ padding: '30px 10px' }}>
-              <Clock size={24} />
-              <p>Nenhuma atividade recente</p>
-            </div>
+            <EmptyState
+              icon={<Clock />}
+              title="Nenhuma atividade recente"
+              description="Sincronizações, reservas e documentos aparecem aqui."
+              action={
+                <Button variant="text" onClick={() => window.location.reload()}>
+                  Atualizar
+                </Button>
+              }
+            />
           )}
-        </div>
+        </Card>
       </div>
 
-      <ConfirmModal
-        isOpen={showEmailModal}
-        onClose={() => setShowEmailModal(false)}
+      <ConfirmDialog
+        open={confirmarEnvio}
+        title="Enviar o relatório do mês?"
+        message="O relatório financeiro deste mês vai para o e-mail do proprietário cadastrado em Configurações."
+        confirmLabel="Enviar"
+        loading={enviando}
+        onCancel={() => setConfirmarEnvio(false)}
         onConfirm={handleConfirmSendReport}
-        title="Enviar Relatório"
-        message="Deseja enviar o relatório financeiro deste mês para o email do proprietário configurado?"
-        isLoading={sendingReport}
       />
     </div>
   );

@@ -1,0 +1,133 @@
+@layer lm.components {
+  .lm-menu {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .lm-menu__list {
+    position: absolute;
+    inset-block-start: calc(100% + var(--lm-space-4));
+    z-index: var(--lm-z-dropdown);
+    min-inline-size: var(--lm-menu-min-width);
+    max-inline-size: var(--lm-menu-max-width);
+    /* Menu longo rola dentro de si em vez de esticar para fora da janela. */
+    max-block-size: 60vh;
+    overflow-y: auto;
+    padding-block: var(--lm-space-4);
+    border-radius: var(--lm-menu-radius);
+    background-color: var(--lm-menu-bg);
+    box-shadow: var(--lm-menu-shadow);
+    animation: lm-menu-in var(--lm-duration-fast) var(--lm-easing-decelerate);
+  }
+
+  .lm-menu__list[data-align='end'] {
+    inset-inline-end: 0;
+  }
+
+  .lm-menu__list[data-align='start'] {
+    inset-inline-start: 0;
+  }
+
+  @keyframes lm-menu-in {
+    from {
+      opacity: 0;
+      /* Nasce colado ao gatilho e desce: o movimento diz de onde o menu veio. */
+      transform: translateY(calc(var(--lm-space-4) * -1));
+    }
+  }
+
+  .lm-menu__item {
+    --_ink: var(--lm-color-on-surface);
+
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-12);
+    inline-size: 100%;
+    min-block-size: var(--lm-menu-item-height);
+    padding-inline: var(--lm-space-12);
+    border: none;
+    background-color: transparent;
+    color: var(--_ink);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-menu__item[data-variant='destructive'] {
+    --_ink: var(--lm-color-error);
+  }
+
+  .lm-menu__item:hover:not(:disabled),
+  .lm-menu__item:focus-visible {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-menu__item:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  .lm-menu__item:disabled {
+    --_ink: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* O anel externo seria cortado pelo `overflow` da lista; vira interno. */
+  .lm-menu__item:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 var(--lm-focus-ring-width) var(--lm-focus-ring-color);
+  }
+
+  .lm-menu__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-menu__item[data-variant='destructive'] .lm-menu__icon {
+    color: currentcolor;
+  }
+
+  .lm-menu__icon > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-menu__label {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lm-menu__hint {
+    flex-shrink: 0;
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .lm-menu__marca {
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+    color: var(--lm-color-primary);
+  }
+
+  .lm-menu__separator {
+    block-size: 1px;
+    margin-block: var(--lm-space-4);
+    background-color: var(--lm-color-divider);
+  }
+}

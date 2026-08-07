@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUMINA — Harness de conformidade</title>
+
+<!-- Ordem canônica das camadas, exatamente como 07-implementacao.md §2 especifica. -->
+<style>@layer lm.reset, lm.tokens, lm.bridge, lm.base, lm.layout, lm.components, lm.utilities, lm.overrides;</style>
+
+<!-- Tokens GERADOS, cópia fiel de frontend/src/styles/tokens/ -->
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens/primitives.css">
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens/semantic.css">
+<link rel="stylesheet" href="../../../frontend/src/styles/tokens/components.css">
+
+<style>
+/* ============ lm.reset ============ */
+@layer lm.reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+  body { -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+}
+
+/* ============ lm.base ============ */
+@layer lm.base {
+  html { font-family: var(--lm-font-sans); }
+  body {
+    background: var(--lm-color-background);
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  /* 03-acessibilidade §3.1 — reset correto que acompanha o anel */
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* 03-acessibilidade §3.3 — bloco normativo do anel de foco */
+  :where(a[href], button, input, select, textarea, summary, [tabindex]):focus-visible,
+  :where([role="button"], [role="tab"], [role="menuitem"], [role="option"],
+         [role="checkbox"], [role="radio"], [role="switch"]):focus-visible {
+    outline: var(--lm-focus-ring-width) solid var(--lm-focus-ring-color);
+    outline-offset: var(--lm-focus-ring-offset);
+  }
+  :where(.lm-snackbar, .lm-tooltip) :where(a, button):focus-visible {
+    outline-color: var(--lm-focus-ring-color-inverse);
+  }
+  :where(a[href], button, input, select, textarea, [tabindex]) {
+    scroll-margin-block-start: calc(var(--lm-app-bar-height) + var(--lm-space-8));
+  }
+
+  .lm-sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+
+  /* 01-fundamentos §9.4 — o único !important legítimo do sistema */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: var(--lm-duration-instant) !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: var(--lm-duration-instant) !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ============ lm.components ============ */
+@layer lm.components {
+  /* --- Button (05 §Button, camada de estado por color-mix) --- */
+  .lm-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: var(--lm-button-gap);
+    block-size: var(--lm-button-height);
+    padding-inline: var(--lm-button-padding-inline);
+    border: none; border-radius: var(--lm-button-radius);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+  .lm-button--filled { background: var(--lm-button-filled-bg); color: var(--lm-button-filled-label); }
+  .lm-button--filled:hover {
+    background: color-mix(in oklab, var(--lm-button-filled-label) calc(var(--lm-state-hover) * 100%), var(--lm-button-filled-bg));
+  }
+  .lm-button--filled:active {
+    background: color-mix(in oklab, var(--lm-button-filled-label) calc(var(--lm-state-pressed) * 100%), var(--lm-button-filled-bg));
+  }
+  .lm-button--tonal { background: var(--lm-button-tonal-bg); color: var(--lm-button-tonal-label); }
+  .lm-button--outlined {
+    background: transparent; color: var(--lm-button-outlined-label);
+    border: 1px solid var(--lm-button-outlined-border);
+  }
+  .lm-button--text { background: transparent; color: var(--lm-button-text-label); }
+  .lm-button--destructive { background: var(--lm-button-destructive-bg); color: var(--lm-button-destructive-label); }
+  .lm-button:disabled {
+    background: color-mix(in oklab, var(--lm-color-on-surface) calc(var(--lm-state-disabled-container) * 100%), transparent);
+    color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* --- IconButton --- */
+  .lm-icon-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    inline-size: var(--lm-icon-button-size); block-size: var(--lm-icon-button-size);
+    border: none; background: transparent;
+    border-radius: var(--lm-icon-button-radius);
+    color: var(--lm-icon-button-color); cursor: pointer;
+  }
+  .lm-icon-button[aria-pressed="true"] {
+    background: var(--lm-icon-button-selected-bg);
+    color: var(--lm-icon-button-selected-color);
+  }
+
+  /* --- TextField --- */
+  .lm-field { display: flex; flex-direction: column; gap: var(--lm-space-4); }
+  .lm-field__label {
+    color: var(--lm-field-label);
+    font-size: var(--lm-type-label-md-size);
+    font-weight: var(--lm-type-label-md-weight);
+  }
+  .lm-field__input {
+    block-size: var(--lm-field-height);
+    padding-inline: var(--lm-field-padding-inline);
+    background: var(--lm-field-bg); color: var(--lm-field-text);
+    border: 1px solid var(--lm-field-border);
+    border-radius: var(--lm-field-radius);
+  }
+  .lm-field__input:hover { border-color: var(--lm-field-border-hover); }
+  .lm-field__input:focus {
+    border-color: var(--lm-field-border-focus);
+    border-width: var(--lm-field-border-width-focus);
+  }
+  .lm-field__input[aria-invalid="true"] { border-color: var(--lm-field-border-error); }
+  .lm-field__input:disabled { color: var(--lm-field-disabled-text); border-color: var(--lm-field-disabled-border); }
+  .lm-field__help { color: var(--lm-field-help); font-size: var(--lm-type-body-sm-size); }
+  .lm-field__error { color: var(--lm-field-error-text); font-size: var(--lm-type-body-sm-size); }
+
+  /* --- Card --- */
+  .lm-card { border-radius: var(--lm-card-radius); padding: var(--lm-card-padding); }
+  .lm-card--filled { background: var(--lm-card-filled-bg); }
+  .lm-card--elevated { background: var(--lm-card-elevated-bg); box-shadow: var(--lm-card-elevated-shadow); }
+  .lm-card--outlined { background: var(--lm-card-outlined-bg); border: 1px solid var(--lm-card-outlined-border); }
+
+  /* --- Chip --- */
+  .lm-chip {
+    display: inline-flex; align-items: center; position: relative;
+    block-size: var(--lm-chip-height);
+    padding-inline: var(--lm-chip-padding-inline);
+    border: 1px solid var(--lm-chip-border);
+    border-radius: var(--lm-chip-radius);
+    color: var(--lm-chip-label); background: transparent; cursor: pointer;
+  }
+  /* 03 §5.2 — alvo maior que o desenho, por pseudo-elemento e não por padding */
+  .lm-chip::after { content: ""; position: absolute; inset-block: -4px; inset-inline: 0; }
+  .lm-chip[aria-pressed="true"] {
+    background: var(--lm-chip-selected-bg); color: var(--lm-chip-selected-label);
+  }
+
+  /* --- Badge --- */
+  .lm-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    block-size: var(--lm-badge-size); min-inline-size: var(--lm-badge-min-width);
+    padding-inline: var(--lm-badge-padding-inline);
+    border-radius: var(--lm-badge-radius);
+    background: var(--lm-badge-bg); color: var(--lm-badge-label);
+    font-size: var(--lm-type-label-sm-size);
+  }
+
+  /* --- Item de navegação (05 §NavigationRail — três sinais) --- */
+  .lm-nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--lm-space-4);
+    inline-size: var(--lm-navigation-rail-width);
+    block-size: var(--lm-navigation-item-height);
+    border: none; background: transparent; cursor: pointer;
+    color: var(--lm-navigation-item-label);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    font-weight: var(--lm-type-body-md-weight);
+  }
+  .lm-nav-item__indicator {
+    display: flex; align-items: center; justify-content: center;
+    inline-size: var(--lm-navigation-indicator-width);
+    block-size: var(--lm-navigation-indicator-height);
+    border-radius: var(--lm-navigation-item-radius);
+  }
+  .lm-nav-item[aria-current="page"] {
+    color: var(--lm-navigation-item-label-selected);
+    font-weight: var(--lm-type-label-lg-weight);
+  }
+  .lm-nav-item[aria-current="page"] .lm-nav-item__indicator {
+    background: var(--lm-navigation-item-bg-selected);
+  }
+
+  /* --- Menu --- */
+  .lm-menu {
+    background: var(--lm-menu-bg); border-radius: var(--lm-menu-radius);
+    box-shadow: var(--lm-menu-shadow);
+    min-inline-size: var(--lm-menu-min-width); max-inline-size: var(--lm-menu-max-width);
+    padding-block: var(--lm-space-8);
+  }
+  .lm-menu-item {
+    display: flex; align-items: center; inline-size: 100%;
+    block-size: var(--lm-menu-item-height);
+    padding-inline: var(--lm-space-16);
+    border: none; background: transparent; color: var(--lm-color-on-surface);
+    cursor: pointer; text-align: start;
+  }
+  .lm-menu-item:hover {
+    background: color-mix(in oklab, var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%), transparent);
+  }
+
+  /* --- Snackbar / Tooltip (superfície invertida) --- */
+  .lm-snackbar {
+    display: inline-flex; align-items: center; gap: var(--lm-space-16);
+    background: var(--lm-snackbar-bg); color: var(--lm-snackbar-label);
+    border-radius: var(--lm-snackbar-radius); box-shadow: var(--lm-snackbar-shadow);
+    min-inline-size: var(--lm-snackbar-min-width); max-inline-size: var(--lm-snackbar-max-width);
+    padding: var(--lm-space-12) var(--lm-space-16);
+  }
+  .lm-snackbar button { background: transparent; border: none; color: var(--lm-snackbar-action); cursor: pointer; }
+  .lm-tooltip {
+    background: var(--lm-tooltip-bg); color: var(--lm-tooltip-label);
+    border-radius: var(--lm-tooltip-radius); max-inline-size: var(--lm-tooltip-max-width);
+    padding: var(--lm-space-4) var(--lm-space-8);
+    font-size: var(--lm-type-body-sm-size);
+  }
+
+  /* --- Skeleton / Progress --- */
+  .lm-skeleton {
+    background: var(--lm-skeleton-bg); border-radius: var(--lm-skeleton-radius);
+    block-size: 16px; inline-size: 200px;
+    animation: lm-pulse var(--lm-skeleton-duration) ease-in-out infinite;
+  }
+  @keyframes lm-pulse { 50% { opacity: .6; } }
+  .lm-progress {
+    block-size: var(--lm-progress-track-height); inline-size: 240px;
+    background: var(--lm-progress-track); border-radius: var(--lm-radius-full); overflow: hidden;
+  }
+  .lm-progress > i { display: block; block-size: 100%; inline-size: 60%; background: var(--lm-progress-indicator); }
+
+  /* --- Tabela --- */
+  .lm-table { border-collapse: collapse; inline-size: 100%; }
+  .lm-table th {
+    block-size: var(--lm-table-header-height);
+    color: var(--lm-table-header-label);
+    font-size: var(--lm-type-label-sm-size);
+    text-align: start; border-block-end: 1px solid var(--lm-table-divider);
+  }
+  .lm-table td {
+    block-size: var(--lm-table-row-height);
+    color: var(--lm-table-cell-text);
+    border-block-end: 1px solid var(--lm-table-divider);
+  }
+  .lm-table td.num { text-align: end; font-variant-numeric: tabular-nums; }
+  .lm-table tr[aria-selected="true"] td { background: var(--lm-table-row-selected-bg); }
+
+  /* --- Dropzone --- */
+  .lm-dropzone {
+    border: var(--lm-dropzone-border-width) var(--lm-dropzone-border-style) var(--lm-dropzone-border);
+    background: var(--lm-dropzone-bg); border-radius: var(--lm-dropzone-radius);
+    min-block-size: var(--lm-dropzone-min-height);
+    display: grid; place-items: center;
+  }
+}
+
+/* ============ lm.layout ============ */
+@layer lm.layout {
+  .harness { padding: var(--lm-space-24); display: grid; gap: var(--lm-space-32); max-inline-size: 1600px; margin-inline: auto; }
+  .row { display: flex; gap: var(--lm-space-12); align-items: center; flex-wrap: wrap; }
+  h2 { font-size: var(--lm-type-title-md-size); font-weight: var(--lm-type-title-md-weight); color: var(--lm-color-on-surface); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--lm-space-8); }
+  .sw { padding: var(--lm-space-8); border-radius: var(--lm-radius-sm); font-size: var(--lm-type-body-sm-size); }
+}
+</style>
+</head>
+<body>
+<div class="harness">
+  <h1 style="font-size:var(--lm-type-headline-md-size)">LUMINA — Harness de conformidade</h1>
+
+  <section><h2>Button</h2><div class="row">
+    <button class="lm-button lm-button--filled">Salvar</button>
+    <button class="lm-button lm-button--tonal">Sincronizar agora</button>
+    <button class="lm-button lm-button--outlined">Cancelar</button>
+    <button class="lm-button lm-button--text">Ver detalhes</button>
+    <button class="lm-button lm-button--destructive">Excluir documento</button>
+    <button class="lm-button lm-button--filled" disabled>Salvar</button>
+  </div></section>
+
+  <section><h2>IconButton · Chip · Badge</h2><div class="row">
+    <button class="lm-icon-button" aria-label="Sincronizar agora">↻</button>
+    <button class="lm-icon-button" aria-label="Fixar coluna" aria-pressed="true">📌</button>
+    <button class="lm-chip" aria-pressed="false">Airbnb</button>
+    <button class="lm-chip" aria-pressed="true">Booking.com</button>
+    <span class="lm-badge">3</span>
+    <span class="lm-badge">99+</span>
+  </div></section>
+
+  <section><h2>TextField</h2><div class="row">
+    <div class="lm-field"><label class="lm-field__label" for="f1">Nome do hóspede (obrigatório)</label>
+      <input class="lm-field__input" id="f1" aria-describedby="h1"><span class="lm-field__help" id="h1">Como aparece na reserva</span></div>
+    <div class="lm-field"><label class="lm-field__label" for="f2">Data de check-in</label>
+      <input class="lm-field__input" id="f2" aria-invalid="true" aria-describedby="e1"><span class="lm-field__error" id="e1">Data anterior ao check-out</span></div>
+    <div class="lm-field"><label class="lm-field__label" for="f3">ID da reserva</label>
+      <input class="lm-field__input" id="f3" disabled value="HMABC123"></div>
+  </div></section>
+
+  <section><h2>Card</h2><div class="row">
+    <div class="lm-card lm-card--filled">Filled</div>
+    <div class="lm-card lm-card--elevated">Elevated</div>
+    <div class="lm-card lm-card--outlined">Outlined</div>
+  </div></section>
+
+  <section><h2>Navigation</h2><div class="row">
+    <button class="lm-nav-item"><span class="lm-nav-item__indicator">▣</span>Calendário</button>
+    <button class="lm-nav-item" aria-current="page"><span class="lm-nav-item__indicator">▣</span>Conflitos</button>
+  </div></section>
+
+  <section><h2>Menu · Snackbar · Tooltip</h2><div class="row">
+    <div class="lm-menu"><button class="lm-menu-item">Marcar como resolvido</button><button class="lm-menu-item">Excluir documento</button></div>
+    <div class="lm-snackbar">Reserva salva<button>Desfazer</button></div>
+    <div class="lm-tooltip">Sincronizar agora</div>
+  </div></section>
+
+  <section><h2>Skeleton · Progress · Dropzone</h2><div class="row">
+    <div class="lm-skeleton"></div>
+    <div class="lm-progress"><i></i></div>
+    <div class="lm-dropzone" style="inline-size:240px">Solte o arquivo</div>
+  </div></section>
+
+  <section><h2>Tabela</h2>
+    <table class="lm-table"><thead><tr><th>Hóspede</th><th>Plataforma</th><th class="num">Receita</th></tr></thead>
+    <tbody><tr><td>Ana Ribeiro</td><td>Airbnb</td><td class="num">1.240,00</td></tr>
+    <tr aria-selected="true"><td>Carlos Nunes</td><td>Booking.com</td><td class="num">890,50</td></tr></tbody></table>
+  </section>
+
+  <section><h2>Superfícies</h2><div class="swatches" id="sw"></div></section>
+</div>
+
+<script type="module" src="check.js"></script>
+</body>
+</html>

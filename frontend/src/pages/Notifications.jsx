@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Bell,
+  BellOff,
   RefreshCw,
   CheckCheck,
   Calendar,
@@ -8,314 +8,231 @@ import {
   FileText,
   Mail,
   Zap,
-  Clock,
-  Eye,
   XCircle,
-  ArrowDownCircle
 } from 'lucide-react';
+import { Button, Card, Chip, EmptyState, Skeleton, useSnackbar } from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
 import { notificationsAPI } from '../services/api';
 import { formatRelativeTime } from '../utils/formatters';
 import './Notifications.css';
 
-const TYPE_CONFIG = {
-  new_booking: { label: 'Nova Reserva', icon: Calendar, color: '#2563eb' },
-  booking_update: { label: 'Atualizacao', icon: Calendar, color: '#2563eb' },
-  booking_cancel: { label: 'Cancelamento', icon: XCircle, color: '#f59e0b' },
-  conflict: { label: 'Conflito', icon: AlertTriangle, color: '#ef4444' },
-  sync: { label: 'Sincronizacao', icon: RefreshCw, color: '#10b981' },
-  document: { label: 'Documento', icon: FileText, color: '#8b5cf6' },
-  email: { label: 'Email', icon: Mail, color: '#06b6d4' },
-  system: { label: 'Sistema', icon: Zap, color: '#64748b' },
+/**
+ * Tipo → rótulo, ícone e PAPEL semântico.
+ *
+ * O papel substitui a cor: antes esta tabela guardava sete hexadecimais, e os
+ * mesmos sete estavam repetidos mais duas vezes no CSS (ponto, borda e ícone) —
+ * 21 valores para sete conceitos. Agora o CSS resolve tudo por `data-tipo`.
+ */
+const TIPOS = {
+  new_booking: { rotulo: 'Nova reserva', icone: Calendar, papel: 'info' },
+  booking_update: { rotulo: 'Atualização', icone: Calendar, papel: 'info' },
+  booking_cancel: { rotulo: 'Cancelamento', icone: XCircle, papel: 'warning' },
+  conflict: { rotulo: 'Conflito', icone: AlertTriangle, papel: 'error' },
+  sync: { rotulo: 'Sincronização', icone: RefreshCw, papel: 'success' },
+  document: { rotulo: 'Documento', icone: FileText, papel: 'tertiary' },
+  email: { rotulo: 'E-mail', icone: Mail, papel: 'info' },
+  system: { rotulo: 'Sistema', icone: Zap, papel: 'neutral' },
 };
 
-const FILTER_TABS = [
-  { id: 'all', label: 'Todas' },
-  { id: 'new_booking,booking_update,booking_cancel', label: 'Reservas' },
-  { id: 'conflict', label: 'Conflitos' },
-  { id: 'sync', label: 'Sync' },
-  { id: 'document', label: 'Documentos' },
-  { id: 'email', label: 'Emails' },
+const FILTROS = [
+  { id: 'all', rotulo: 'Todas' },
+  { id: 'new_booking,booking_update,booking_cancel', rotulo: 'Reservas' },
+  { id: 'conflict', rotulo: 'Conflitos' },
+  { id: 'sync', rotulo: 'Sincronização' },
+  { id: 'document', rotulo: 'Documentos' },
+  { id: 'email', rotulo: 'E-mails' },
 ];
 
 const Notifications = () => {
+  const { show } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [summary, setSummary] = useState({ total: 0, unread: 0, today: 0, by_type: {} });
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [filtro, setFiltro] = useState('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        setLoading(true);
-        await Promise.all([
-          loadSummary(),
-          loadNotifications(1),
-        ]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const params = { page: 1, limit: 20 };
-        if (activeFilter !== 'all') {
-          params.type = activeFilter;
-        }
-        const response = await notificationsAPI.getAll(params);
-        if (cancelled) return;
-        const data = response.data;
-
-        setNotifications(data.items);
-        setTotal(data.total);
-        setUnreadCount(data.unread_count);
-        setPage(1);
-      } catch (error) {
-        if (!cancelled) console.error('Error loading notifications:', error);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [activeFilter]);
-
-  const loadData = async () => {
+  const carregarResumo = useCallback(async () => {
     try {
-      setLoading(true);
-      await Promise.all([
-        loadSummary(),
-        loadNotifications(1),
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSummary = async () => {
-    try {
-      const response = await notificationsAPI.getSummary();
-      setSummary(response.data);
+      const r = await notificationsAPI.getSummary();
+      setSummary(r.data);
     } catch (error) {
       console.error('Error loading summary:', error);
     }
-  };
+  }, []);
 
-  const loadNotifications = async (pageNum) => {
-    try {
-      const params = { page: pageNum, limit: 20 };
-      if (activeFilter !== 'all') {
-        params.type = activeFilter;
+  const carregarLista = useCallback(
+    async (pagina) => {
+      try {
+        const params = { page: pagina, limit: 20 };
+        if (filtro !== 'all') params.type = filtro;
+        const { data } = await notificationsAPI.getAll(params);
+        setNotifications((prev) => (pagina === 1 ? data.items : [...prev, ...data.items]));
+        setTotal(data.total);
+        setPage(pagina);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
       }
-      const response = await notificationsAPI.getAll(params);
-      const data = response.data;
+    },
+    [filtro],
+  );
 
-      if (pageNum === 1) {
-        setNotifications(data.items);
-      } else {
-        setNotifications(prev => [...prev, ...data.items]);
-      }
-      setTotal(data.total);
-      setUnreadCount(data.unread_count);
-      setPage(pageNum);
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    }
-  };
+  useEffect(() => {
+    let cancelado = false;
+    setLoading(true);
+    Promise.all([carregarResumo(), carregarLista(1)]).finally(() => {
+      if (!cancelado) setLoading(false);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [carregarResumo, carregarLista]);
 
-  const handleMarkAsRead = async (id) => {
+  const marcarComoLida = async (id) => {
     try {
       await notificationsAPI.markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      setSummary(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1) }));
+      setSummary((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }));
     } catch (error) {
       console.error('Error marking as read:', error);
+      show('Não foi possível marcar como lida.', { variant: 'error' });
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const marcarTodasComoLidas = async () => {
     try {
       await notificationsAPI.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
-      setUnreadCount(0);
-      setSummary(prev => ({ ...prev, unread: 0 }));
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setSummary((prev) => ({ ...prev, unread: 0 }));
+      show('Todas marcadas como lidas.');
     } catch (error) {
       console.error('Error marking all as read:', error);
+      show('Não foi possível marcar todas como lidas.', { variant: 'error' });
     }
   };
 
-  const handleLoadMore = () => {
-    loadNotifications(page + 1);
-  };
-
-  // formatTime → usando formatRelativeTime de ../utils/formatters
-
-  if (loading) {
-    return (
-      <div className="notifications-page">
-        <div className="loading-state">
-          <RefreshCw className="spin" size={32} />
-          <p>Carregando notificacoes...</p>
-        </div>
-      </div>
-    );
-  }
+  const resumo = [
+    { chave: 'unread', rotulo: 'Não lidas', valor: summary.unread, papel: 'error' },
+    { chave: 'today', rotulo: 'Hoje', valor: summary.today, papel: 'success' },
+    { chave: 'conflicts', rotulo: 'Conflitos', valor: summary.by_type?.conflict ?? 0, papel: 'warning' },
+    { chave: 'total', rotulo: 'Total', valor: summary.total, papel: 'neutral' },
+  ];
 
   return (
-    <div className="notifications-page">
-      {/* Header */}
-      <div className="notifications-header">
-        <div>
-          <h1>Central de Notificacoes</h1>
-          <p className="subtitle">Acompanhe todos os eventos do sistema em tempo real</p>
-        </div>
-        <div className="header-actions">
-          {summary.unread > 0 && (
-            <button className="btn btn-secondary" onClick={handleMarkAllAsRead}>
-              <CheckCheck size={16} />
-              Marcar tudo como lido
-            </button>
-          )}
-          <button className="btn btn-primary" onClick={loadData}>
-            <RefreshCw size={16} />
-            Atualizar
-          </button>
-        </div>
-      </div>
-
-      {/* Bento Grid - Summary Cards */}
-      <div className="bento-grid">
-        <div className="glass-card glass-card-unread">
-          <div className="glass-card-icon">
-            <Bell size={22} />
-          </div>
-          <div className="glass-card-value">{summary.unread}</div>
-          <div className="glass-card-label">Nao Lidas</div>
-        </div>
-
-        <div className="glass-card glass-card-today">
-          <div className="glass-card-icon">
-            <Clock size={22} />
-          </div>
-          <div className="glass-card-value">{summary.today}</div>
-          <div className="glass-card-label">Hoje</div>
-        </div>
-
-        <div className="glass-card glass-card-conflicts">
-          <div className="glass-card-icon">
-            <AlertTriangle size={22} />
-          </div>
-          <div className="glass-card-value">{summary.by_type?.conflict || 0}</div>
-          <div className="glass-card-label">Conflitos</div>
-        </div>
-
-        <div className="glass-card glass-card-total">
-          <div className="glass-card-icon">
-            <Zap size={22} />
-          </div>
-          <div className="glass-card-value">{summary.total}</div>
-          <div className="glass-card-label">Total</div>
-        </div>
-      </div>
-
-      {/* Type Breakdown Chips */}
-      {Object.keys(summary.by_type || {}).length > 0 && (
-        <div className="type-breakdown">
-          {Object.entries(summary.by_type).map(([type, count]) => {
-            const config = TYPE_CONFIG[type] || { label: type, color: '#64748b' };
-            return (
-              <div key={type} className={`type-chip type-${type}`}>
-                <span className="type-chip-dot" style={{ background: config.color }} />
-                <span>{config.label}</span>
-                <span className="type-chip-count">{count}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Filter Tabs */}
-      <div className="notification-filters">
-        {FILTER_TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`filter-tab ${activeFilter === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveFilter(tab.id)}
-          >
-            {tab.label}
-          </button>
+    <div className="ntf">
+      <PageHeader
+        description="Reservas, conflitos, sincronizações e documentos, em ordem cronológica."
+        actions={
+          <>
+            {summary.unread > 0 ? (
+              <Button variant="outlined" icon={<CheckCheck />} onClick={marcarTodasComoLidas}>
+                Marcar tudo como lido
+              </Button>
+            ) : null}
+            <Button
+              icon={<RefreshCw />}
+              onClick={() => {
+                carregarResumo();
+                carregarLista(1);
+              }}
+            >
+              Atualizar
+            </Button>
+          </>
+        }
+        filters={FILTROS.map((f) => (
+          <Chip
+            key={f.id}
+            variant="filter"
+            label={f.rotulo}
+            selected={filtro === f.id}
+            onClick={() => setFiltro(f.id)}
+          />
         ))}
-      </div>
+      />
 
-      {/* Notification Feed */}
-      <div className="notification-feed">
-        {notifications.length === 0 ? (
-          <div className="empty-state">
-            <Bell size={48} />
-            <h3>Nenhuma notificacao</h3>
-            <p>As notificacoes do sistema apareceriao aqui</p>
-          </div>
-        ) : (
-          notifications.map(notification => {
-            const config = TYPE_CONFIG[notification.type] || TYPE_CONFIG.system;
-            const Icon = config.icon;
+      <ul className="ntf-resumo" role="list">
+        {resumo.map((r) => (
+          <li key={r.chave}>
+            <Card variant="outlined" className="ntf-resumo__item" data-papel={r.papel}>
+              <span className="ntf-resumo__valor">{r.valor}</span>
+              <span className="ntf-resumo__rotulo">{r.rotulo}</span>
+            </Card>
+          </li>
+        ))}
+      </ul>
 
-            return (
-              <div
-                key={notification.id}
-                className={`notification-card type-${notification.type} ${!notification.is_read ? 'unread' : ''}`}
-                onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
-              >
-                {!notification.is_read && <div className="unread-dot" />}
-
-                <div className={`notification-icon type-${notification.type}`}>
-                  <Icon size={20} />
-                </div>
-
-                <div className="notification-content">
-                  <div className="notification-title">{notification.title}</div>
-                  {notification.message && (
-                    <div className="notification-message">{notification.message}</div>
-                  )}
-                  <div className="notification-meta">
-                    <span className="notification-time">
-                      <Clock size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                      {formatRelativeTime(notification.created_at)}
-                    </span>
-                    <span className={`notification-badge ${notification.is_read ? 'read' : 'unread'}`}>
-                      {notification.is_read ? (
-                        <><Eye size={11} /> Lida</>
-                      ) : (
-                        <><Bell size={11} /> Nova</>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Load More */}
-      {notifications.length < total && (
-        <div className="load-more-container">
-          <button className="btn btn-secondary" onClick={handleLoadMore}>
-            <ArrowDownCircle size={16} />
-            Carregar mais ({total - notifications.length} restantes)
-          </button>
+      {loading ? (
+        <div aria-busy="true" aria-label="Carregando notificações">
+          <Skeleton variant="text" lines={6} />
         </div>
+      ) : notifications.length === 0 ? (
+        <EmptyState
+          icon={<BellOff />}
+          title="Nada por aqui"
+          description={
+            filtro === 'all'
+              ? 'Quando houver reservas, conflitos ou sincronizações, elas aparecem nesta lista.'
+              : 'Nenhuma notificação deste tipo. Experimente outro filtro.'
+          }
+          action={
+            filtro === 'all' ? null : (
+              <Button variant="text" onClick={() => setFiltro('all')}>
+                Ver todas
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <>
+          <ul className="ntf-lista" role="list">
+            {notifications.map((n) => {
+              const cfg = TIPOS[n.type] || TIPOS.system;
+              const Icone = cfg.icone;
+              const naoLida = !n.is_read;
+              return (
+                <li key={n.id}>
+                  {/* Um <button> de verdade. Antes era `<div onClick>`: sem
+                      teclado, sem papel e sem estado anunciável. */}
+                  <button
+                    type="button"
+                    className="ntf-item"
+                    data-papel={cfg.papel}
+                    data-nao-lida={naoLida || undefined}
+                    aria-label={`${cfg.rotulo}: ${n.title}${naoLida ? '. Não lida' : ''}`}
+                    onClick={() => naoLida && marcarComoLida(n.id)}
+                  >
+                    <span className="ntf-item__icone">
+                      <Icone aria-hidden="true" focusable="false" />
+                    </span>
+                    <span className="ntf-item__corpo">
+                      <span className="ntf-item__titulo">{n.title}</span>
+                      <span className="ntf-item__texto">{n.message}</span>
+                      <span className="ntf-item__meta">
+                        <span className="ntf-item__tipo">{cfg.rotulo}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{formatRelativeTime(n.created_at)}</span>
+                      </span>
+                    </span>
+                    {/* Não lida por forma E por texto, nunca só pelo ponto: um
+                        ponto colorido some para quem não distingue a cor. */}
+                    {naoLida ? <span className="ntf-item__novo">Nova</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {notifications.length < total ? (
+            <div className="ntf-mais">
+              <Button variant="outlined" onClick={() => carregarLista(page + 1)}>
+                Carregar mais ({notifications.length} de {total})
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

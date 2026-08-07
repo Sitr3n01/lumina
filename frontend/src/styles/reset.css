@@ -1,0 +1,135 @@
+/* =============================================================
+   LUMINA — Reset
+   Camada: lm.reset (a mais fraca — qualquer coisa a sobrescreve)
+
+   Regra que este arquivo NÃO tem, e nunca terá: `outline: none`.
+   O reset anterior (global.css) o aplicava no seletor universal,
+   apagando o anel de foco de todos os elementos da aplicação.
+   O anel é definido em base.css.
+   ============================================================= */
+
+@layer lm.reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    tab-size: 4;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  /* Controles não herdam tipografia por padrão em nenhum navegador. */
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    margin: 0;
+  }
+
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    -webkit-appearance: button;
+    appearance: button;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type='button']:disabled,
+  [type='reset']:disabled,
+  [type='submit']:disabled {
+    cursor: not-allowed;
+  }
+
+  textarea {
+    resize: vertical;
+    field-sizing: content;
+  }
+
+  /* Mídia é substituída, não inline: elimina o descender fantasma. */
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  /* Ícones nunca devem ser alvo de evento — o controle ao redor é. */
+  svg {
+    flex-shrink: 0;
+  }
+
+  ul[role='list'],
+  ol[role='list'] {
+    list-style: none;
+    padding: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  th {
+    text-align: start;
+    font-weight: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-skip-ink: auto;
+  }
+
+  /* Quebra de palavra longa (ID de reserva, e-mail) sem estourar
+     o contêiner — WCAG 1.4.10 a 320px depende disso. */
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  li,
+  dd,
+  dt,
+  td,
+  th {
+    overflow-wrap: break-word;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+    text-wrap: balance;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}

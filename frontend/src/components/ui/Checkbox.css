@@ -1,0 +1,204 @@
+@layer lm.components {
+  .lm-checkbox {
+    /* Desenho de 18px exigido por 05-componentes.md §5. A lacuna A2 de
+       LACUNAS.md (não existe escala de tamanho de controle) segue aberta, então
+       o valor é composto da escala de espaço — nem literal solto, nem token
+       inventado. Sai daqui e não do input porque o rótulo também precisa dele. */
+    --_size: calc(var(--lm-space-16) + var(--lm-space-2));
+
+    /* O alvo de ponteiro cresce sem inflar a pintura: quem cresce é o
+       pseudo-elemento da camada de estado. */
+    --_target: max(var(--lm-target-min-size), var(--lm-density-control));
+
+    /* Recuo que centra o desenho na PRIMEIRA linha do rótulo. Com rótulo de
+       duas linhas o conjunto fica alinhado ao topo, e não ao meio do bloco. */
+    --_lead: max(var(--lm-space-0), calc((var(--lm-type-body-md-line) - var(--_size)) / 2));
+
+    display: inline-grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--lm-space-12);
+    align-items: start;
+  }
+
+  .lm-checkbox__input {
+    /* Quatro locais governam todos os estados: origem da camada de estado,
+       preenchimento, borda e cor da marca. */
+    --_ink: var(--lm-color-on-surface);
+    --_container: transparent;
+    /* A borda é a única fronteira do controle e precisa de 3:1 — WCAG 1.4.11.
+       `outline-variant` dá 1,62:1 e reprovaria. */
+    --_outline: var(--lm-color-outline-interactive);
+    --_content: var(--lm-color-on-primary);
+
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    place-content: center;
+    inline-size: var(--_size);
+    block-size: var(--_size);
+    margin: 0;
+    margin-block-start: var(--_lead);
+    border: 1px solid var(--_outline);
+    border-radius: var(--lm-radius-xs);
+    background-color: var(--_container);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      border-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-checkbox__input:checked,
+  .lm-checkbox__input:indeterminate {
+    --_ink: var(--lm-color-primary);
+    --_container: var(--lm-color-primary);
+    --_outline: var(--lm-color-primary);
+  }
+
+  /* --- Camada de estado ----------------------------------------------------
+     Círculo em volta do desenho: é ele que dá o alvo mínimo e é ele que recebe
+     hover, foco e pressionado. Fica em ::before para pintar ABAIXO da marca
+     (::after), senão a translucidez sujaria o desenho do check. */
+
+  .lm-checkbox__input::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--_target);
+    block-size: var(--_target);
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    translate: -50% -50%;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* O rótulo faz parte do alvo, então o hover nasce da raiz e não do input. */
+  .lm-checkbox:hover:not([data-disabled]) .lm-checkbox__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  /* Camada complementa o anel de foco — nunca o substitui. */
+  .lm-checkbox__input:focus-visible::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-focus) * 100%),
+      transparent
+    );
+  }
+
+  .lm-checkbox:active:not([data-disabled]) .lm-checkbox__input::before {
+    background-color: color-mix(
+      in oklab,
+      var(--_ink) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  /* --- Marca ---------------------------------------------------------------
+     Desenhada em CSS, nunca imagem ou emoji: emoji muda de forma por
+     plataforma e não acompanha a cor do contêiner. */
+
+  .lm-checkbox__input::after {
+    content: '';
+    inline-size: calc(var(--_size) - var(--lm-space-4));
+    block-size: calc(var(--_size) - var(--lm-space-4));
+    background-color: var(--_content);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
+    scale: 0;
+    transition: scale var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-checkbox__input:checked::after {
+    scale: 1;
+  }
+
+  /* Indeterminado vence o marcado, como no controle nativo: cabeçalho de tabela
+     com seleção parcial continua parcial mesmo com `checked` pendurado. */
+  .lm-checkbox__input:indeterminate::after {
+    clip-path: polygon(8% 42%, 92% 42%, 92% 58%, 8% 58%);
+    scale: 1;
+  }
+
+  /* --- Desabilitado --------------------------------------------------------- */
+
+  .lm-checkbox__input:disabled {
+    --_outline: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  .lm-checkbox__input:disabled:checked,
+  .lm-checkbox__input:disabled:indeterminate {
+    /* 0.38 e não 0.12: aqui o contêiner precisa segurar uma marca por cima.
+       Com `--lm-state-disabled-container` a marca sumiria no fundo. */
+    --_container: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-disabled-content) * 100%),
+      transparent
+    );
+    --_outline: transparent;
+    --_content: var(--lm-color-surface);
+  }
+
+  /* --- Texto ---------------------------------------------------------------- */
+
+  .lm-checkbox__label {
+    grid-column: 2;
+    grid-row: 1;
+    /* Espelho de --_lead: vale quando o desenho for mais alto que a linha. */
+    margin-block-start: max(
+      var(--lm-space-0),
+      calc((var(--_size) - var(--lm-type-body-md-line)) / 2)
+    );
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    cursor: pointer;
+    /* Clique duplo no rótulo alternaria duas vezes e ainda selecionaria o texto. */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .lm-checkbox__description {
+    grid-column: 2;
+    grid-row: 2;
+    margin-block-start: var(--lm-space-4);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    font-weight: var(--lm-type-body-sm-weight);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .lm-checkbox[data-disabled] .lm-checkbox__label,
+  .lm-checkbox[data-disabled] .lm-checkbox__description {
+    /* Cor, não opacidade: 0.38 sobre a superfície rende 2,34:1, e desabilitado
+       ainda precisa ser lido. */
+    color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* --- Contraste forçado ----------------------------------------------------
+     O SO reescreve fundo e borda, e a marca — que é fundo de pseudo-elemento —
+     desapareceria. O desenho nativo é confiável nesse modo; o nosso não. */
+  @media (forced-colors: active) {
+    .lm-checkbox__input {
+      appearance: auto;
+      -webkit-appearance: auto;
+    }
+
+    .lm-checkbox__input::before,
+    .lm-checkbox__input::after {
+      display: none;
+    }
+  }
+}

@@ -1,408 +1,253 @@
-import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, RefreshCw, X, Calendar, User } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
+import {
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  EmptyState,
+  Skeleton,
+  Textarea,
+  useSnackbar,
+} from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
 import { conflictsAPI } from '../services/api';
 import { usePropertyId } from '../contexts/PropertyContext';
 import { formatDateShort, formatDateTime } from '../utils/formatters';
 import './ConflictsPage.css';
 
+/**
+ * Severidade na escala de status do sistema, com RÓTULO e ÍCONE.
+ * A cor sozinha nunca diz a gravidade: para quem não a distingue, três cartões
+ * vermelhos, laranjas e azuis são apenas três cartões.
+ */
+const SEVERIDADE = {
+  critical: { rotulo: 'Crítico', papel: 'error', icone: AlertTriangle },
+  high: { rotulo: 'Alta', papel: 'warning', icone: AlertTriangle },
+  medium: { rotulo: 'Média', papel: 'info', icone: AlertTriangle },
+};
+
+const TIPO = {
+  duplicate: 'Duplicata',
+  overlap: 'Sobreposição',
+};
+
+function CartaoDeConflito({ conflict, onResolve }) {
+  const sev = SEVERIDADE[conflict.severity] || SEVERIDADE.medium;
+  const Icone = sev.icone;
+  const reservas = [conflict.booking_1, conflict.booking_2].filter(Boolean);
+
+  return (
+    <Card variant="outlined" className="cfl-card" data-papel={sev.papel} as="article">
+      <header className="cfl-card__topo">
+        <span className="cfl-card__severidade">
+          <Icone aria-hidden="true" focusable="false" />
+          {sev.rotulo}
+        </span>
+        <span className="cfl-card__tipo">
+          {TIPO[conflict.conflict_type] || conflict.conflict_type}
+        </span>
+        {conflict.overlap_nights ? (
+          <span className="cfl-card__noites">
+            {conflict.overlap_nights} noite{conflict.overlap_nights > 1 ? 's' : ''} em choque
+          </span>
+        ) : null}
+      </header>
+
+      {/* Comparação lado a lado. Em tela estreita as colunas empilham e o "vs"
+          vira uma régua horizontal — a relação continua legível. */}
+      <div className="cfl-card__comparacao">
+        {/* A posição entra na chave: num conflito de DUPLICATA as duas reservas
+            podem ser o mesmo registro, e `key={b.id}` produziria chaves iguais —
+            o React avisa e pode reaproveitar o nó errado entre renders. */}
+        {reservas.map((b, i) => (
+          <div className="cfl-reserva" key={`${b.id ?? 'sem-id'}-${i}`}>
+            <Chip
+              variant="assist"
+              className="cfl-reserva__plataforma"
+              data-plataforma={(b.platform || 'manual').toLowerCase()}
+              label={b.platform || 'Manual'}
+            />
+            <p className="cfl-reserva__hospede">{b.guest_name || 'Hóspede'}</p>
+            <p className="cfl-reserva__periodo">
+              {formatDateShort(b.check_in_date)} – {formatDateShort(b.check_out_date)}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <footer className="cfl-card__rodape">
+        <span className="cfl-card__detectado">
+          Detectado em {formatDateTime(conflict.detected_at)}
+        </span>
+        <Button variant="tonal" density="compact" onClick={onResolve}>
+          Resolver
+        </Button>
+      </footer>
+    </Card>
+  );
+}
+
 const Conflicts = () => {
   const { propertyId } = usePropertyId();
+  const { show } = useSnackbar();
   const [conflicts, setConflicts] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedConflict, setSelectedConflict] = useState(null);
-  const [resolutionNotes, setResolutionNotes] = useState('');
-  const [resolving, setResolving] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [selecionado, setSelecionado] = useState(null);
+  const [notas, setNotas] = useState('');
+  const [resolvendo, setResolvendo] = useState(false);
 
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 4000);
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const results = await Promise.allSettled([
-          conflictsAPI.getAll({ property_id: propertyId, active_only: true }),
-          conflictsAPI.getSummary(propertyId),
-        ]);
-        if (cancelled) return;
-
-        if (results[0].status === 'fulfilled') {
-          setConflicts(results[0].value.data || []);
-        }
-        if (results[1].status === 'fulfilled') {
-          setSummary(results[1].value.data || {});
-        }
-      } catch (error) {
-        if (!cancelled) console.error('Error loading conflicts:', error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadConflicts = async () => {
+  const carregar = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const results = await Promise.allSettled([
+      const [lista, resumo] = await Promise.allSettled([
         conflictsAPI.getAll({ property_id: propertyId, active_only: true }),
         conflictsAPI.getSummary(propertyId),
       ]);
-
-      if (results[0].status === 'fulfilled') {
-        setConflicts(results[0].value.data || []);
-      }
-      if (results[1].status === 'fulfilled') {
-        setSummary(results[1].value.data || {});
-      }
+      if (lista.status === 'fulfilled') setConflicts(lista.value.data || []);
+      if (resumo.status === 'fulfilled') setSummary(resumo.value.data || {});
     } catch (error) {
       console.error('Error loading conflicts:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [propertyId]);
 
-  const handleDetectConflicts = async () => {
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  const detectar = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       await conflictsAPI.detect(propertyId);
-      await loadConflicts();
+      await carregar();
+      show('Detecção concluída.');
     } catch (error) {
       console.error('Error detecting conflicts:', error);
-      showMessage('Erro ao detectar conflitos', 'error');
+      show('Falha ao detectar conflitos.', { variant: 'error' });
+      setLoading(false);
     }
   };
 
-  const handleResolve = async () => {
-    if (!selectedConflict || !resolutionNotes.trim()) {
-      showMessage('Por favor, adicione notas de resolução', 'error');
+  const resolver = async () => {
+    if (!notas.trim()) {
+      show('Descreva como o conflito foi resolvido antes de concluir.', { variant: 'error' });
       return;
     }
-
+    setResolvendo(true);
     try {
-      setResolving(true);
-      await conflictsAPI.resolve(selectedConflict.id, resolutionNotes);
-      setSelectedConflict(null);
-      setResolutionNotes('');
-      await loadConflicts();
+      await conflictsAPI.resolve(selecionado.id, notas);
+      setSelecionado(null);
+      setNotas('');
+      await carregar();
+      show('Conflito resolvido.');
     } catch (error) {
       console.error('Error resolving conflict:', error);
-      showMessage('Erro ao resolver conflito', 'error');
+      show('Falha ao resolver o conflito.', { variant: 'error' });
     } finally {
-      setResolving(false);
+      setResolvendo(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="conflicts-page">
-        <div className="loading-state">
-          <RefreshCw className="spin" size={32} />
-          <p>Carregando conflitos...</p>
-        </div>
-      </div>
-    );
-  }
+  const contagens = summary
+    ? [
+        { chave: 'critical', rotulo: 'Críticos', valor: summary.critical || 0, papel: 'error' },
+        { chave: 'high', rotulo: 'Alta', valor: summary.high || 0, papel: 'warning' },
+        { chave: 'medium', rotulo: 'Média', valor: summary.medium || 0, papel: 'info' },
+        { chave: 'duplicates', rotulo: 'Duplicatas', valor: summary.duplicates || 0, papel: 'neutral' },
+        { chave: 'overlaps', rotulo: 'Sobreposições', valor: summary.overlaps || 0, papel: 'neutral' },
+      ].filter((c) => c.valor > 0)
+    : [];
 
   return (
-    <div className="conflicts-page">
-      <div className="conflicts-header">
-        <div>
-          <h1>Conflitos de Reservas</h1>
-          <p className="subtitle">
-            Detecte e resolva sobreposições e duplicatas entre plataformas
-          </p>
-        </div>
-        <button className="btn btn-primary" onClick={handleDetectConflicts}>
-          <RefreshCw size={16} />
-          Detectar Conflitos
-        </button>
-      </div>
+    <div className="cfl">
+      <PageHeader
+        description="Sobreposições e duplicatas entre as plataformas, com o histórico de como cada uma foi tratada."
+        actions={
+          <Button icon={<RefreshCw />} loading={loading} onClick={detectar}>
+            Detectar conflitos
+          </Button>
+        }
+      />
 
-      {message && (
-        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-          <span>{message.text}</span>
+      {loading ? (
+        <div aria-busy="true" aria-label="Carregando conflitos">
+          <Skeleton variant="text" lines={5} />
         </div>
-      )}
-
-      {/* Resumo */}
-      {summary && (
-        <div className="conflicts-summary">
-          <div className={`summary-card ${summary.total > 0 ? 'has-conflicts' : ''}`}>
-            <div className="summary-icon">
-              {summary.total > 0 ? (
-                <AlertTriangle size={32} />
-              ) : (
-                <CheckCircle size={32} />
-              )}
-            </div>
-            <div className="summary-content">
-              <h2 className="summary-number">{summary.total || 0}</h2>
-              <p className="summary-label">
-                {summary.total === 1 ? 'Conflito Ativo' : 'Conflitos Ativos'}
+      ) : conflicts.length === 0 ? (
+        <EmptyState
+          icon={<ShieldCheck />}
+          title="Nenhum conflito em aberto"
+          description="Todas as reservas das plataformas estão coerentes entre si."
+          action={
+            <Button variant="outlined" icon={<RefreshCw />} onClick={detectar}>
+              Verificar novamente
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <Card variant="outlined" className="cfl-resumo" as="section">
+            <span className="cfl-resumo__icone" aria-hidden="true">
+              <AlertTriangle />
+            </span>
+            <div>
+              <p className="cfl-resumo__valor">{summary?.total ?? conflicts.length}</p>
+              <p className="cfl-resumo__rotulo">
+                {(summary?.total ?? conflicts.length) === 1
+                  ? 'conflito em aberto'
+                  : 'conflitos em aberto'}
               </p>
             </div>
-          </div>
+            <ul className="cfl-resumo__lista" role="list">
+              {contagens.map((c) => (
+                <li key={c.chave}>
+                  <span className="cfl-tag" data-papel={c.papel}>
+                    {c.valor} {c.rotulo}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
 
-          <div className="summary-breakdown">
-            <div className="breakdown-item">
-              <span className="breakdown-label">Por Tipo:</span>
-              <div className="breakdown-values">
-                <span className="badge badge-warning">
-                  {summary.duplicates || 0} Duplicata{summary.duplicates !== 1 ? 's' : ''}
-                </span>
-                <span className="badge badge-danger">
-                  {summary.overlaps || 0} Sobreposiç{summary.overlaps !== 1 ? 'ões' : 'ão'}
-                </span>
-              </div>
-            </div>
-
-            <div className="breakdown-item">
-              <span className="breakdown-label">Por Severidade:</span>
-              <div className="breakdown-values">
-                {summary.critical > 0 && (
-                  <span className="badge badge-danger">
-                    {summary.critical} Crítico{summary.critical !== 1 ? 's' : ''}
-                  </span>
-                )}
-                {summary.high > 0 && (
-                  <span className="badge badge-warning">
-                    {summary.high} Alta{summary.high !== 1 ? 's' : ''}
-                  </span>
-                )}
-                {summary.medium > 0 && (
-                  <span className="badge badge-info">
-                    {summary.medium} Média{summary.medium !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          <ul className="cfl-lista" role="list">
+            {conflicts.map((c) => (
+              <li key={c.id}>
+                <CartaoDeConflito conflict={c} onResolve={() => setSelecionado(c)} />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
-      {/* Lista de conflitos */}
-      {conflicts.length === 0 ? (
-        <div className="empty-state">
-          <CheckCircle size={64} className="success-icon" />
-          <h3>Nenhum conflito detectado!</h3>
-          <p>Todas as reservas estão sincronizadas corretamente.</p>
-          <button className="btn btn-primary" onClick={handleDetectConflicts}>
-            Verificar Novamente
-          </button>
-        </div>
-      ) : (
-        <div className="conflicts-list">
-          {conflicts.map((conflict) => (
-            <ConflictCard
-              key={conflict.id}
-              conflict={conflict}
-              onResolve={() => setSelectedConflict(conflict)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Modal de resolução */}
-      {selectedConflict && (
-        <div className="modal-overlay" onClick={() => setSelectedConflict(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Resolver Conflito</h2>
-              <button
-                className="modal-close"
-                onClick={() => setSelectedConflict(null)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <div className="conflict-details">
-                <h3>Detalhes do Conflito</h3>
-                <div className="conflict-info">
-                  <span className={`badge badge-${getSeverityColor(selectedConflict.severity)}`}>
-                    {getSeverityName(selectedConflict.severity)}
-                  </span>
-                  <span className={`badge badge-${getTypeColor(selectedConflict.conflict_type)}`}>
-                    {getTypeName(selectedConflict.conflict_type)}
-                  </span>
-                </div>
-
-                <div className="bookings-comparison">
-                  <div className="booking-card">
-                    <h4>Reserva 1 - {selectedConflict.booking_1_platform}</h4>
-                    <p><User size={14} /> {selectedConflict.booking_1_guest}</p>
-                    <p><Calendar size={14} /> {selectedConflict.booking_1_dates}</p>
-                  </div>
-
-                  <div className="versus">VS</div>
-
-                  <div className="booking-card">
-                    <h4>Reserva 2 - {selectedConflict.booking_2_platform}</h4>
-                    <p><User size={14} /> {selectedConflict.booking_2_guest}</p>
-                    <p><Calendar size={14} /> {selectedConflict.booking_2_dates}</p>
-                  </div>
-                </div>
-
-                {selectedConflict.overlap_start && (
-                  <div className="overlap-info">
-                    <p><strong>Período de Sobreposição:</strong></p>
-                    <p>
-                      {formatDateShort(selectedConflict.overlap_start)} até{' '}
-                      {formatDateShort(selectedConflict.overlap_end)}
-                    </p>
-                    <p>({selectedConflict.overlap_nights} noite{selectedConflict.overlap_nights !== 1 ? 's' : ''})</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="resolution-form">
-                <label className="label">
-                  Notas de Resolução
-                  <span className="required">*</span>
-                </label>
-                <textarea
-                  className="input"
-                  rows="4"
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Ex: Cancelada reserva do Airbnb, mantida reserva do Booking.com"
-                />
-                <small className="field-help">
-                  Descreva como o conflito foi resolvido
-                </small>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setSelectedConflict(null)}
-                disabled={resolving}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleResolve}
-                disabled={resolving || !resolutionNotes.trim()}
-              >
-                {resolving ? 'Resolvendo...' : 'Marcar como Resolvido'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={Boolean(selecionado)}
+        title="Resolver conflito"
+        description="Registre o que foi feito. A nota fica no histórico e explica a decisão a quem consultar depois."
+        onClose={resolvendo ? undefined : () => setSelecionado(null)}
+        actions={
+          <>
+            <Button variant="text" onClick={() => setSelecionado(null)} disabled={resolvendo}>
+              Cancelar
+            </Button>
+            <Button onClick={resolver} loading={resolvendo}>
+              Concluir
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Como foi resolvido"
+          required
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          help="Ex.: cancelei a reserva duplicada do Booking e avisei o hóspede."
+        />
+      </Dialog>
     </div>
   );
 };
-
-// Componente de card de conflito
-const ConflictCard = ({ conflict, onResolve }) => {
-  return (
-    <div className={`conflict-card severity-${conflict.severity}`}>
-      <div className="conflict-card-header">
-        <div className="conflict-badges">
-          <span className={`badge badge-${getSeverityColor(conflict.severity)}`}>
-            {getSeverityName(conflict.severity)}
-          </span>
-          <span className={`badge badge-${getTypeColor(conflict.conflict_type)}`}>
-            {getTypeName(conflict.conflict_type)}
-          </span>
-        </div>
-        <span className="conflict-date">
-          Detectado em {formatDateTime(conflict.detected_at)}
-        </span>
-      </div>
-
-      <div className="conflict-card-body">
-        <div className="booking-row">
-          <div className="booking-info">
-            <span className={`platform-badge platform-${conflict.booking_1_platform}`}>
-              {conflict.booking_1_platform}
-            </span>
-            <span className="guest-name">{conflict.booking_1_guest}</span>
-            <span className="dates">{conflict.booking_1_dates}</span>
-          </div>
-        </div>
-
-        <div className="conflict-vs">
-          <AlertTriangle size={16} />
-          <span>CONFLITO</span>
-        </div>
-
-        <div className="booking-row">
-          <div className="booking-info">
-            <span className={`platform-badge platform-${conflict.booking_2_platform}`}>
-              {conflict.booking_2_platform}
-            </span>
-            <span className="guest-name">{conflict.booking_2_guest}</span>
-            <span className="dates">{conflict.booking_2_dates}</span>
-          </div>
-        </div>
-
-        {conflict.overlap_nights > 0 && (
-          <div className="overlap-badge">
-            Sobreposição de {conflict.overlap_nights} noite{conflict.overlap_nights !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
-
-      <div className="conflict-card-footer">
-        <button className="btn btn-primary" onClick={onResolve}>
-          Resolver Conflito
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Utilitários
-const getSeverityColor = (severity) => {
-  const colors = {
-    critical: 'danger',
-    high: 'warning',
-    medium: 'info',
-    low: 'success',
-  };
-  return colors[severity] || 'secondary';
-};
-
-const getSeverityName = (severity) => {
-  const names = {
-    critical: 'Crítico',
-    high: 'Alta',
-    medium: 'Média',
-    low: 'Baixa',
-  };
-  return names[severity] || severity;
-};
-
-const getTypeColor = (type) => {
-  const colors = {
-    duplicate: 'warning',
-    overlap: 'danger',
-  };
-  return colors[type] || 'secondary';
-};
-
-const getTypeName = (type) => {
-  const names = {
-    duplicate: 'Duplicata',
-    overlap: 'Sobreposição',
-  };
-  return names[type] || type;
-};
-
-// formatDate e formatDateTime importados de ../utils/formatters
 
 export default Conflicts;

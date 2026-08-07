@@ -1,239 +1,130 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
-  <title>LUMINA</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <title>LUMINA</title>
+    <!--
+      Os mesmos tokens do aplicativo, gerados por scripts/design/generate_tokens.py.
+      Antes esta tela tinha paleta e tipografia próprias (Segoe UI fixa, cores soltas):
+      era a PRIMEIRA coisa que o usuário via e não se parecia com o produto.
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
+      O splash segue o tema do sistema, e não a preferência salva: ele roda antes do
+      React, num contexto que não alcança o localStorage do aplicativo. Os tokens já
+      trazem a media query de prefers-color-scheme, então isso sai de graça.
+    -->
+    <link rel="stylesheet" href="./wizard/tokens.css" />
+    <style>
+      @layer lm.wizard {
+        html,
+        body {
+          block-size: 100%;
+        }
 
-    body {
-      background: #101922;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      color: #e2e8f0;
-      user-select: none;
-      -webkit-app-region: drag;
-      position: relative;
-    }
+        body {
+          margin: 0;
+          display: grid;
+          place-items: center;
+          background-color: var(--lm-color-background);
+          color: var(--lm-color-on-surface);
+          font-family: var(--lm-font-sans);
+          user-select: none;
+          overflow: hidden;
+        }
 
-    /* ── Background ── */
-    .bg-gradient {
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 25% 20%, rgba(19, 127, 236, 0.10) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 40% at 75% 80%, rgba(14, 165, 233, 0.08) 0%, transparent 70%),
-        linear-gradient(160deg, #101922 0%, #0d1b2a 45%, #101922 100%);
-      pointer-events: none;
-    }
+        .splash {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: var(--lm-space-32);
+          inline-size: min(320px, 80vw);
+          text-align: center;
+        }
 
-    .bg-grid {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(19, 127, 236, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(19, 127, 236, 0.03) 1px, transparent 1px);
-      background-size: 64px 64px;
-      pointer-events: none;
-    }
+        .splash__marca {
+          color: var(--lm-color-primary);
+          font-size: var(--lm-type-headline-md-size);
+          line-height: var(--lm-type-headline-md-line);
+          font-weight: var(--lm-type-title-md-weight);
+          letter-spacing: 0.2em;
+          margin: 0;
+        }
 
-    /* ── Decorative orbs ── */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.15;
-      pointer-events: none;
-    }
-    .orb-1 {
-      width: 420px;
-      height: 420px;
-      background: radial-gradient(circle, #137fec, transparent 70%);
-      top: -100px;
-      left: -80px;
-      animation: orbFloat 8s ease-in-out infinite;
-    }
-    .orb-2 {
-      width: 360px;
-      height: 360px;
-      background: radial-gradient(circle, #0ea5e9, transparent 70%);
-      bottom: -80px;
-      right: -60px;
-      animation: orbFloat 10s ease-in-out infinite reverse;
-    }
+        .splash__apoio {
+          margin: var(--lm-space-8) 0 0;
+          color: var(--lm-color-on-surface-variant);
+          font-size: var(--lm-type-body-sm-size);
+          line-height: var(--lm-type-body-sm-line);
+          letter-spacing: var(--lm-type-body-sm-tracking);
+        }
 
-    /* ── Main content ── */
-    .content {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 28px;
-    }
+        .splash__estado {
+          inline-size: 100%;
+        }
 
-    /* ── Brand text ── */
-    .logo-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
+        /* Barra determinada: o processo principal escreve a largura em %.
+           Uma barra que anda diz "está acontecendo"; um giro infinito não diz
+           quanto falta, e a inicialização do backend pode levar segundos. */
+        .splash__trilha {
+          inline-size: 100%;
+          block-size: var(--lm-progress-track-height);
+          border-radius: var(--lm-radius-full);
+          background-color: var(--lm-progress-track);
+          overflow: hidden;
+        }
 
-    .app-name {
-      font-size: 3.2rem;
-      font-weight: 800;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      background: linear-gradient(135deg, #137fec 0%, #38bdf8 50%, #7dd3fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-    }
+        .splash__barra {
+          inline-size: 0%;
+          block-size: 100%;
+          border-radius: inherit;
+          background-color: var(--lm-progress-indicator);
+          transition: inline-size var(--lm-duration-emphasized) var(--lm-easing-standard);
+        }
 
-    .app-subtitle {
-      font-size: 0.72rem;
-      letter-spacing: 0.22em;
-      color: #475569;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
+        .splash__texto {
+          margin: var(--lm-space-12) 0 0;
+          color: var(--lm-color-on-surface-variant);
+          font-size: var(--lm-type-body-sm-size);
+          line-height: var(--lm-type-body-sm-line);
+          letter-spacing: var(--lm-type-body-sm-tracking);
+          /* Altura reservada: sem isto o bloco pula de altura a cada mensagem
+             nova e a barra de progresso balança junto. */
+          min-block-size: var(--lm-type-body-sm-line);
+        }
 
-    /* ── Spinner ── */
-    .spinner-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        .splash__versao {
+          position: fixed;
+          inset-block-end: var(--lm-space-16);
+          color: var(--lm-color-on-surface-disabled);
+          font-size: var(--lm-type-label-sm-size);
+          letter-spacing: var(--lm-type-label-sm-tracking);
+          font-variant-numeric: tabular-nums;
+        }
 
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 2.5px solid rgba(19, 127, 236, 0.15);
-      border-top-color: #137fec;
-      border-radius: 50%;
-      animation: spin 0.85s linear infinite;
-    }
+        @media (prefers-reduced-motion: reduce) {
+          .splash__barra {
+            transition-duration: 1ms;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- `role="status"` com aria-live: o leitor de tela anuncia cada etapa da
+         inicialização em vez de deixar o usuário diante de uma tela muda. -->
+    <div class="splash" role="status" aria-live="polite">
+      <div>
+        <h1 class="splash__marca">LUMINA</h1>
+        <p class="splash__apoio">Gestão de apartamento</p>
+      </div>
 
-    /* ── Status ── */
-    .status-area {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .status-text {
-      font-size: 0.82rem;
-      color: #475569;
-      letter-spacing: 0.06em;
-      min-height: 1.2em;
-    }
-
-    .status-dots {
-      font-size: 0.82rem;
-      color: #475569;
-      letter-spacing: 0.04em;
-      width: 18px;
-      text-align: left;
-    }
-
-    /* ── Progress bar ── */
-    .progress-track {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: rgba(19, 127, 236, 0.08);
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #137fec, #0ea5e9, #38bdf8);
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 0 2px 2px 0;
-    }
-
-    /* ── Version ── */
-    .version {
-      position: fixed;
-      bottom: 12px;
-      right: 18px;
-      font-size: 0.62rem;
-      color: #1e293b;
-      letter-spacing: 0.06em;
-      font-weight: 500;
-    }
-
-    /* ── Animations ── */
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes orbFloat {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      50%       { transform: translate(12px, -16px) scale(1.05); }
-    }
-  </style>
-</head>
-<body>
-  <!-- Fundo -->
-  <div class="bg-gradient"></div>
-  <div class="bg-grid"></div>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-
-  <!-- Conteúdo central -->
-  <div class="content">
-    <div class="logo-block">
-      <div class="app-name">LUMINA</div>
-      <div class="app-subtitle">Gestão de Apartamentos</div>
+      <div class="splash__estado">
+        <div class="splash__trilha">
+          <div class="splash__barra" id="progressBar"></div>
+        </div>
+        <p class="splash__texto" id="statusText">Iniciando…</p>
+      </div>
     </div>
 
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
-    </div>
-
-    <div class="status-area">
-      <span class="status-text" id="statusText">Iniciando sistema</span>
-      <span class="status-dots" id="dots"></span>
-    </div>
-  </div>
-
-  <!-- Barra de progresso (atualizada pelo main process via executeJavaScript) -->
-  <div class="progress-track">
-    <div class="progress-bar" id="progressBar"></div>
-  </div>
-
-  <!-- Versão (preenchida dinamicamente) -->
-  <div class="version" id="appVersion"></div>
-
-  <script>
-    // Animação dos pontinhos de loading
-    const dotsEl = document.getElementById('dots');
-    let count = 0;
-    setInterval(() => {
-      count = (count + 1) % 4;
-      dotsEl.textContent = '.'.repeat(count);
-    }, 380);
-  </script>
-</body>
+    <span class="splash__versao" id="appVersion"></span>
+  </body>
 </html>

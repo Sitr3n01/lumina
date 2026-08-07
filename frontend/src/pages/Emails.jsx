@@ -1,515 +1,369 @@
 import { useState } from 'react';
 import {
-  Mail,
   Send,
   Inbox,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  Clock,
   Zap,
-  Search
+  RefreshCw,
+  MailCheck,
+  MailX,
+  Plug,
+  CalendarCheck,
+  BellRing,
+  Users,
 } from 'lucide-react';
+import {
+  Button,
+  Card,
+  Checkbox,
+  Chip,
+  EmptyState,
+  Select,
+  Tabs,
+  TextField,
+  Textarea,
+  useSnackbar,
+} from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
 import { emailsAPI } from '../services/api';
 import { formatDateTime } from '../utils/formatters';
 import './Emails.css';
 
+/** Cartão de automação: uma tarefa, um campo, um botão. Cada bloco é
+ *  autossuficiente para que não haja dúvida sobre qual botão usa qual campo. */
+function Automacao({ icone: Icone, titulo, descricao, children, acao }) {
+  return (
+    <Card variant="outlined" className="eml-auto" as="section">
+      <header className="eml-auto__topo">
+        <span className="eml-auto__icone" aria-hidden="true">
+          <Icone />
+        </span>
+        <div>
+          <h3 className="eml-auto__titulo">{titulo}</h3>
+          <p className="eml-auto__descricao">{descricao}</p>
+        </div>
+      </header>
+      {children}
+      <div className="eml-auto__acao">{acao}</div>
+    </Card>
+  );
+}
+
 const Emails = () => {
-  const [activeTab, setActiveTab] = useState('send');
+  const { show } = useSnackbar();
+  const [aba, setAba] = useState('send');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState(null);
+  const [conexao, setConexao] = useState(null);
   const [emails, setEmails] = useState([]);
 
-  // Forms
-  const [sendForm, setSendForm] = useState({
-    to: '',
-    subject: '',
-    body: '',
-    html: false,
-  });
+  const [envio, setEnvio] = useState({ to: '', subject: '', body: '', html: false });
+  const [confirmacao, setConfirmacao] = useState('');
+  const [lembrete, setLembrete] = useState('');
+  const [lote, setLote] = useState(1);
+  const [busca, setBusca] = useState({ folder: 'INBOX', limit: 10, unread_only: false });
 
-  const [confirmationForm, setConfirmationForm] = useState({ booking_id: '' });
-  const [reminderForm, setReminderForm] = useState({ booking_id: '' });
-  const [bulkForm, setBulkForm] = useState({ days_before: 1 });
+  const comErro = (error, padrao) =>
+    show(error.response?.data?.detail || padrao, { variant: 'error' });
 
-  const [fetchForm, setFetchForm] = useState({
-    folder: 'INBOX',
-    limit: 10,
-    unread_only: false,
-  });
-
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 4000);
-  };
-
-  // === SEND EMAIL ===
-  const handleSendEmail = async () => {
-    if (!sendForm.to.trim() || !sendForm.subject.trim() || !sendForm.body.trim()) {
-      showMessage('Preencha todos os campos obrigatorios', 'error');
+  const enviar = async () => {
+    if (!envio.to || !envio.subject || !envio.body) {
+      show('Preencha destinatário, assunto e corpo.', { variant: 'error' });
       return;
     }
-
+    setSending(true);
     try {
-      setSending(true);
-      const recipients = sendForm.to.split(',').map(email => email.trim()).filter(Boolean);
-      await emailsAPI.send({
-        to: recipients,
-        subject: sendForm.subject,
-        body: sendForm.body,
-        html: sendForm.html,
-      });
-      showMessage('Email enviado com sucesso!', 'success');
-      setSendForm({ to: '', subject: '', body: '', html: false });
+      await emailsAPI.send(envio);
+      show('E-mail enviado.');
+      setEnvio({ to: '', subject: '', body: '', html: false });
     } catch (error) {
-      console.error('Error sending email:', error);
-      showMessage('Erro ao enviar email. Verifique as configuracoes SMTP.', 'error');
+      comErro(error, 'Falha ao enviar o e-mail.');
     } finally {
       setSending(false);
     }
   };
 
-  // === FETCH EMAILS ===
-  const handleFetchEmails = async () => {
+  const buscar = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await emailsAPI.fetch({
-        folder: fetchForm.folder,
-        limit: fetchForm.limit,
-        unread_only: fetchForm.unread_only,
-      });
-      setEmails(response.data?.emails || response.data || []);
-      showMessage(`${(response.data?.emails || response.data || []).length} email(s) encontrado(s)`, 'success');
+      const { data } = await emailsAPI.fetch(busca);
+      setEmails(data?.emails || data || []);
     } catch (error) {
-      console.error('Error fetching emails:', error);
-      showMessage('Erro ao buscar emails. Verifique as configuracoes IMAP.', 'error');
+      comErro(error, 'Falha ao buscar os e-mails.');
     } finally {
       setLoading(false);
     }
   };
 
-  // === AUTOMATIONS ===
-  const handleSendConfirmation = async () => {
-    if (!confirmationForm.booking_id) {
-      showMessage('Informe o ID da reserva', 'error');
-      return;
-    }
+  const disparar = async (fn, mensagem, erro) => {
+    setSending(true);
     try {
-      setSending(true);
-      await emailsAPI.sendBookingConfirmation({ booking_id: parseInt(confirmationForm.booking_id) });
-      showMessage('Confirmacao enviada com sucesso!', 'success');
-      setConfirmationForm({ booking_id: '' });
+      const r = await fn();
+      show(typeof mensagem === 'function' ? mensagem(r) : mensagem);
     } catch (error) {
-      console.error('Error sending confirmation:', error);
-      showMessage('Erro ao enviar confirmacao', 'error');
+      comErro(error, erro);
     } finally {
       setSending(false);
     }
   };
 
-  const handleSendReminder = async () => {
-    if (!reminderForm.booking_id) {
-      showMessage('Informe o ID da reserva', 'error');
-      return;
-    }
+  const testarConexao = async () => {
+    setLoading(true);
     try {
-      setSending(true);
-      await emailsAPI.sendCheckinReminder({ booking_id: parseInt(reminderForm.booking_id) });
-      showMessage('Lembrete enviado com sucesso!', 'success');
-      setReminderForm({ booking_id: '' });
+      const { data } = await emailsAPI.testConnection();
+      setConexao(data);
     } catch (error) {
-      console.error('Error sending reminder:', error);
-      showMessage('Erro ao enviar lembrete', 'error');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleSendBulkReminders = async () => {
-    try {
-      setSending(true);
-      const response = await emailsAPI.sendBulkReminders({ days_before: bulkForm.days_before });
-      const count = response.data?.sent_count || 0;
-      showMessage(`${count} lembrete(s) enviado(s) com sucesso!`, 'success');
-    } catch (error) {
-      console.error('Error sending bulk reminders:', error);
-      showMessage('Erro ao enviar lembretes em massa', 'error');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  // === TEST CONNECTION ===
-  const handleTestConnection = async () => {
-    try {
-      setLoading(true);
-      setConnectionStatus(null);
-      const response = await emailsAPI.testConnection();
-      setConnectionStatus(response.data);
-      showMessage('Teste de conexao concluido', 'success');
-    } catch (error) {
-      console.error('Error testing connection:', error);
-      setConnectionStatus({ smtp: false, imap: false, message: 'Erro ao testar conexao' });
-      showMessage('Erro ao testar conexao', 'error');
+      comErro(error, 'Falha ao testar a conexão.');
+      setConexao(null);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="emails-page">
-      <div className="emails-header">
-        <div>
-          <h1>Emails</h1>
-          <p className="subtitle">Envie confirmacoes, lembretes e gerencie comunicacoes</p>
-        </div>
-      </div>
+    <div className="eml">
+      <PageHeader description="Envio manual, caixa de entrada, automações e diagnóstico da conexão." />
 
-      {message && (
-        <div className={`message message-${message.type}`}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-          <span>{message.text}</span>
-        </div>
-      )}
-
-      <div className="tabs">
-        <button className={`tab ${activeTab === 'send' ? 'active' : ''}`} onClick={() => setActiveTab('send')}>
-          <Send size={14} />
-          Enviar Email
-        </button>
-        <button className={`tab ${activeTab === 'inbox' ? 'active' : ''}`} onClick={() => setActiveTab('inbox')}>
-          <Inbox size={14} />
-          Caixa de Entrada
-        </button>
-        <button className={`tab ${activeTab === 'automation' ? 'active' : ''}`} onClick={() => setActiveTab('automation')}>
-          <Zap size={14} />
-          Automacoes
-        </button>
-        <button className={`tab ${activeTab === 'connection' ? 'active' : ''}`} onClick={() => setActiveTab('connection')}>
-          <RefreshCw size={14} />
-          Conexao
-        </button>
-      </div>
-
-      <div className="emails-content">
-        {activeTab === 'send' && (
-          <SendTab
-            form={sendForm}
-            onChange={setSendForm}
-            onSend={handleSendEmail}
-            sending={sending}
-          />
-        )}
-        {activeTab === 'inbox' && (
-          <InboxTab
-            emails={emails}
-            fetchForm={fetchForm}
-            onFetchFormChange={setFetchForm}
-            onFetch={handleFetchEmails}
-            loading={loading}
-          />
-        )}
-        {activeTab === 'automation' && (
-          <AutomationTab
-            confirmationForm={confirmationForm}
-            reminderForm={reminderForm}
-            bulkForm={bulkForm}
-            onConfirmationChange={setConfirmationForm}
-            onReminderChange={setReminderForm}
-            onBulkChange={setBulkForm}
-            onSendConfirmation={handleSendConfirmation}
-            onSendReminder={handleSendReminder}
-            onSendBulk={handleSendBulkReminders}
-            sending={sending}
-          />
-        )}
-        {activeTab === 'connection' && (
-          <ConnectionTab
-            status={connectionStatus}
-            onTest={handleTestConnection}
-            loading={loading}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-// === TAB: ENVIAR EMAIL ===
-const SendTab = ({ form, onChange, onSend, sending }) => {
-  const handleChange = (field, value) => {
-    onChange(prev => ({ ...prev, [field]: value }));
-  };
-
-  return (
-    <div className="email-form">
-      <div className="form-field">
-        <label className="label">Para *</label>
-        <input
-          type="text"
-          className="input"
-          value={form.to}
-          onChange={(e) => handleChange('to', e.target.value)}
-          placeholder="email@exemplo.com (separe multiplos com virgula)"
-        />
-      </div>
-      <div className="form-field">
-        <label className="label">Assunto *</label>
-        <input
-          type="text"
-          className="input"
-          value={form.subject}
-          onChange={(e) => handleChange('subject', e.target.value)}
-          placeholder="Assunto do email"
-        />
-      </div>
-      <div className="form-field">
-        <label className="label">Corpo *</label>
-        <textarea
-          className="textarea"
-          rows="8"
-          value={form.body}
-          onChange={(e) => handleChange('body', e.target.value)}
-          placeholder="Conteudo do email..."
-        />
-      </div>
-      <div className="form-field checkbox-field">
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={form.html}
-            onChange={(e) => handleChange('html', e.target.checked)}
-          />
-          <span>Enviar como HTML</span>
-        </label>
-      </div>
-      <div className="form-actions">
-        <button className="btn btn-primary" onClick={onSend} disabled={sending}>
-          <Send size={16} />
-          {sending ? 'Enviando...' : 'Enviar Email'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// === TAB: CAIXA DE ENTRADA ===
-const InboxTab = ({ emails, fetchForm, onFetchFormChange, onFetch, loading }) => {
-  const handleChange = (field, value) => {
-    onFetchFormChange(prev => ({ ...prev, [field]: value }));
-  };
-
-  return (
-    <div className="inbox-section">
-      <div className="inbox-filters">
-        <div className="filter-group">
-          <label className="label">Pasta</label>
-          <select
-            className="select"
-            value={fetchForm.folder}
-            onChange={(e) => handleChange('folder', e.target.value)}
-          >
-            <option value="INBOX">Caixa de Entrada</option>
-            <option value="SENT">Enviados</option>
-            <option value="DRAFTS">Rascunhos</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label className="label">Limite</label>
-          <input
-            type="number"
-            className="input filter-input"
-            value={fetchForm.limit}
-            onChange={(e) => handleChange('limit', parseInt(e.target.value) || 10)}
-            min="1"
-            max="50"
-          />
-        </div>
-        <div className="filter-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={fetchForm.unread_only}
-              onChange={(e) => handleChange('unread_only', e.target.checked)}
+      <Tabs
+        ariaLabel="Seções de e-mail"
+        value={aba}
+        onChange={setAba}
+        tabs={[
+          { key: 'send', label: 'Enviar', icon: <Send /> },
+          { key: 'inbox', label: 'Caixa de entrada', icon: <Inbox /> },
+          { key: 'automation', label: 'Automações', icon: <Zap /> },
+          { key: 'connection', label: 'Conexão', icon: <Plug /> },
+        ]}
+      >
+        {aba === 'send' ? (
+          <div className="eml-form">
+            <TextField
+              label="Para"
+              type="email"
+              required
+              value={envio.to}
+              onChange={(e) => setEnvio((p) => ({ ...p, to: e.target.value }))}
+              placeholder="hospede@exemplo.com"
             />
-            <span>Somente nao lidos</span>
-          </label>
-        </div>
-        <button className="btn btn-primary" onClick={onFetch} disabled={loading}>
-          <Search size={16} />
-          {loading ? 'Buscando...' : 'Buscar Emails'}
-        </button>
-      </div>
-
-      {emails.length === 0 ? (
-        <div className="empty-state">
-          <Inbox size={48} />
-          <h3>Nenhum email encontrado</h3>
-          <p>Clique em "Buscar Emails" para carregar a caixa de entrada.</p>
-        </div>
-      ) : (
-        <div className="email-list">
-          {emails.map((email, index) => (
-            <div key={index} className={`email-card ${email.unread ? 'unread' : ''}`}>
-              <div className="email-card-header">
-                <div className="email-sender">
-                  <Mail size={14} />
-                  <span>{email.from || email.sender || 'Desconhecido'}</span>
-                </div>
-                <span className="email-date">{email.date ? formatDateTime(email.date) : ''}</span>
-              </div>
-              <p className="email-subject">{email.subject || '(Sem assunto)'}</p>
-              {email.body_preview && (
-                <p className="email-preview">{email.body_preview}</p>
-              )}
+            <TextField
+              label="Assunto"
+              required
+              value={envio.subject}
+              onChange={(e) => setEnvio((p) => ({ ...p, subject: e.target.value }))}
+            />
+            <Textarea
+              label="Mensagem"
+              required
+              rows={8}
+              value={envio.body}
+              onChange={(e) => setEnvio((p) => ({ ...p, body: e.target.value }))}
+            />
+            <Checkbox
+              checked={envio.html}
+              onChange={(e) => setEnvio((p) => ({ ...p, html: e.target.checked }))}
+              description="Marque se o corpo já contém marcação HTML."
+            >
+              Enviar como HTML
+            </Checkbox>
+            <div className="eml-form__acao">
+              <Button icon={<Send />} loading={sending} onClick={enviar}>
+                Enviar
+              </Button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// === TAB: AUTOMACOES ===
-const AutomationTab = ({
-  confirmationForm, reminderForm, bulkForm,
-  onConfirmationChange, onReminderChange, onBulkChange,
-  onSendConfirmation, onSendReminder, onSendBulk,
-  sending
-}) => {
-  return (
-    <div className="automation-grid">
-      <div className="automation-card">
-        <h3 className="automation-title">
-          <CheckCircle size={20} />
-          Confirmacao de Reserva
-        </h3>
-        <p className="automation-description">
-          Envia um email de confirmacao com os detalhes da reserva para o hospede.
-        </p>
-        <div className="form-field">
-          <label className="label">ID da Reserva</label>
-          <input
-            type="number"
-            className="input"
-            value={confirmationForm.booking_id}
-            onChange={(e) => onConfirmationChange({ booking_id: e.target.value })}
-            placeholder="Ex: 1, 2, 3..."
-          />
-        </div>
-        <button className="btn btn-primary" onClick={onSendConfirmation} disabled={sending}>
-          <Send size={16} />
-          Enviar Confirmacao
-        </button>
-      </div>
-
-      <div className="automation-card">
-        <h3 className="automation-title">
-          <Clock size={20} />
-          Lembrete de Check-in
-        </h3>
-        <p className="automation-description">
-          Envia um lembrete automatico com informacoes de check-in para o hospede.
-        </p>
-        <div className="form-field">
-          <label className="label">ID da Reserva</label>
-          <input
-            type="number"
-            className="input"
-            value={reminderForm.booking_id}
-            onChange={(e) => onReminderChange({ booking_id: e.target.value })}
-            placeholder="Ex: 1, 2, 3..."
-          />
-        </div>
-        <button className="btn btn-primary" onClick={onSendReminder} disabled={sending}>
-          <Send size={16} />
-          Enviar Lembrete
-        </button>
-      </div>
-
-      <div className="automation-card">
-        <h3 className="automation-title">
-          <Zap size={20} />
-          Lembretes em Massa
-        </h3>
-        <p className="automation-description">
-          Envia lembretes automaticos para todos os hospedes com check-in proximo.
-        </p>
-        <div className="form-field">
-          <label className="label">Dias antes do check-in</label>
-          <input
-            type="number"
-            className="input"
-            value={bulkForm.days_before}
-            onChange={(e) => onBulkChange({ days_before: parseInt(e.target.value) || 1 })}
-            min="1"
-            max="7"
-          />
-          <small className="field-help">
-            Enviar para reservas com check-in nos proximos X dias
-          </small>
-        </div>
-        <button className="btn btn-primary" onClick={onSendBulk} disabled={sending}>
-          <Zap size={16} />
-          Enviar Lembretes
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// === TAB: CONEXAO ===
-const ConnectionTab = ({ status, onTest, loading }) => {
-  return (
-    <div className="connection-section">
-      <div className="connection-info">
-        <p>
-          Teste a conexao SMTP (envio) e IMAP (recebimento) para verificar se as
-          configuracoes de email estao corretas.
-        </p>
-      </div>
-
-      <button className="btn btn-primary" onClick={onTest} disabled={loading}>
-        <RefreshCw size={16} className={loading ? 'spin' : ''} />
-        {loading ? 'Testando...' : 'Testar Conexao'}
-      </button>
-
-      {status && (
-        <div className="connection-grid">
-          <div className={`connection-card ${status.smtp ? 'success' : 'error'}`}>
-            <div className="connection-icon">
-              {status.smtp ? <CheckCircle size={36} /> : <XCircle size={36} />}
-            </div>
-            <h3>SMTP (Envio)</h3>
-            <p className="connection-status-text">
-              {status.smtp ? 'Conectado' : 'Falha na conexao'}
-            </p>
           </div>
+        ) : null}
 
-          <div className={`connection-card ${status.imap ? 'success' : 'error'}`}>
-            <div className="connection-icon">
-              {status.imap ? <CheckCircle size={36} /> : <XCircle size={36} />}
+        {aba === 'inbox' ? (
+          <div className="eml-inbox">
+            <div className="eml-inbox__filtros">
+              <Select
+                label="Pasta"
+                density="compact"
+                value={busca.folder}
+                onChange={(e) => setBusca((p) => ({ ...p, folder: e.target.value }))}
+              >
+                <option value="INBOX">Caixa de entrada</option>
+                <option value="Sent">Enviados</option>
+              </Select>
+              <TextField
+                label="Quantidade"
+                type="number"
+                density="compact"
+                value={busca.limit}
+                onChange={(e) => setBusca((p) => ({ ...p, limit: Number(e.target.value) }))}
+              />
+              <Checkbox
+                checked={busca.unread_only}
+                onChange={(e) => setBusca((p) => ({ ...p, unread_only: e.target.checked }))}
+              >
+                Só não lidos
+              </Checkbox>
+              <Button variant="outlined" icon={<RefreshCw />} loading={loading} onClick={buscar}>
+                Buscar
+              </Button>
             </div>
-            <h3>IMAP (Recebimento)</h3>
-            <p className="connection-status-text">
-              {status.imap ? 'Conectado' : 'Falha na conexao'}
-            </p>
-          </div>
-        </div>
-      )}
 
-      {status?.message && (
-        <div className="connection-message">
-          <p>{status.message}</p>
-        </div>
-      )}
+            {emails.length === 0 ? (
+              <EmptyState
+                icon={<Inbox />}
+                title="Nada carregado ainda"
+                description="Busque na caixa de entrada para ver as mensagens recebidas."
+                action={
+                  <Button icon={<RefreshCw />} loading={loading} onClick={buscar}>
+                    Buscar agora
+                  </Button>
+                }
+              />
+            ) : (
+              <ul className="eml-lista" role="list">
+                {emails.map((e, i) => (
+                  <li key={e.id ?? i}>
+                    <Card variant="outlined" className="eml-item" data-nao-lido={e.unread || undefined}>
+                      <div className="eml-item__topo">
+                        <span className="eml-item__remetente">{e.sender || e.from}</span>
+                        <span className="eml-item__data">{formatDateTime(e.date)}</span>
+                      </div>
+                      <p className="eml-item__assunto">{e.subject}</p>
+                      {e.body_preview ? <p className="eml-item__previa">{e.body_preview}</p> : null}
+                      {/* Não lido por selo textual, não só pelo peso da fonte. */}
+                      {e.unread ? <span className="eml-item__novo">Não lido</span> : null}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
+
+        {aba === 'automation' ? (
+          <div className="eml-automacoes">
+            <Automacao
+              icone={CalendarCheck}
+              titulo="Confirmação de reserva"
+              descricao="Envia ao hóspede a confirmação com as datas e as instruções de chegada."
+              acao={
+                <Button
+                  loading={sending}
+                  onClick={() =>
+                    disparar(
+                      () =>
+                        emailsAPI.sendBookingConfirmation({
+                          booking_id: parseInt(confirmacao, 10),
+                        }),
+                      'Confirmação enviada.',
+                      'Falha ao enviar a confirmação.',
+                    )
+                  }
+                >
+                  Enviar confirmação
+                </Button>
+              }
+            >
+              <TextField
+                label="Identificador da reserva"
+                value={confirmacao}
+                onChange={(e) => setConfirmacao(e.target.value)}
+                placeholder="Ex.: 12"
+              />
+            </Automacao>
+
+            <Automacao
+              icone={BellRing}
+              titulo="Lembrete de check-in"
+              descricao="Lembra o hóspede da chegada e reenvia as instruções do condomínio."
+              acao={
+                <Button
+                  loading={sending}
+                  onClick={() =>
+                    disparar(
+                      () => emailsAPI.sendCheckinReminder({ booking_id: parseInt(lembrete, 10) }),
+                      'Lembrete enviado.',
+                      'Falha ao enviar o lembrete.',
+                    )
+                  }
+                >
+                  Enviar lembrete
+                </Button>
+              }
+            >
+              <TextField
+                label="Identificador da reserva"
+                value={lembrete}
+                onChange={(e) => setLembrete(e.target.value)}
+                placeholder="Ex.: 12"
+              />
+            </Automacao>
+
+            <Automacao
+              icone={Users}
+              titulo="Lembretes em lote"
+              descricao="Dispara o lembrete para todas as reservas que chegam no prazo escolhido."
+              acao={
+                <Button
+                  loading={sending}
+                  onClick={() =>
+                    disparar(
+                      () => emailsAPI.sendBulkReminders({ days_before: lote }),
+                      (r) => `${r?.data?.sent ?? 0} lembretes enviados.`,
+                      'Falha ao enviar os lembretes.',
+                    )
+                  }
+                >
+                  Disparar lote
+                </Button>
+              }
+            >
+              <TextField
+                label="Dias antes da chegada"
+                type="number"
+                value={lote}
+                onChange={(e) => setLote(Number(e.target.value))}
+                help="1 envia para quem chega amanhã."
+              />
+            </Automacao>
+          </div>
+        ) : null}
+
+        {aba === 'connection' ? (
+          <div className="eml-conexao">
+            <p className="eml-conexao__nota">
+              Verifica se o LUMINA consegue enviar (SMTP) e ler (IMAP) com as credenciais
+              cadastradas no assistente de instalação.
+            </p>
+
+            <Button variant="outlined" icon={<Plug />} loading={loading} onClick={testarConexao}>
+              Testar conexão
+            </Button>
+
+            {conexao ? (
+              <ul className="eml-conexao__lista" role="list">
+                {[
+                  { chave: 'smtp', rotulo: 'Envio (SMTP)', ok: conexao.smtp ?? conexao.success },
+                  { chave: 'imap', rotulo: 'Leitura (IMAP)', ok: conexao.imap ?? conexao.success },
+                ].map((c) => (
+                  <li key={c.chave}>
+                    <Card variant="outlined" className="eml-status" data-ok={c.ok || undefined}>
+                      <span className="eml-status__icone" aria-hidden="true">
+                        {c.ok ? <MailCheck /> : <MailX />}
+                      </span>
+                      <div>
+                        <p className="eml-status__rotulo">{c.rotulo}</p>
+                        {/* O texto diz o estado; a cor apenas reforça. */}
+                        <p className="eml-status__valor">{c.ok ? 'Funcionando' : 'Com falha'}</p>
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {conexao?.message ? (
+              <Chip variant="assist" label={conexao.message} className="eml-conexao__mensagem" />
+            ) : null}
+          </div>
+        ) : null}
+      </Tabs>
     </div>
   );
 };
-
-// formatDate → usando formatDateTime de ../utils/formatters
 
 export default Emails;

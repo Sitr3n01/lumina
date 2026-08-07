@@ -1,0 +1,249 @@
+@layer lm.components {
+  .lm-data-table {
+    display: flex;
+    flex-direction: column;
+    /* Um item de flex/grid tem `min-block-size: auto` e se recusa a encolher
+       abaixo do conteúdo. Sem este zero, um pai de altura limitada não consegue
+       apertar o rolador e o cabeçalho grudento nunca chega a grudar. */
+    min-block-size: 0;
+  }
+
+  /* `--lm-table-row-height` é declarado em :root já resolvendo `--lm-density-row`
+     lá — custom property substitui no elemento que a declara. Sem redeclarar,
+     `data-density` neste nó não alcançaria a altura da linha. Só redeclaramos
+     quando o atributo existe, para que uma folha de página continue podendo
+     sobrescrever `--lm-table-row-height` diretamente. */
+  .lm-data-table[data-density] {
+    --lm-table-row-height: var(--lm-density-row);
+  }
+
+  /* --- Região rolável ------------------------------------------------------ */
+
+  .lm-data-table__scroller {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+    /* Chegando ao fim da rolagem horizontal, o gesto não vaza para o histórico
+       de navegação da janela do Electron. */
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--lm-table-divider);
+    border-radius: var(--lm-radius-md);
+    background-color: var(--lm-color-surface);
+  }
+
+  .lm-data-table__table {
+    inline-size: 100%;
+    /* `collapse` faz o Chromium perder as bordas das células grudentas ao
+       rolar; com `separate` a régua vira box-shadow e continua desenhada.
+       `position: relative` dá à legenda absoluta um bloco contêiner que não
+       acompanha a rolagem. */
+    position: relative;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* --- Legenda e região viva ------------------------------------------------
+     Recorte em vez de `display: none`: o nó precisa continuar na árvore de
+     acessibilidade, senão a tabela perde o nome e o anúncio nunca sai. */
+
+  .lm-data-table__caption[data-hidden],
+  .lm-data-table__announcer {
+    position: absolute;
+    inline-size: var(--lm-space-2);
+    block-size: var(--lm-space-2);
+    padding: var(--lm-space-0);
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lm-data-table__caption {
+    padding-block-end: var(--lm-space-8);
+    padding-inline: var(--lm-space-16);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+    text-align: start;
+  }
+
+  /* --- Cabeçalho ----------------------------------------------------------- */
+
+  .lm-data-table__header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--lm-z-sticky);
+    block-size: var(--lm-table-header-height);
+    padding: var(--lm-space-0);
+    /* Opaco por obrigação: as linhas passam por baixo ao rolar. */
+    background-color: var(--lm-color-surface-container-low);
+    color: var(--lm-table-header-label);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    text-align: start;
+    /* Régua inferior por sombra: uma borda em célula grudente descola do resto
+       da linha durante a rolagem. */
+    box-shadow: inset 0 -1px 0 var(--lm-table-divider);
+  }
+
+  .lm-data-table__header-label,
+  .lm-data-table__sort {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-4);
+    inline-size: 100%;
+    block-size: var(--lm-table-header-height);
+    padding-inline: var(--lm-space-16);
+  }
+
+  /* Rótulo de coluna não quebra: quebrado em uma palavra por linha ele deixa de
+     ser lido como cabeçalho. Se não couber, o contêiner rola. */
+  .lm-data-table__header-label,
+  .lm-data-table__header-text {
+    white-space: nowrap;
+  }
+
+  .lm-data-table__header-label[data-align='center'],
+  .lm-data-table__sort[data-align='center'] {
+    justify-content: center;
+  }
+
+  .lm-data-table__header-label[data-align='end'],
+  .lm-data-table__sort[data-align='end'] {
+    justify-content: flex-end;
+  }
+
+  /* --- Ordenação ------------------------------------------------------------
+     Um <button> dentro do <th>: o cabeçalho precisa ser um alvo real de foco e
+     de clique, e `aria-sort` fica no <th>, que é quem a tabela expõe. */
+
+  .lm-data-table__sort {
+    --_container: transparent;
+    --_content: var(--lm-table-header-label);
+
+    border: none;
+    background-color: var(--_container);
+    color: var(--_content);
+    /* Herdado do <th>, que já declara o quarteto tipográfico: repetir aqui
+       abriria a porta para os dois divergirem. */
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-data-table__sort:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-data-table__sort:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-pressed) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-data-table__sort:disabled {
+    color: var(--lm-color-on-surface-disabled);
+    cursor: not-allowed;
+  }
+
+  /* Exceção prevista no README §5: o anel externo do primeiro e do último
+     cabeçalho seria cortado pelo `overflow` do rolador. O par com
+     `:focus-visible` é obrigatório — `outline: none` sozinho é proibido. */
+  .lm-data-table__sort:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 var(--lm-focus-ring-width) var(--lm-focus-ring-color);
+  }
+
+  .lm-data-table__sort-icon {
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+    transition: transform var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* Coluna ordenável ainda não ordenada: o ícone existe para dizer "isto é
+     ordenável", então fica em traço de baixa ênfase e não compete com o rótulo. */
+  .lm-data-table__sort-icon[data-direction='none'] {
+    color: var(--lm-color-outline);
+  }
+
+  .lm-data-table__sort-icon[data-direction='descending'] {
+    transform: rotate(0.5turn);
+  }
+
+  /* --- Linhas e células ----------------------------------------------------- */
+
+  .lm-data-table__row {
+    --_container: transparent;
+    --_content: var(--lm-table-row-hover);
+  }
+
+  /* Linha de espera ou de estado vazio não responde ao ponteiro: sugeriria um
+     alvo que não existe. */
+  .lm-data-table__row:not([data-placeholder]):hover {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-data-table__cell {
+    block-size: var(--lm-table-row-height);
+    padding-inline: var(--lm-space-16);
+    border-block-end: 1px solid var(--lm-table-divider);
+    color: var(--lm-table-cell-text);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  /* A última régua duplicaria a borda do contêiner. */
+  .lm-data-table__row:last-child .lm-data-table__cell {
+    border-block-end: none;
+  }
+
+  .lm-data-table__cell[data-align='center'] {
+    text-align: center;
+  }
+
+  /* Número alinhado à direita com dígito de largura fixa: sem `tabular-nums` as
+     casas decimais desalinham entre linhas e a coluna parece dançar. */
+  .lm-data-table__cell[data-align='end'] {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Estados de dados ------------------------------------------------------ */
+
+  /* O placeholder ocupa a largura da célula sem que a DataTable precise conhecer
+     a API interna do Skeleton. */
+  .lm-data-table__row[data-placeholder='loading'] .lm-data-table__cell > * {
+    inline-size: 100%;
+  }
+
+  .lm-data-table__row[data-placeholder='empty'] .lm-data-table__cell {
+    block-size: auto;
+    padding-block: var(--lm-space-32);
+    border-block-end: none;
+  }
+}

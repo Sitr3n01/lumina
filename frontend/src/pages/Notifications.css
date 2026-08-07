@@ -1,361 +1,204 @@
-/* ========== NOTIFICATIONS PAGE - Bento Grid + Dark Glassmorphism ========== */
+@layer lm.overrides {
+  /* Esta era a última ilha de glassmorphism do produto: três intensidades de
+     `backdrop-filter` (10px, 8px, 6px) num aplicativo que já era plano em todas
+     as outras telas. Saíram todas — desfoque não é hierarquia. */
 
-.notifications-page {
-  padding: 32px;
-  max-width: 1400px;
-}
-
-.notifications-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
-}
-
-.notifications-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
-/* ========== BENTO GRID - Summary Cards ========== */
-
-.notifications-page .bento-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-/* Override glass-card for notification summary cards */
-.notifications-page .glass-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.notifications-page .glass-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  border-radius: 12px 12px 0 0;
-  opacity: 0.8;
-}
-
-.notifications-page .glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.glass-card-unread::before { background: var(--primary); }
-.glass-card-today::before { background: var(--success); }
-.glass-card-conflicts::before { background: var(--danger); }
-.glass-card-total::before { background: var(--secondary); }
-
-.glass-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-
-.glass-card-unread .glass-card-icon {
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
-}
-
-.glass-card-today .glass-card-icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--success);
-}
-
-.glass-card-conflicts .glass-card-icon {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--danger);
-}
-
-.glass-card-total .glass-card-icon {
-  background: rgba(100, 116, 139, 0.15);
-  color: var(--secondary);
-}
-
-.glass-card-value {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--text-main);
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.glass-card-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-/* ========== TYPE BREAKDOWN - Bento Mini Cards ========== */
-
-.type-breakdown {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 28px;
-}
-
-.type-chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--glass-1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: var(--border-glass);
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
-  transition: all 0.2s;
-}
-
-.type-chip:hover {
-  background: var(--glass-2);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-}
-
-.type-chip-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.type-chip-count {
-  margin-left: auto;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* Type colors */
-.type-new_booking .type-chip-dot,
-.type-booking_update .type-chip-dot { background: #6366f1; }
-.type-booking_cancel .type-chip-dot { background: #f59e0b; }
-.type-conflict .type-chip-dot { background: #ef4444; }
-.type-sync .type-chip-dot { background: #10b981; }
-.type-document .type-chip-dot { background: #8b5cf6; }
-.type-email .type-chip-dot { background: #06b6d4; }
-.type-system .type-chip-dot { background: #64748b; }
-
-/* ========== FILTER TABS ========== */
-
-.notification-filters {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.filter-tab {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: var(--border-glass);
-  background: var(--glass-1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.filter-tab:hover {
-  border-color: rgba(99, 102, 241, 0.3);
-  color: var(--primary);
-  background: var(--glass-2);
-}
-
-.filter-tab.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-/* ========== NOTIFICATION FEED ========== */
-
-.notification-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.notification-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 18px 20px;
-  background: var(--glass-1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: var(--border-glass);
-  border-left: 4px solid transparent;
-  border-radius: 14px;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.notification-card:hover {
-  background: var(--glass-2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transform: translateX(2px);
-}
-
-.notification-card.unread {
-  background: rgba(99, 102, 241, 0.04);
-  border-left-width: 4px;
-}
-
-.notification-card.unread .notification-title {
-  font-weight: 700;
-}
-
-/* Border colors by type */
-.notification-card.type-new_booking.unread,
-.notification-card.type-booking_update.unread { border-left-color: #6366f1; }
-.notification-card.type-booking_cancel.unread { border-left-color: #f59e0b; }
-.notification-card.type-conflict.unread { border-left-color: #ef4444; }
-.notification-card.type-sync.unread { border-left-color: #10b981; }
-.notification-card.type-document.unread { border-left-color: #8b5cf6; }
-.notification-card.type-email.unread { border-left-color: #06b6d4; }
-.notification-card.type-system.unread { border-left-color: #64748b; }
-
-.notification-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.notification-icon.type-new_booking,
-.notification-icon.type-booking_update { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
-.notification-icon.type-booking_cancel { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.notification-icon.type-conflict { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.notification-icon.type-sync { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.notification-icon.type-document { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
-.notification-icon.type-email { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
-.notification-icon.type-system { background: rgba(100, 116, 139, 0.15); color: #64748b; }
-
-.notification-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.notification-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.notification-message {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.5;
-  white-space: pre-line;
-}
-
-.notification-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.notification-time {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.notification-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.notification-badge.unread {
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
-}
-
-.notification-badge.read {
-  background: rgba(100, 116, 139, 0.1);
-  color: var(--text-muted);
-}
-
-/* Unread dot */
-.unread-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-  flex-shrink: 0;
-  margin-top: 6px;
-}
-
-/* ========== LOAD MORE ========== */
-
-.load-more-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-/* ========== RESPONSIVE ========== */
-
-@media (max-width: 1024px) {
-  .notifications-page .bento-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .notifications-page {
-    padding: 20px;
-  }
-
-  .notifications-page .bento-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .notifications-header {
+  .ntf {
+    display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--lm-space-16);
   }
 
-  .notification-card {
-    padding: 14px;
+  /* --- Resumo --- */
+
+  .ntf-resumo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--lm-space-12);
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
 
-  .notification-filters {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 4px;
+  .ntf-resumo__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-2);
+    padding: var(--lm-space-16);
+    border-inline-start: var(--lm-space-4) solid var(--lm-color-outline-variant);
+  }
+
+  .ntf-resumo__valor {
+    font-size: var(--lm-type-headline-sm-size);
+    line-height: var(--lm-type-headline-sm-line);
+    font-weight: var(--lm-type-headline-sm-weight);
+    letter-spacing: var(--lm-type-headline-sm-tracking);
+    color: var(--lm-color-on-surface);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ntf-resumo__rotulo {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  /* Um único ponto de verdade para o papel de cor, consumido pelo resumo, pelo
+     ícone do item e pelo filete. Antes eram três listas de sete hexadecimais. */
+  .ntf-resumo__item[data-papel='error'] {
+    border-inline-start-color: var(--lm-color-error);
+  }
+  .ntf-resumo__item[data-papel='success'] {
+    border-inline-start-color: var(--lm-color-success);
+  }
+  .ntf-resumo__item[data-papel='warning'] {
+    border-inline-start-color: var(--lm-color-warning);
+  }
+
+  /* --- Lista --- */
+
+  .ntf-lista {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-8);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ntf-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--lm-space-12);
+    inline-size: 100%;
+    padding: var(--lm-space-16);
+    border: 1px solid var(--lm-color-outline-variant);
+    border-inline-start-width: var(--lm-space-4);
+    border-radius: var(--lm-card-radius);
+    background-color: var(--lm-color-surface-container-low);
+    text-align: start;
+    cursor: pointer;
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      border-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .ntf-item:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      var(--lm-color-surface-container-low)
+    );
+  }
+
+  .ntf-item[data-papel='error'] {
+    border-inline-start-color: var(--lm-color-error);
+  }
+  .ntf-item[data-papel='warning'] {
+    border-inline-start-color: var(--lm-color-warning);
+  }
+  .ntf-item[data-papel='success'] {
+    border-inline-start-color: var(--lm-color-success);
+  }
+  .ntf-item[data-papel='info'] {
+    border-inline-start-color: var(--lm-color-info);
+  }
+  .ntf-item[data-papel='tertiary'] {
+    border-inline-start-color: var(--lm-color-tertiary);
+  }
+
+  /* Não lida: superfície mais alta E o selo textual "Nova". Dois sinais, porque
+     um deles é cor. */
+  .ntf-item[data-nao-lida] {
+    background-color: var(--lm-color-surface-container-high);
+  }
+
+  .ntf-item__icone {
+    display: grid;
+    place-items: center;
+    inline-size: var(--lm-space-40);
+    block-size: var(--lm-space-40);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-surface-container-high);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .ntf-item[data-nao-lida] .ntf-item__icone {
+    background-color: var(--lm-color-surface-container-highest);
+  }
+
+  .ntf-item__icone > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .ntf-item__corpo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-2);
+    min-inline-size: 0;
+  }
+
+  .ntf-item__titulo {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-title-sm-size);
+    line-height: var(--lm-type-title-sm-line);
+    font-weight: var(--lm-type-title-sm-weight);
+    letter-spacing: var(--lm-type-title-sm-tracking);
+  }
+
+  .ntf-item__texto {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  .ntf-item__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-4);
+    margin-block-start: var(--lm-space-2);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+  }
+
+  .ntf-item__tipo {
+    text-transform: uppercase;
+    font-weight: var(--lm-type-label-sm-weight);
+  }
+
+  .ntf-item__novo {
+    flex-shrink: 0;
+    padding: var(--lm-space-2) var(--lm-space-8);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-primary-container);
+    color: var(--lm-color-on-primary-container);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-transform: uppercase;
+  }
+
+  .ntf-mais {
+    display: flex;
+    justify-content: center;
+    padding-block: var(--lm-space-8);
+  }
+
+  @media (max-width: 599px) {
+    .ntf-item {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .ntf-item__novo {
+      grid-column: 2;
+      justify-self: start;
+    }
   }
 }

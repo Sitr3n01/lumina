@@ -1,0 +1,181 @@
+@layer lm.components {
+  .lm-chip {
+    /* Mesmo mecanismo do Button. O par é declarado no contêiner e HERDADO pelos
+       botões internos do chip removível — por isso a camada de estado de cada
+       alvo interno sai do mesmo cálculo, sem repetir token. */
+    --_container: transparent;
+    --_content: var(--lm-chip-label);
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    block-size: var(--lm-chip-height);
+    padding-inline: var(--lm-chip-padding-inline);
+    border: none;
+    border-radius: var(--lm-chip-radius);
+    background-color: var(--_container);
+    color: var(--_content);
+    /* A borda é o único limite do controle: 3:1 obrigatório (WCAG 1.4.11), e é
+       por isso que `--lm-chip-border` aponta para `outline-interactive`. */
+    box-shadow: inset 0 0 0 1px var(--lm-chip-border);
+    font-family: inherit;
+    font-size: var(--lm-type-label-md-size);
+    line-height: var(--lm-type-label-md-line);
+    font-weight: var(--lm-type-label-md-weight);
+    letter-spacing: var(--lm-type-label-md-tracking);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      box-shadow var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* O contêiner do chip removível não é clicável — quem clica são os dois botões
+     internos. Sem isto o cursor prometeria um alvo que não existe na moldura. */
+  .lm-chip[data-removable] {
+    cursor: default;
+    /* Aqui o vão separa DOIS alvos, não um ícone de um rótulo: é o que impede a
+       área estendida do botão de remover de encostar na do botão do chip. */
+    gap: var(--lm-target-min-gap);
+    /* O recuo final encolhe porque o alvo estendido do botão de remover já ocupa
+       esse espaço; manter 12px daria um chip visualmente desequilibrado. */
+    padding-inline-end: var(--lm-space-4);
+  }
+
+  /* --- Seleção -------------------------------------------------------------
+     Dois canais, como exige a especificação: contêiner tonal + ícone de check.
+     A borda PERMANECE — o preenchimento tonal sobre a superfície não garante
+     3:1 sozinho, e o chip ficaria sem limite legível no tema claro. */
+
+  .lm-chip[data-selected] {
+    --_container: var(--lm-chip-selected-bg);
+    --_content: var(--lm-chip-selected-label);
+  }
+
+  /* --- Estados -------------------------------------------------------------
+     A camada de hover cobre o alvo, não a moldura: no chip removível ela pinta
+     só a metade em que o ponteiro está, o que é justamente o sinal de que ali
+     existem dois alvos distintos. */
+
+  .lm-chip:not([data-removable]):hover:not(:disabled),
+  .lm-chip__action:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-chip:not([data-removable]):active:not(:disabled),
+  .lm-chip__action:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-pressed) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-chip:disabled,
+  .lm-chip[data-disabled] {
+    --_container: transparent;
+    --_content: var(--lm-color-on-surface-disabled);
+    box-shadow: inset 0 0 0 1px var(--lm-color-outline-variant);
+    cursor: not-allowed;
+  }
+
+  .lm-chip[data-disabled] .lm-chip__action,
+  .lm-chip[data-disabled] .lm-chip__remove {
+    cursor: not-allowed;
+  }
+
+  /* --- Partes -------------------------------------------------------------- */
+
+  .lm-chip__label {
+    /* Rótulo longo encolhe com reticências em vez de esticar o chip para fora da
+       linha de filtros — WCAG 1.4.10 a 320px depende disso. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lm-chip__icon,
+  .lm-chip__check {
+    display: inline-flex;
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  .lm-chip__icon > svg {
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  /* Botão do rótulo no chip removível: herda tudo do contêiner e ocupa a altura
+     inteira, para que a camada de estado cubra o alvo real e não uma faixa. */
+  .lm-chip__action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    block-size: 100%;
+    padding: var(--lm-space-0);
+    border: none;
+    border-radius: var(--lm-chip-radius);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-chip__remove {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+    padding: var(--lm-space-0);
+    border: none;
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* O desenho de 16px reprovaria o alvo mínimo de 24x24 (WCAG 2.5.8). O inset
+     negativo estende só a área sensível; `padding` aqui empurraria o X para fora
+     do centro e alargaria o chip. */
+  .lm-chip__remove::after {
+    content: '';
+    position: absolute;
+    inset: calc((var(--lm-icon-sm) - var(--lm-target-min-size)) / 2);
+    border-radius: inherit;
+  }
+
+  .lm-chip__remove > svg {
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  .lm-chip__remove:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-chip__remove:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+}

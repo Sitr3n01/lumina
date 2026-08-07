@@ -1,0 +1,207 @@
+@layer lm.components {
+  .lm-button {
+    /* Cada variante declara só este par; todo o resto — repouso, hover, pressed,
+       desabilitado — deriva dele. É o mecanismo único de camada de estado. */
+    --_container: transparent;
+    --_content: var(--lm-color-primary);
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lm-button-gap);
+    block-size: var(--lm-button-height);
+    padding-inline: var(--lm-button-padding-inline);
+    border: none;
+    border-radius: var(--lm-button-radius);
+    background-color: var(--_container);
+    color: var(--_content);
+    font-family: inherit;
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+
+    /* Propriedades nomeadas, nunca `all`: `all` anima também largura e altura,
+       o que força layout a cada quadro e faz o botão tremer ao trocar de rótulo. */
+    transition:
+      background-color var(--lm-duration-fast) var(--lm-easing-standard),
+      border-color var(--lm-duration-fast) var(--lm-easing-standard),
+      box-shadow var(--lm-duration-standard) var(--lm-easing-standard);
+  }
+
+  /* --- Variantes --------------------------------------------------------- */
+
+  .lm-button[data-variant='filled'] {
+    --_container: var(--lm-button-filled-bg);
+    --_content: var(--lm-button-filled-label);
+  }
+
+  .lm-button[data-variant='tonal'] {
+    --_container: var(--lm-button-tonal-bg);
+    --_content: var(--lm-button-tonal-label);
+  }
+
+  .lm-button[data-variant='elevated'] {
+    --_container: var(--lm-button-elevated-bg);
+    --_content: var(--lm-color-primary);
+    box-shadow: var(--lm-button-elevated-shadow);
+  }
+
+  .lm-button[data-variant='destructive'] {
+    --_container: var(--lm-button-destructive-bg);
+    --_content: var(--lm-button-destructive-label);
+  }
+
+  .lm-button[data-variant='outlined'] {
+    --_container: transparent;
+    --_content: var(--lm-button-outlined-label);
+    /* A borda é a única fronteira do controle, então precisa de 3:1 —
+       WCAG 1.4.11. `outline-interactive` existe exatamente por isso;
+       `outline-variant`, usado para régua decorativa, dá 1,62:1 e reprovaria. */
+    box-shadow: inset 0 0 0 1px var(--lm-color-outline-interactive);
+  }
+
+  .lm-button[data-variant='text'] {
+    --_container: transparent;
+    --_content: var(--lm-button-text-label);
+    /* Sem container pintado, a área clicável fica menor que o alvo aparente. */
+    padding-inline: var(--lm-space-12);
+  }
+
+  /* --- Estados ------------------------------------------------------------
+     `color-mix` com um `--_container` transparente devolve a cor de conteúdo
+     com alfa parcial — que é exatamente o hover correto de um botão de texto.
+     O mesmo cálculo serve às seis variantes sem nenhum caso especial. */
+
+  .lm-button:hover:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-button:active:not(:disabled) {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-pressed) * 100%),
+      var(--_container)
+    );
+  }
+
+  .lm-button[data-variant='elevated']:hover:not(:disabled) {
+    box-shadow: var(--lm-elevation-2);
+  }
+
+  .lm-button[data-variant='elevated']:active:not(:disabled) {
+    box-shadow: var(--lm-elevation-1);
+  }
+
+  .lm-button:disabled {
+    /* Texto desabilitado por token e não por opacidade: `opacity: 0.38` sobre a
+       superfície dava 2,34:1. O token vale 3,48:1 no claro e 3,91:1 no escuro. */
+    --_container: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-disabled-container) * 100%),
+      transparent
+    );
+    --_content: var(--lm-color-on-surface-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .lm-button[data-variant='text']:disabled,
+  .lm-button[data-variant='outlined']:disabled {
+    --_container: transparent;
+  }
+
+  .lm-button[data-variant='outlined']:disabled {
+    box-shadow: inset 0 0 0 1px var(--lm-color-outline-variant);
+  }
+
+  /* --- Partes -------------------------------------------------------------- */
+
+  .lm-button__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .lm-button__icon > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  /* Ícone à frente do rótulo pede menos recuo desse lado, senão o conjunto
+     parece deslocado para a direita dentro do botão. */
+  .lm-button:has(.lm-button__icon:first-child) {
+    padding-inline-start: var(--lm-space-16);
+  }
+
+  .lm-button:has(.lm-button__icon--trailing) {
+    padding-inline-end: var(--lm-space-16);
+  }
+
+  .lm-button__label {
+    /* Rótulo longo em tela estreita encolhe com reticências em vez de esticar o
+       botão para fora do contêiner — WCAG 1.4.10 a 320px depende disso. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lm-button[data-full-width] {
+    display: flex;
+    inline-size: 100%;
+  }
+
+  /* --- Carregando ---------------------------------------------------------- */
+
+  .lm-button[data-loading] .lm-button__label,
+  .lm-button[data-loading] .lm-button__icon {
+    visibility: hidden;
+  }
+
+  .lm-button__spinner {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+    margin-block-start: calc(var(--lm-icon-md) / -2);
+    margin-inline-start: calc(var(--lm-icon-md) / -2);
+    border: var(--lm-progress-circular-stroke) solid
+      color-mix(in oklab, var(--_content) 24%, transparent);
+    border-block-start-color: var(--_content);
+    border-radius: var(--lm-radius-full);
+    animation: lm-button-spin var(--lm-duration-complex) linear infinite;
+  }
+
+  @keyframes lm-button-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  /* Sem movimento, um giro parado não comunica nada: o indicador passa a pulsar
+     de opacidade, que `prefers-reduced-motion` permite e ainda diz "ocupado". */
+  @media (prefers-reduced-motion: reduce) {
+    .lm-button__spinner {
+      animation: lm-button-pulse var(--lm-duration-complex) ease-in-out infinite alternate;
+      border-block-start-color: var(--_content);
+    }
+
+    @keyframes lm-button-pulse {
+      from {
+        opacity: 0.4;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  }
+}

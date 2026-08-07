@@ -1,891 +1,482 @@
-import { useState, useEffect } from 'react';
-import { Save, RefreshCw, CheckCircle, AlertCircle, Eye, EyeOff, Bot, Zap, Monitor, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Save,
+  Bot,
+  Zap,
+  Monitor,
+  Lock,
+  Unlock,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Sun,
+  Moon,
+  Rows3,
+  CheckCircle,
+} from 'lucide-react';
+import {
+  Button,
+  Card,
+  Checkbox,
+  ConfirmDialog,
+  IconButton,
+  Select,
+  Skeleton,
+  Switch,
+  Tabs,
+  TextField,
+  useSnackbar,
+} from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
+import { useAppearance, THEMES, DENSITIES } from '../contexts/AppearanceContext';
 import { settingsAPI, aiAPI } from '../services/api';
 import './Settings.css';
 
+/** Seção de formulário. `<fieldset>`/`<legend>` e não `<div>`+`<h3>`: é a legenda
+ *  que o leitor de tela repete antes de cada campo do grupo. */
+function Secao({ titulo, descricao, children }) {
+  return (
+    <fieldset className="set-secao">
+      <legend className="set-secao__titulo">{titulo}</legend>
+      {descricao ? <p className="set-secao__descricao">{descricao}</p> : null}
+      <div className="set-grade">{children}</div>
+    </fieldset>
+  );
+}
+
+const MODELO_PADRAO = {
+  openai: 'gpt-4o-mini',
+  compatible: 'llama3',
+  anthropic: 'claude-3-5-haiku-latest',
+};
+
+const AJUDA_DA_CHAVE = {
+  anthropic: 'Obtenha em console.anthropic.com',
+  openai: 'Obtenha em platform.openai.com',
+  compatible: 'Chave do provedor compatível. Para Ollama local, qualquer valor serve.',
+};
+
+const AJUDA_DO_MODELO = {
+  anthropic: 'Ex.: claude-3-5-haiku-latest, claude-3-5-sonnet-latest',
+  openai: 'Ex.: gpt-4o-mini, gpt-4o',
+  compatible: 'Ex.: llama3, gemma3:4b, mistral',
+};
+
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('easy');
+  const { show } = useSnackbar();
+  const { theme, setTheme, density, setDensity } = useAppearance();
+  const [aba, setAba] = useState('easy');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState(null);
   const [autoLaunch, setAutoLaunch] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [mostrarChave, setMostrarChave] = useState(false);
+  const [testando, setTestando] = useState(false);
+  const [confirmarReset, setConfirmarReset] = useState(false);
   const [rememberLogin, setRememberLogin] = useState(
-    localStorage.getItem('lumina_remember_login') !== 'false'
+    localStorage.getItem('lumina_remember_login') !== 'false',
   );
 
   const [settings, setSettings] = useState({
-    // Dados do imovel (carregados do servidor)
-    propertyName: '',
-    propertyAddress: '',
-    maxGuests: 6,
-    condoName: '',
-    condoAdminName: '',
-    condoEmail: '',
-
-    // Proprietario (carregados do servidor)
-    ownerName: '',
-    ownerEmail: '',
-    ownerPhone: '',
-    ownerApto: '',
-    ownerBloco: '',
-    ownerGaragem: '',
-
-    // URLs iCal
-    airbnbIcalUrl: '',
-    bookingIcalUrl: '',
-
-    // Sincronizacao
+    propertyName: '', propertyAddress: '', maxGuests: 6,
+    condoName: '', condoAdminName: '', condoEmail: '', condoLogoUrl: '',
+    ownerName: '', ownerEmail: '', ownerPhone: '',
+    ownerApto: '', ownerBloco: '', ownerGaragem: '',
+    airbnbIcalUrl: '', bookingIcalUrl: '',
     syncIntervalMinutes: 30,
-
-    // Telegram
-    telegramBotToken: '',
-    telegramAdminUserIds: '',
-
-    // Email (read-only — configurado no assistente de instalação)
-    emailProvider: '',
-    emailFrom: '',
-    emailPasswordSet: false,
-    emailSmtpHost: '',
-    emailSmtpPort: 587,
-    emailImapHost: '',
-    emailImapPort: 993,
-
-    // Features
-    enableAutoDocumentGeneration: false,
-    enableConflictNotifications: true,
-
-    // AI Settings
-    aiProvider: 'anthropic',
-    aiApiKey: '',
-    aiModel: '',
-    aiBaseUrl: '',
-    aiApiKeySet: false,
-
-    // Document / branding
-    condoLogoUrl: '',
+    telegramBotToken: '', telegramAdminUserIds: '',
+    emailProvider: '', emailFrom: '', emailPasswordSet: false,
+    emailSmtpHost: '', emailSmtpPort: 587, emailImapHost: '', emailImapPort: 993,
+    enableAutoDocumentGeneration: false, enableConflictNotifications: true,
+    aiProvider: 'anthropic', aiApiKey: '', aiModel: '', aiBaseUrl: '', aiApiKeySet: false,
   });
 
-  // Carregar estado do auto-launch via Electron IPC
   useEffect(() => {
-    if (window.electronAPI?.getAutoLaunch) {
-      window.electronAPI.getAutoLaunch().then(setAutoLaunch).catch(() => {});
-    }
+    window.electronAPI?.getAutoLaunch?.().then(setAutoLaunch).catch(() => {});
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const response = await settingsAPI.getAll();
-        if (cancelled) return;
-        const data = response.data;
-
-        setSettings(prev => ({
-          ...prev,
-          propertyName: data.propertyName || prev.propertyName,
-          propertyAddress: data.propertyAddress || prev.propertyAddress,
-          maxGuests: data.maxGuests ?? prev.maxGuests,
-          condoName: data.condoName || prev.condoName,
-          condoAdminName: data.condoAdminName || prev.condoAdminName,
-          condoEmail: data.condoEmail || prev.condoEmail,
-          // iCal (read-only, do .env)
-          airbnbIcalUrl: data.airbnbIcalUrl || prev.airbnbIcalUrl,
-          bookingIcalUrl: data.bookingIcalUrl || prev.bookingIcalUrl,
-          // Email (read-only, do .env)
-          emailProvider: data.emailProvider || prev.emailProvider,
-          emailFrom: data.emailFrom || prev.emailFrom,
-          emailPasswordSet: data.emailPasswordSet ?? prev.emailPasswordSet,
-          // Telegram (read-only, do .env)
-          telegramBotToken: data.telegramBotToken || prev.telegramBotToken,
-          ownerName: data.ownerName || prev.ownerName,
-          ownerEmail: data.ownerEmail || prev.ownerEmail,
-          ownerPhone: data.ownerPhone || prev.ownerPhone,
-          ownerApto: data.ownerApto || prev.ownerApto,
-          ownerBloco: data.ownerBloco || prev.ownerBloco,
-          ownerGaragem: data.ownerGaragem || prev.ownerGaragem,
-          syncIntervalMinutes: data.syncIntervalMinutes || prev.syncIntervalMinutes,
-          enableAutoDocumentGeneration: data.enableAutoDocumentGeneration ?? prev.enableAutoDocumentGeneration,
-          enableConflictNotifications: data.enableConflictNotifications ?? prev.enableConflictNotifications,
-          aiProvider: data.aiProvider || prev.aiProvider,
-          aiApiKeySet: data.aiApiKeySet ?? prev.aiApiKeySet,
-          aiModel: data.aiModel || prev.aiModel,
-          aiBaseUrl: data.aiBaseUrl || prev.aiBaseUrl,
-          condoLogoUrl: data.condoLogoUrl ?? prev.condoLogoUrl,
-        }));
-      } catch (error) {
-        if (!cancelled) {
+    let cancelado = false;
+    settingsAPI
+      .getAll()
+      .then(({ data }) => {
+        if (cancelado) return;
+        // Só sobrescreve o que veio: um campo ausente na resposta não pode
+        // apagar o valor local do formulário.
+        setSettings((prev) => {
+          const proximo = { ...prev };
+          for (const [chave, valor] of Object.entries(data)) {
+            if (chave in prev && valor !== null && valor !== undefined) proximo[chave] = valor;
+          }
+          return proximo;
+        });
+      })
+      .catch((error) => {
+        if (!cancelado) {
           console.error('Error loading settings:', error);
-          showMessage('Erro ao carregar configuracoes', 'error');
+          show('Falha ao carregar as configurações.', { variant: 'error' });
         }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!cancelado) setLoading(false);
+      });
+    return () => {
+      cancelado = true;
     };
-    load();
-    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleHardReset = async () => {
-    const msg =
-      'ATENÇÃO: Hard Reset vai apagar TODAS as configurações editadas ' +
-      '(incluindo chaves de IA configuradas pela interface) e reverter para os dados de fábrica.\n\n' +
-      'O aplicativo será reiniciado e voltará à tela do wizard de configuração inicial.\n\n' +
-      'Esta ação não pode ser desfeita. Deseja continuar?';
-    let confirmed;
-    if (window.electronAPI?.showConfirmDialog) {
-      confirmed = await window.electronAPI.showConfirmDialog({
-        title: 'Hard Reset — Reverter para Fábrica',
-        message: msg,
-        buttons: ['Cancelar', 'Sim, Resetar Tudo'],
-        defaultId: 0,
-        cancelId: 0,
-      });
-    } else {
-      confirmed = window.confirm(msg);
+  const mudar = (campo) => (e) => {
+    const valor = e?.target ? e.target.value : e;
+    setSettings((prev) => ({ ...prev, [campo]: valor }));
+  };
+
+  const alternar = (campo) => (e) => {
+    setSettings((prev) => ({ ...prev, [campo]: e.target.checked }));
+  };
+
+  const salvar = async () => {
+    setSaving(true);
+    try {
+      await settingsAPI.update(settings);
+      show('Configurações salvas.');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      show('Falha ao salvar as configurações.', { variant: 'error' });
+    } finally {
+      setSaving(false);
     }
-    if (!confirmed) return;
+  };
+
+  const resetar = async () => {
     try {
       await settingsAPI.reset();
       if (window.electronAPI?.factoryReset) {
-        // Electron: remove .env do userData e relança o app → wizard abre automaticamente
         await window.electronAPI.factoryReset();
-        // Código abaixo não é executado (app já foi encerrado)
       } else {
-        // Web mode: limpar tokens e redirecionar para login
         localStorage.removeItem('lumina_token');
         sessionStorage.removeItem('lumina_token');
         window.dispatchEvent(new Event('auth:logout'));
       }
     } catch (err) {
       console.error('Hard reset failed:', err);
-      showMessage('Erro ao resetar configurações.', 'error');
+      show('Falha ao reverter as configurações.', { variant: 'error' });
+      setConfirmarReset(false);
     }
   };
 
-  const handleSave = async () => {
+  const testarIA = async () => {
+    if (!settings.aiApiKey) {
+      show('Informe a chave de API antes de testar.', { variant: 'error' });
+      return;
+    }
+    setTestando(true);
     try {
-      setSaving(true);
-      await settingsAPI.update(settings);
-      showMessage('Configuracoes salvas com sucesso!', 'success');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      showMessage('Erro ao salvar configuracoes', 'error');
+      const { data } = await aiAPI.testConnection({
+        provider: settings.aiProvider,
+        api_key: settings.aiApiKey,
+        model: settings.aiModel || MODELO_PADRAO[settings.aiProvider],
+        base_url: settings.aiBaseUrl || null,
+      });
+      show(data.message, { variant: data.success ? 'success' : 'error' });
+    } catch {
+      show('Falha ao testar a conexão.', { variant: 'error' });
     } finally {
-      setSaving(false);
+      setTestando(false);
     }
   };
 
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 3000);
+  const trocarAutoLaunch = async (e) => {
+    const ligado = e.target.checked;
+    setAutoLaunch(ligado);
+    await window.electronAPI?.setAutoLaunch?.(ligado);
   };
 
-  const handleChange = (field, value) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleAutoLaunchChange = async (enabled) => {
-    setAutoLaunch(enabled);
-    if (window.electronAPI?.setAutoLaunch) {
-      await window.electronAPI.setAutoLaunch(enabled);
-    }
-  };
-
-  const handleRememberLoginChange = (enabled) => {
-    setRememberLogin(enabled);
-    localStorage.setItem('lumina_remember_login', enabled ? 'true' : 'false');
-  };
+  const noElectron = Boolean(window.electronAPI);
+  const bloqueado = !editMode;
 
   if (loading) {
     return (
-      <div className="settings-page">
-        <div className="loading-state">
-          <RefreshCw className="spin" size={32} />
-          <p>Carregando configuracoes...</p>
-        </div>
+      <div className="set">
+        <Skeleton variant="text" lines={8} />
       </div>
     );
   }
 
   return (
-    <div className="settings-page">
-      <div className="settings-header">
-        <h1>Configuracoes</h1>
-        <p className="subtitle">Configure todos os parametros do sistema aqui</p>
-      </div>
-
-      {message && (
-        <div className={`message message-${message.type}`}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-          <span>{message.text}</span>
-        </div>
-      )}
-
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'easy' ? 'active' : ''}`}
-          onClick={() => setActiveTab('easy')}
-        >
-          Configuracao Facil
-        </button>
-        <button
-          className={`tab ${activeTab === 'advanced' ? 'active' : ''}`}
-          onClick={() => setActiveTab('advanced')}
-        >
-          Configuracao Avancada
-        </button>
-        <button
-          className={`tab ${activeTab === 'ai' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-          style={activeTab === 'ai' ? { color: '#8b5cf6', borderBottomColor: '#8b5cf6' } : {}}
-        >
-          <Bot size={14} style={{ display: 'inline', marginRight: 5 }} />
-          Inteligencia Artificial
-        </button>
-      </div>
-
-      <div className="settings-content">
-        {activeTab === 'easy' ? (
-          <EasySettings settings={settings} onChange={handleChange} editMode={editMode} />
-        ) : activeTab === 'ai' ? (
-          <AISettings settings={settings} onChange={handleChange} showMessage={showMessage} />
-        ) : (
-          <AdvancedSettings
-            settings={settings}
-            onChange={handleChange}
-            autoLaunch={autoLaunch}
-            onAutoLaunchChange={handleAutoLaunchChange}
-            rememberLogin={rememberLogin}
-            onRememberLoginChange={handleRememberLoginChange}
-          />
-        )}
-      </div>
-
-      <div className="settings-actions">
-        <button
-          className="btn"
-          onClick={handleHardReset}
-          disabled={saving}
-          title="Hard Reset — Apaga todas as configurações editadas e retorna ao wizard"
-          style={{ background: '#e53e3e', color: '#fff', border: 'none' }}
-        >
-          <AlertTriangle size={16} />
-          Hard Reset
-        </button>
-        <button
-          className={`btn ${editMode ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setEditMode(v => !v)}
-          title={editMode ? 'Desativar edição de campos críticos' : 'Editar campos do wizard'}
-        >
-          {editMode ? <><Unlock size={16} /> Edição Ativa</> : <><Lock size={16} /> Editar Dados</>}
-        </button>
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          <Save size={16} />
-          {saving ? 'Salvando...' : 'Salvar Configuracoes'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ========== ABA FACIL ==========
-const EasySettings = ({ settings, onChange, editMode }) => {
-  return (
-    <div className="settings-section">
-
-      {/* Banner de aviso do modo de edição */}
-      {editMode && (
-        <div className="message message-warning" style={{ marginBottom: 16 }}>
-          <AlertTriangle size={16} />
-          <span>
-            Modo de edição ativo — alterações nos campos do wizard serão salvas no banco de dados
-            e terão precedência sobre os valores originais do wizard.
-          </span>
-        </div>
-      )}
-
-      <div className="section-group">
-        <h3 className="section-title">Dados do Imovel</h3>
-        <p className="section-description">
-          Informacoes basicas sobre o apartamento
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Nome do Imovel</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.propertyName}
-              readOnly={!editMode}
-              onChange={(e) => onChange('propertyName', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Endereco Completo</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.propertyAddress}
-              readOnly={!editMode}
-              onChange={(e) => onChange('propertyAddress', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Maximo de Hospedes</label>
-            <input
-              type="number"
-              className="input"
-              value={settings.maxGuests}
-              onChange={(e) => onChange('maxGuests', parseInt(e.target.value))}
-              min="1"
-              max="20"
-            />
-          </div>
-        </div>
-
-        {!editMode && (
-          <div className="info-box">
-            <p>Nome e endereço do imóvel são configurados durante a instalação. Ative o <strong>Modo de Edição</strong> para alterá-los.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Dados do Condominio</h3>
-        <p className="section-description">
-          Informacoes para geracao de documentos de autorizacao
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Nome do Condominio</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.condoName}
-              readOnly={!editMode}
-              onChange={(e) => onChange('condoName', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Nome da Administracao</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.condoAdminName}
-              readOnly={!editMode}
-              onChange={(e) => onChange('condoAdminName', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">URL do Logo (opcional)</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.condoLogoUrl}
-              onChange={(e) => onChange('condoLogoUrl', e.target.value)}
-              placeholder="https://exemplo.com/logo.png  ou  data:image/png;base64,..."
-            />
-            <small className="field-help">
-              URL pública ou imagem base64 — exibida no cabeçalho da Autorização de Hospedagem
-            </small>
-          </div>
-
-          <div className="form-field">
-            <label className="label">Email do Condominio</label>
-            <input
-              type="email"
-              className="input"
-              value={settings.condoEmail}
-              onChange={(e) => onChange('condoEmail', e.target.value)}
-              placeholder="condominio@exemplo.com"
-            />
-            <small className="field-help">
-              Email para envio automatico de autorizacoes de hospedagem
-            </small>
-          </div>
-        </div>
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Dados do Proprietario</h3>
-        <p className="section-description">
-          {editMode
-            ? 'Modo de edição ativo — os campos abaixo podem ser alterados'
-            : 'Informacoes do proprietario (ative o Modo de Edição para alterar)'}
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Nome Completo</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.ownerName}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerName', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Email</label>
-            <input
-              type="email"
-              className="input"
-              value={settings.ownerEmail}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerEmail', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Telefone</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.ownerPhone}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerPhone', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Apartamento</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.ownerApto}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerApto', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Bloco</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.ownerBloco}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerBloco', e.target.value)}
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Garagem</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.ownerGaragem}
-              readOnly={!editMode}
-              onChange={(e) => onChange('ownerGaragem', e.target.value)}
-            />
-          </div>
-        </div>
-
-        {!editMode && (
-          <div className="info-box">
-            <p><strong>Nota:</strong> Os dados do proprietario sao configurados no wizard e utilizados nos documentos de autorizacao. Ative o <strong>Modo de Edição</strong> para alterá-los.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Conexao com Plataformas</h3>
-        <p className="section-description">
-          URLs de sincronizacao do calendario (iCal)
-        </p>
-
-        <div className="info-box">
-          <p><strong>Como obter as URLs:</strong></p>
-          <ul>
-            <li><strong>Airbnb:</strong> Va em Calendario &rarr; Disponibilidade &rarr; Exportar calendario</li>
-            <li><strong>Booking:</strong> Va em Calendario &rarr; Sincronizacao &rarr; Link de exportacao iCal</li>
-          </ul>
-        </div>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">URL iCal do Airbnb</label>
-            <input
-              type="url"
-              className="input"
-              value={settings.airbnbIcalUrl}
-              readOnly
-              placeholder="Configurado durante a instalação"
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">URL iCal do Booking.com</label>
-            <input
-              type="url"
-              className="input"
-              value={settings.bookingIcalUrl}
-              readOnly
-              placeholder="Configurado durante a instalação"
-            />
-          </div>
-        </div>
-
-        <div className="info-box">
-          <p>As URLs iCal são configuradas durante a instalação e usadas pelo sistema de sincronização. Para alterá-las, reconfigure o aplicativo.</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ========== ABA AVANCADA ==========
-const AdvancedSettings = ({ settings, onChange, autoLaunch, onAutoLaunchChange, rememberLogin, onRememberLoginChange }) => {
-  const isElectron = Boolean(window.electronAPI);
-
-  return (
-    <div className="settings-section">
-
-      {/* Seção Sistema — apenas no Electron */}
-      {isElectron && (
-        <div className="section-group">
-          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Monitor size={16} />
-            Sistema
-          </h3>
-          <p className="section-description">
-            Preferências do aplicativo desktop
-          </p>
-
-          <div className="form-grid">
-            <div className="form-field checkbox-field">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={autoLaunch}
-                  onChange={(e) => onAutoLaunchChange(e.target.checked)}
-                />
-                <span>Iniciar com o Windows</span>
-              </label>
-              <small className="field-help">
-                Abre o LUMINA automaticamente quando o Windows inicializa
-              </small>
-            </div>
-
-            <div className="form-field checkbox-field">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberLogin}
-                  onChange={(e) => onRememberLoginChange(e.target.checked)}
-                />
-                <span>Manter sessão ativa entre reinicializações</span>
-              </label>
-              <small className="field-help">
-                Mantém o login salvo ao fechar e reabrir o aplicativo. Desative para exigir login a cada abertura.
-              </small>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="section-group">
-        <h3 className="section-title">Sincronizacao</h3>
-        <p className="section-description">
-          Controle de frequencia de atualizacao dos calendarios
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Intervalo de Sincronizacao (minutos)</label>
-            <input
-              type="number"
-              className="input"
-              value={settings.syncIntervalMinutes}
-              onChange={(e) => onChange('syncIntervalMinutes', parseInt(e.target.value))}
-              min="5"
-              max="1440"
-            />
-            <small className="field-help">
-              Frequencia de atualizacao automatica (recomendado: 30 minutos)
-            </small>
-          </div>
-        </div>
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Telegram Bot</h3>
-        <p className="section-description">
-          Configuracoes de Telegram definidas durante a instalacao (somente leitura)
-        </p>
-
-        <div className="info-box">
-          <p>
-            <strong>Configurado na instalação.</strong> Para alterar o token ou IDs de administrador,
-            reconfigure o aplicativo pelo assistente de instalação.
-          </p>
-        </div>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Token do Bot (mascarado)</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.telegramBotToken}
-              readOnly
-              placeholder="Não configurado"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Configuracoes de Email</h3>
-        <p className="section-description">
-          Configuracoes de email definidas durante a instalacao (somente leitura)
-        </p>
-
-        <div className="info-box">
-          <p>
-            <strong>Configurado na instalação.</strong> Para alterar provedor, credenciais ou configurações
-            SMTP, reconfigure o aplicativo pelo assistente de instalação.
-            {settings.emailPasswordSet && (
-              <span style={{ marginLeft: 8, color: 'var(--success)', fontWeight: 500 }}>
-                ✓ Senha configurada
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Provedor de Email</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.emailProvider}
-              readOnly
-              placeholder="Não configurado"
-            />
-          </div>
-
-          <div className="form-field">
-            <label className="label">Email de Envio</label>
-            <input
-              type="email"
-              className="input"
-              value={settings.emailFrom}
-              readOnly
-              placeholder="Não configurado"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="section-group">
-        <h3 className="section-title">Funcionalidades</h3>
-        <p className="section-description">
-          Ative ou desative recursos do sistema
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field checkbox-field">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.enableConflictNotifications}
-                onChange={(e) => onChange('enableConflictNotifications', e.target.checked)}
-              />
-              <span>Notificacoes de Conflitos</span>
-            </label>
-            <small className="field-help">
-              Enviar alertas quando conflitos de reserva forem detectados
-            </small>
-          </div>
-
-          <div className="form-field checkbox-field">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.enableAutoDocumentGeneration}
-                onChange={(e) => onChange('enableAutoDocumentGeneration', e.target.checked)}
-              />
-              <span>Geracao Automatica de Documentos</span>
-            </label>
-            <small className="field-help">
-              Gerar automaticamente documentos de autorizacao do condominio
-            </small>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  );
-};
-
-// ========== ABA IA ==========
-const AI_PURPLE = '#8b5cf6';
-
-const AISettings = ({ settings, onChange, showMessage }) => {
-  const [showKey, setShowKey] = useState(false);
-  const [testing, setTesting] = useState(false);
-
-  const handleTest = async () => {
-    if (!settings.aiApiKey) {
-      showMessage('Informe a API Key antes de testar', 'error');
-      return;
-    }
-    setTesting(true);
-    try {
-      const res = await aiAPI.testConnection({
-        provider: settings.aiProvider,
-        api_key: settings.aiApiKey,
-        model: settings.aiModel || getDefaultModel(settings.aiProvider),
-        base_url: settings.aiBaseUrl || null,
-      });
-      const result = res.data;
-      showMessage(result.success ? `Conexao OK: ${result.message}` : result.message, result.success ? 'success' : 'error');
-    } catch {
-      showMessage('Erro ao testar conexao', 'error');
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const getDefaultModel = (provider) => {
-    if (provider === 'openai') return 'gpt-4o-mini';
-    if (provider === 'compatible') return 'llama3';
-    return 'claude-3-5-haiku-latest';
-  };
-
-  return (
-    <div className="settings-section">
-      <div className="section-group">
-        <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bot size={18} style={{ color: AI_PURPLE }} />
-          Configurar Assistente de IA
-        </h3>
-        <p className="section-description">
-          Configure o provider e credenciais para o assistente LUMINA AI.
-          Suporta Claude (Anthropic), GPT (OpenAI) e qualquer provider compativel com API OpenAI.
-        </p>
-
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="label">Provider de IA</label>
-            <select
-              className="select"
-              value={settings.aiProvider}
-              onChange={(e) => onChange('aiProvider', e.target.value)}
-              style={{ width: '100%' }}
+    <div className="set">
+      <PageHeader
+        description="Dados do imóvel, integrações e preferências. Os campos ficam travados até você liberar a edição."
+        actions={
+          <>
+            <Button
+              variant="outlined"
+              icon={editMode ? <Unlock /> : <Lock />}
+              onClick={() => setEditMode((v) => !v)}
             >
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="openai">OpenAI (GPT)</option>
-              <option value="compatible">Compativel (Ollama, Groq, LM Studio...)</option>
-            </select>
-          </div>
+              {editMode ? 'Edição liberada' : 'Liberar edição'}
+            </Button>
+            <Button icon={<Save />} loading={saving} disabled={bloqueado} onClick={salvar}>
+              Salvar
+            </Button>
+          </>
+        }
+      />
 
-          <div className="form-field">
-            <label className="label">
-              API Key
-              {settings.aiApiKeySet && (
-                <span style={{ marginLeft: 8, fontSize: 11, color: '#22c55e', fontWeight: 400 }}>
-                  (configurada no servidor)
-                </span>
-              )}
-            </label>
-            <div style={{ position: 'relative', display: 'flex' }}>
-              <input
-                type={showKey ? 'text' : 'password'}
-                className="input"
-                value={settings.aiApiKey}
-                onChange={(e) => onChange('aiApiKey', e.target.value)}
-                placeholder={settings.aiApiKeySet ? '••••••••••••••••••••' : 'sk-ant-... ou sk-...'}
-                style={{ flex: 1, paddingRight: 40 }}
+      <Tabs
+        ariaLabel="Seções das configurações"
+        value={aba}
+        onChange={setAba}
+        tabs={[
+          { key: 'easy', label: 'Essencial' },
+          { key: 'advanced', label: 'Avançado' },
+          { key: 'ai', label: 'Inteligência artificial', icon: <Bot /> },
+          { key: 'appearance', label: 'Aparência', icon: <Sun /> },
+        ]}
+      >
+        {aba === 'easy' ? (
+          <div className="set-conteudo">
+            {bloqueado ? (
+              <Card variant="filled" className="set-aviso">
+                <Lock aria-hidden="true" focusable="false" />
+                <p>
+                  Os campos estão em somente leitura. Use <strong>Liberar edição</strong> acima
+                  para alterá-los.
+                </p>
+              </Card>
+            ) : null}
+
+            <Secao titulo="Imóvel">
+              <TextField label="Nome do imóvel" value={settings.propertyName} onChange={mudar('propertyName')} disabled={bloqueado} />
+              <TextField label="Endereço completo" value={settings.propertyAddress} onChange={mudar('propertyAddress')} disabled={bloqueado} />
+              <TextField label="Máximo de hóspedes" type="number" value={settings.maxGuests} onChange={mudar('maxGuests')} disabled={bloqueado} />
+            </Secao>
+
+            <Secao titulo="Condomínio">
+              <TextField label="Nome do condomínio" value={settings.condoName} onChange={mudar('condoName')} disabled={bloqueado} />
+              <TextField label="Nome da administração" value={settings.condoAdminName} onChange={mudar('condoAdminName')} disabled={bloqueado} />
+              <TextField label="E-mail do condomínio" type="email" value={settings.condoEmail} onChange={mudar('condoEmail')} disabled={bloqueado} />
+              <TextField label="URL do logotipo" type="url" value={settings.condoLogoUrl} onChange={mudar('condoLogoUrl')} disabled={bloqueado} help="Aparece no cabeçalho dos documentos gerados." />
+            </Secao>
+
+            <Secao titulo="Proprietário" descricao="Estes dados preenchem as autorizações de hospedagem.">
+              <TextField label="Nome completo" value={settings.ownerName} onChange={mudar('ownerName')} disabled={bloqueado} />
+              <TextField label="E-mail" type="email" value={settings.ownerEmail} onChange={mudar('ownerEmail')} disabled={bloqueado} />
+              <TextField label="Telefone" value={settings.ownerPhone} onChange={mudar('ownerPhone')} disabled={bloqueado} />
+              <TextField label="Apartamento" value={settings.ownerApto} onChange={mudar('ownerApto')} disabled={bloqueado} />
+              <TextField label="Bloco" value={settings.ownerBloco} onChange={mudar('ownerBloco')} disabled={bloqueado} />
+              <TextField label="Garagem" value={settings.ownerGaragem} onChange={mudar('ownerGaragem')} disabled={bloqueado} />
+            </Secao>
+
+            <Secao titulo="Plataformas" descricao="Definidas no assistente de instalação. Somente leitura.">
+              <TextField label="URL iCal do Airbnb" value={settings.airbnbIcalUrl} disabled readOnly />
+              <TextField label="URL iCal do Booking.com" value={settings.bookingIcalUrl} disabled readOnly />
+            </Secao>
+          </div>
+        ) : null}
+
+        {aba === 'advanced' ? (
+          <div className="set-conteudo">
+            {noElectron ? (
+              <Secao titulo="Sistema">
+                <Switch checked={autoLaunch} onChange={trocarAutoLaunch}>
+                  Iniciar o LUMINA junto com o Windows
+                </Switch>
+                <Switch
+                  checked={rememberLogin}
+                  onChange={(e) => {
+                    setRememberLogin(e.target.checked);
+                    localStorage.setItem('lumina_remember_login', e.target.checked ? 'true' : 'false');
+                  }}
+                >
+                  Manter a sessão ativa entre reinícios
+                </Switch>
+              </Secao>
+            ) : null}
+
+            <Secao titulo="Sincronização">
+              <TextField
+                label="Intervalo de sincronização"
+                type="number"
+                value={settings.syncIntervalMinutes}
+                onChange={mudar('syncIntervalMinutes')}
+                disabled={bloqueado}
+                help="Em minutos. Abaixo de 15 as plataformas podem limitar as requisições."
               />
-              <button
-                type="button"
-                onClick={() => setShowKey(v => !v)}
-                style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-                  padding: 0,
-                }}
+            </Secao>
+
+            <Secao titulo="Telegram" descricao="Definido no assistente de instalação. Somente leitura.">
+              <TextField label="Token do bot" value={settings.telegramBotToken} disabled readOnly />
+            </Secao>
+
+            <Secao titulo="E-mail" descricao="Definido no assistente de instalação. Somente leitura.">
+              <TextField label="Provedor" value={settings.emailProvider} disabled readOnly />
+              <TextField label="Endereço de envio" value={settings.emailFrom} disabled readOnly />
+              {settings.emailPasswordSet ? (
+                <p className="set-ok">
+                  <CheckCircle aria-hidden="true" focusable="false" />
+                  Senha configurada no servidor
+                </p>
+              ) : null}
+            </Secao>
+
+            {/* Estes dois valem só ao salvar, então são Checkbox e não Switch:
+                um interruptor promete efeito imediato. */}
+            <Secao titulo="Funcionalidades">
+              <Checkbox
+                checked={settings.enableAutoDocumentGeneration}
+                onChange={alternar('enableAutoDocumentGeneration')}
+                disabled={bloqueado}
+                description="Gera a autorização assim que uma reserva é confirmada."
               >
-                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            <small className="field-help">
-              {settings.aiProvider === 'anthropic' && 'Obtenha em: console.anthropic.com'}
-              {settings.aiProvider === 'openai' && 'Obtenha em: platform.openai.com'}
-              {settings.aiProvider === 'compatible' && 'Chave do provider compativel (pode ser qualquer valor para Ollama local)'}
-            </small>
-          </div>
+                Gerar documentos automaticamente
+              </Checkbox>
+              <Checkbox
+                checked={settings.enableConflictNotifications}
+                onChange={alternar('enableConflictNotifications')}
+                disabled={bloqueado}
+                description="Avisa quando duas plataformas reservam a mesma data."
+              >
+                Notificar conflitos
+              </Checkbox>
+            </Secao>
 
-          <div className="form-field">
-            <label className="label">Modelo</label>
-            <input
-              type="text"
-              className="input"
-              value={settings.aiModel}
-              onChange={(e) => onChange('aiModel', e.target.value)}
-              placeholder={getDefaultModel(settings.aiProvider)}
-            />
-            <small className="field-help">
-              {settings.aiProvider === 'anthropic' && 'Ex: claude-3-5-haiku-latest, claude-3-5-sonnet-latest'}
-              {settings.aiProvider === 'openai' && 'Ex: gpt-4o-mini, gpt-4o, gpt-3.5-turbo'}
-              {settings.aiProvider === 'compatible' && 'Ex: llama3, gemma3:4b, mistral'}
-            </small>
+            {/* Zona destrutiva, separada e no fim. Uma ação irreversível não pode
+                ficar ao lado de "Salvar": a proximidade é metade do acidente. */}
+            <section className="set-perigo" aria-labelledby="set-perigo-titulo">
+              <h3 className="set-perigo__titulo" id="set-perigo-titulo">
+                <AlertTriangle aria-hidden="true" focusable="false" />
+                Zona irreversível
+              </h3>
+              <p className="set-perigo__texto">
+                Reverter para fábrica apaga todas as configurações editadas, incluindo chaves de
+                IA, e reabre o assistente de instalação.
+              </p>
+              <Button variant="destructive" onClick={() => setConfirmarReset(true)}>
+                Reverter para fábrica
+              </Button>
+            </section>
           </div>
+        ) : null}
 
-          {settings.aiProvider === 'compatible' && (
-            <div className="form-field">
-              <label className="label">Base URL</label>
-              <input
-                type="url"
-                className="input"
-                value={settings.aiBaseUrl}
-                onChange={(e) => onChange('aiBaseUrl', e.target.value)}
-                placeholder="http://localhost:11434/v1"
+        {aba === 'ai' ? (
+          <div className="set-conteudo">
+            <Secao
+              titulo="Assistente de IA"
+              descricao="Funciona com Claude (Anthropic), GPT (OpenAI) e qualquer provedor compatível com a API da OpenAI."
+            >
+              <Select label="Provedor" value={settings.aiProvider} onChange={mudar('aiProvider')} disabled={bloqueado}>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (GPT)</option>
+                <option value="compatible">Compatível (Ollama, Groq, LM Studio…)</option>
+              </Select>
+
+              <TextField
+                label="Chave de API"
+                type={mostrarChave ? 'text' : 'password'}
+                value={settings.aiApiKey}
+                onChange={mudar('aiApiKey')}
+                disabled={bloqueado}
+                placeholder={settings.aiApiKeySet ? '••••••••••••••••' : 'sk-ant-… ou sk-…'}
+                help={
+                  settings.aiApiKeySet
+                    ? `Já há uma chave salva no servidor. ${AJUDA_DA_CHAVE[settings.aiProvider]}`
+                    : AJUDA_DA_CHAVE[settings.aiProvider]
+                }
+                trailingAction={
+                  <IconButton
+                    density="compact"
+                    aria-label={mostrarChave ? 'Ocultar a chave' : 'Mostrar a chave'}
+                    aria-pressed={mostrarChave}
+                    onClick={() => setMostrarChave((v) => !v)}
+                  >
+                    {mostrarChave ? <EyeOff /> : <Eye />}
+                  </IconButton>
+                }
               />
-              <small className="field-help">
-                URL base do provider (ex: Ollama: http://localhost:11434/v1, Groq: https://api.groq.com/openai/v1)
-              </small>
+
+              <TextField
+                label="Modelo"
+                value={settings.aiModel}
+                onChange={mudar('aiModel')}
+                disabled={bloqueado}
+                placeholder={MODELO_PADRAO[settings.aiProvider]}
+                help={AJUDA_DO_MODELO[settings.aiProvider]}
+              />
+
+              {settings.aiProvider === 'compatible' ? (
+                <TextField
+                  label="URL base"
+                  type="url"
+                  value={settings.aiBaseUrl}
+                  onChange={mudar('aiBaseUrl')}
+                  disabled={bloqueado}
+                  placeholder="http://localhost:11434/v1"
+                  help="Ollama: http://localhost:11434/v1 · Groq: https://api.groq.com/openai/v1"
+                />
+              ) : null}
+            </Secao>
+
+            <div className="set-testar">
+              <Button variant="tonal" icon={<Zap />} loading={testando} onClick={testarIA}>
+                Testar conexão
+              </Button>
+              <p className="set-testar__nota">Verifica a credencial sem salvar nada.</p>
             </div>
-          )}
-        </div>
 
-        <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button
-            className="btn"
-            onClick={handleTest}
-            disabled={testing}
-            style={{
-              background: 'rgba(139, 92, 246, 0.12)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              color: AI_PURPLE,
-            }}
-          >
-            <Zap size={15} />
-            {testing ? 'Testando...' : 'Testar Conexao'}
-          </button>
-          <small style={{ color: 'var(--text-disable)' }}>
-            Testa a conectividade sem salvar
-          </small>
-        </div>
+            <Card variant="filled" className="set-nota">
+              <p>
+                <strong>Segurança.</strong> A chave é guardada no banco local. Em produção,
+                prefira definir <code>AI_API_KEY</code> no arquivo <code>.env</code>.
+              </p>
+            </Card>
+          </div>
+        ) : null}
 
-        <div className="info-box" style={{ marginTop: 20 }}>
-          <p>
-            <strong>Nota de seguranca:</strong> A API Key e salva de forma segura no banco de dados local.
-            Para uso em producao, prefira definir <code>AI_API_KEY</code> no arquivo <code>.env</code>.
-          </p>
-        </div>
-      </div>
+        {aba === 'appearance' ? (
+          <div className="set-conteudo">
+            <Secao
+              titulo="Tema"
+              descricao="Os mesmos controles do menu na barra superior. A escolha vale para todas as telas e persiste entre sessões."
+            >
+              <Select label="Tema" value={theme} onChange={(e) => setTheme(e.target.value)}>
+                {THEMES.map((t) => (
+                  <option key={t} value={t}>
+                    {{ light: 'Claro', dark: 'Escuro', system: 'Seguir o sistema' }[t]}
+                  </option>
+                ))}
+              </Select>
+              <Select label="Densidade" value={density} onChange={(e) => setDensity(e.target.value)}>
+                {DENSITIES.map((d) => (
+                  <option key={d} value={d}>
+                    {{ comfortable: 'Espaçoso', standard: 'Padrão', compact: 'Compacto' }[d]}
+                  </option>
+                ))}
+              </Select>
+            </Secao>
+
+            <Card variant="filled" className="set-nota">
+              <p>
+                <Monitor aria-hidden="true" focusable="false" />{' '}
+                <strong>Densidade</strong> muda a altura de todos os controles ao mesmo tempo —
+                botões, campos e linhas de tabela. <Rows3 aria-hidden="true" focusable="false" />{' '}
+                <strong>Compacto</strong> cabe mais na tela; <Moon aria-hidden="true" focusable="false" />{' '}
+                o tema escuro é validado com os mesmos contrastes do claro.
+              </p>
+            </Card>
+          </div>
+        ) : null}
+      </Tabs>
+
+      <ConfirmDialog
+        open={confirmarReset}
+        destructive
+        title="Reverter tudo para fábrica?"
+        message="Todas as configurações editadas serão apagadas, incluindo chaves de IA. O aplicativo reinicia no assistente de instalação. Não há como desfazer."
+        confirmLabel="Reverter tudo"
+        onCancel={() => setConfirmarReset(false)}
+        onConfirm={resetar}
+      />
     </div>
   );
 };

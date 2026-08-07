@@ -1,204 +1,258 @@
-.calendar-widget {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-}
+@layer lm.components {
+  /* A paleta que estava aqui era do tema CLARO do Tailwind (#eff6ff, #fee2e2,
+     #dbeafe, #1e40af…) dentro de um aplicativo escuro — 16 valores fixos na tela
+     mais usada do produto. Agora tudo sai de token e a grade acompanha o tema. */
 
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.calendar-title {
-  font-size: 20px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.calendar-nav {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-sm {
-  padding: 8px 16px;
-  font-size: 13px;
-}
-
-.btn-icon {
-  padding: 8px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.calendar-day-header {
-  background: var(--bg-tertiary);
-  padding: 12px 8px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.calendar-day {
-  background: var(--bg-primary);
-  min-height: 100px;
-  padding: 8px;
-  position: relative;
-  transition: background-color 0.2s;
-}
-
-.calendar-day:hover {
-  background: var(--bg-secondary);
-}
-
-.calendar-day.other-month {
-  background: var(--bg-tertiary);
-  opacity: 0.5;
-}
-
-.calendar-day.today {
-  background: #eff6ff;
-}
-
-.calendar-day.today .day-number {
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.day-number {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.day-events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.calendar-event {
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-left: 3px solid;
-}
-
-.calendar-event:hover {
-  opacity: 0.8;
-  transform: translateX(2px);
-}
-
-.event-airbnb {
-  background: #fee2e2;
-  color: #991b1b;
-  border-left-color: #ef4444;
-}
-
-.event-booking {
-  background: #dbeafe;
-  color: #1e40af;
-  border-left-color: #2563eb;
-}
-
-.event-manual {
-  background: #f1f5f9;
-  color: #475569;
-  border-left-color: #64748b;
-}
-
-.event-guest {
-  font-weight: 500;
-}
-
-.event-more {
-  font-size: 10px;
-  color: var(--text-secondary);
-  padding: 2px 6px;
-  text-align: center;
-}
-
-.calendar-legend {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border-left: 3px solid;
-}
-
-.legend-dot.event-airbnb {
-  background: #fee2e2;
-  border-left-color: #ef4444;
-}
-
-.legend-dot.event-booking {
-  background: #dbeafe;
-  border-left-color: #2563eb;
-}
-
-.legend-dot.event-manual {
-  background: #f1f5f9;
-  border-left-color: #64748b;
-}
-
-@media (max-width: 768px) {
-  .calendar-day {
-    min-height: 80px;
-    padding: 4px;
+  .cal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+    padding: var(--lm-space-20);
+    border: 1px solid var(--lm-color-outline-variant);
+    border-radius: var(--lm-card-radius);
+    background-color: var(--lm-color-surface-container-low);
   }
 
-  .calendar-event {
-    font-size: 10px;
-    padding: 2px 4px;
+  .cal__topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lm-space-16);
+    flex-wrap: wrap;
   }
 
-  .day-number {
-    font-size: 12px;
+  .cal__titulo {
+    font-size: var(--lm-type-title-lg-size);
+    line-height: var(--lm-type-title-lg-line);
+    font-weight: var(--lm-type-title-md-weight);
+    letter-spacing: var(--lm-type-title-lg-tracking);
+    color: var(--lm-color-on-surface);
+  }
+
+  .cal__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-4);
+  }
+
+  /* --- Grade --- */
+
+  .cal__grade {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-2);
+    min-inline-size: 0;
+  }
+
+  .cal__semana {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--lm-space-2);
+  }
+
+  .cal__cabecalho {
+    padding-block: var(--lm-space-8);
+    text-align: center;
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-transform: uppercase;
+  }
+
+  .cal__dia {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    /* Altura suficiente para o número do dia mais três eventos de 24px, que é o
+       alvo mínimo de WCAG 2.5.8. Com 1,6 os eventos saíam com 20px e nenhuma
+       das exceções da norma se aplicava: empilhados com 2px de intervalo, os
+       círculos de 24px se sobrepõem. */
+    min-block-size: calc(var(--lm-density-row) * 2);
+    padding: var(--lm-space-4);
+    border-radius: var(--lm-radius-sm);
+    background-color: var(--lm-color-surface-container);
+    cursor: default;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .cal__dia:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      var(--lm-color-surface-container)
+    );
+  }
+
+  /* Dias de fora do mês continuam visíveis — a semana precisa fechar — mas
+     recuados o suficiente para não competirem com o mês corrente. */
+  .cal__dia[data-fora] {
+    background-color: transparent;
+  }
+
+  /* Tinta secundária, NÃO a de desabilitado. Dia de outro mês continua sendo
+     conteúdo legível — só está em segundo plano. A tinta de desabilitado vale
+     4,06:1, abaixo dos 4,5:1 exigidos, e reprovava nos 11 dias de borda do mês
+     no tema claro. A hierarquia se mantém: o mês corrente usa `on-surface`. */
+  .cal__dia[data-fora] .cal__numero {
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .cal__numero {
+    display: grid;
+    place-items: center;
+    inline-size: var(--lm-space-24);
+    block-size: var(--lm-space-24);
+    border-radius: var(--lm-radius-full);
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-label-md-size);
+    line-height: var(--lm-type-label-md-line);
+    font-weight: var(--lm-type-label-md-weight);
+    letter-spacing: var(--lm-type-label-md-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hoje: pastilha preenchida. É FORMA, não só cor — sobrevive ao daltonismo e
+     ao contraste forçado, onde a cor de fundo é descartada. */
+  .cal__dia[data-hoje] .cal__numero {
+    background-color: var(--lm-color-primary);
+    color: var(--lm-color-on-primary);
+  }
+
+  /* --- Eventos --- */
+
+  .cal__eventos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-2);
+    min-inline-size: 0;
+  }
+
+  .cal__evento {
+    --_container: var(--lm-color-secondary-container);
+    --_content: var(--lm-color-on-secondary-container);
+
+    display: flex;
+    align-items: center;
+    inline-size: 100%;
+    min-block-size: var(--lm-target-min-size);
+    padding: var(--lm-space-2) var(--lm-space-4);
+    border: none;
+    border-radius: var(--lm-radius-xs);
+    background-color: var(--_container);
+    color: var(--_content);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-align: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .cal__evento:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--_content) calc(var(--lm-state-hover) * 100%),
+      var(--_container)
+    );
+  }
+
+  /* Plataforma pelos papéis semânticos, e não pelos hexadecimais de marca de
+     terceiros que estavam no código. O par contêiner + tinta já é validado. */
+  .cal__evento[data-plataforma='airbnb'],
+  .cal__legenda-marca[data-plataforma='airbnb'] {
+    --_container: var(--lm-color-airbnb-container);
+    --_content: var(--lm-color-on-airbnb-container);
+  }
+
+  .cal__evento[data-plataforma='booking'],
+  .cal__legenda-marca[data-plataforma='booking'] {
+    --_container: var(--lm-color-booking-container);
+    --_content: var(--lm-color-on-booking-container);
+  }
+
+  .cal__mais {
+    padding-inline: var(--lm-space-4);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+  }
+
+  /* --- Legenda --- */
+
+  .cal__legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lm-space-16);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    padding-block-start: var(--lm-space-12);
+    border-block-start: 1px solid var(--lm-color-divider);
+  }
+
+  .cal__legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .cal__legenda-marca {
+    --_container: var(--lm-color-secondary-container);
+
+    inline-size: var(--lm-space-12);
+    block-size: var(--lm-space-12);
+    border-radius: var(--lm-radius-xs);
+    background-color: var(--_container);
+  }
+
+  @media (max-width: 599px) {
+    .cal__dia {
+      min-block-size: var(--lm-density-row);
+    }
+
+    /* A célula não comporta nem o nome do hóspede nem três alvos de 24px. Os
+       botões saem inteiros — uma barra de 4px seria um alvo impossível de
+       acertar, e não vale trocar um requisito por outro. O `aria-label` da
+       célula já anuncia a contagem, e o ponto abaixo do número a mostra. */
+    .cal__eventos {
+      display: none;
+    }
+
+    .cal__dia:has(.cal__evento) .cal__numero::after {
+      content: '';
+      position: absolute;
+      inset-block-end: calc(var(--lm-space-2) * -1);
+      inset-inline-start: 50%;
+      inline-size: var(--lm-space-4);
+      block-size: var(--lm-space-4);
+      border-radius: var(--lm-radius-full);
+      background-color: var(--lm-color-primary);
+      translate: -50% 0;
+    }
+
+    .cal__numero {
+      position: relative;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .cal__dia[data-hoje] .cal__numero {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .cal__evento {
+      border: 1px solid ButtonBorder;
+    }
   }
 }

@@ -5,6 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LUMINA - Gestão de Apartamento</title>
+    <script>
+      /* Aplica tema e densidade ANTES da primeira pintura. Se isto rodasse dentro do
+         React, o app pintaria claro por um quadro antes de virar escuro — o flash que
+         todo mundo reconhece e ninguém consegue "consertar" depois.
+         Mantenha em sincronia com src/contexts/AppearanceContext.jsx. */
+      (function () {
+        var raiz = document.documentElement;
+        var tema = 'light';
+        var densidade = 'standard';
+        try {
+          tema = localStorage.getItem('lumina.theme') || tema;
+          densidade = localStorage.getItem('lumina.density') || densidade;
+        } catch (e) {
+          /* storage bloqueado: seguimos com os padrões */
+        }
+        /* 'system' se expressa pela AUSÊNCIA do atributo — é assim que a media query
+           prefers-color-scheme de semantic.css volta a mandar. */
+        if (tema !== 'system') raiz.setAttribute('data-theme', tema);
+        raiz.setAttribute('data-density', densidade);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

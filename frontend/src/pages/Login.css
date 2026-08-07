@@ -1,0 +1,66 @@
+@layer lm.overrides {
+  .login {
+    display: grid;
+    place-items: center;
+    min-block-size: 100vh;
+    padding: var(--lm-space-24);
+    background-color: var(--lm-color-background);
+  }
+
+  .login__card {
+    inline-size: 100%;
+    max-inline-size: 400px;
+    /* O card padrão tem 16px; uma tela de entrada pede mais ar porque não há
+       mais nada competindo por espaço. */
+    padding: var(--lm-space-32);
+    text-align: initial;
+  }
+
+  .login__cabecalho {
+    margin-block-end: var(--lm-space-24);
+    text-align: center;
+  }
+
+  .login__marca {
+    color: var(--lm-color-primary);
+    font-size: var(--lm-type-headline-md-size);
+    line-height: var(--lm-type-headline-md-line);
+    /* 500 e não 800: a escala do sistema só tem 400 e 500, e o peso extra vinha
+       de uma fonte que nem era baixada nesse peso. O espaçamento largo é o que
+       dá presença de marca. */
+    font-weight: var(--lm-type-title-md-weight);
+    letter-spacing: 0.2em;
+  }
+
+  .login__apoio {
+    margin-block-start: var(--lm-space-8);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+  }
+
+  .login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+  }
+
+  .login__erro {
+    padding: var(--lm-space-12) var(--lm-space-16);
+    border-radius: var(--lm-radius-sm);
+    background-color: var(--lm-color-error-container);
+    color: var(--lm-color-on-error-container);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  /* Estado de verificação: marca e indicador centrados. */
+  .login__card:not(:has(.login__form)) {
+    display: grid;
+    justify-items: center;
+    gap: var(--lm-space-24);
+    padding-block: var(--lm-space-48);
+  }
+}

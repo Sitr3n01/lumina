@@ -1,0 +1,33 @@
+@layer lm.components {
+  .lm-tooltip {
+    position: fixed;
+
+    /* A posição real chega por style inline calculado sobre o retângulo do
+       gatilho; estes dois só dão o ponto de partida para a primeira medição. */
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: var(--lm-z-popover);
+    max-inline-size: var(--lm-tooltip-max-width);
+    padding-block: var(--lm-space-4);
+    padding-inline: var(--lm-space-8);
+    border-radius: var(--lm-tooltip-radius);
+    background-color: var(--lm-tooltip-bg);
+    color: var(--lm-tooltip-label);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+
+    /* Nunca é alvo de ponteiro: se capturasse o mouse, atravessá-lo ao sair do
+       gatilho dispararia um ciclo de sai-entra e o tooltip piscaria. Também é o
+       que garante que nada dentro dele seja clicável. */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  /* Só pinta depois de medido — antes disso está no canto da janela. */
+  .lm-tooltip[data-ready] {
+    opacity: 1;
+  }
+}

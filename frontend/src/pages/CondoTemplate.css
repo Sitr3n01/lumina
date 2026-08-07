@@ -1,0 +1,193 @@
+@layer lm.overrides {
+  .ct {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+  }
+
+  /* --------------------------------------------------------------
+     A FOLHA.
+
+     Único lugar do produto onde a cor NÃO segue o tema: isto simula
+     papel, e papel é branco com tinta preta na impressora, tanto no
+     tema claro quanto no escuro. Trocar por token faria o preview
+     mentir sobre o resultado impresso.
+
+     O mesmo documento no wizard (electron/wizard/wizard.css) usa
+     Georgia; aqui é Arial. São duas aparências para o mesmo papel —
+     pendência registrada nos dois arquivos.
+     -------------------------------------------------------------- */
+
+  .ct-folha {
+    inline-size: 100%;
+    max-inline-size: 820px;
+    margin-inline: auto;
+    padding: var(--lm-space-40) var(--lm-space-48);
+    background-color: #ffffff;
+    color: #000000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  .ct-doc__cabecalho {
+    margin-block-end: var(--lm-space-24);
+    text-align: center;
+  }
+
+  .ct-doc__condominio {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .ct-doc__titulo {
+    margin-block-start: var(--lm-space-4);
+    font-size: 12pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .ct-doc__secao {
+    margin-block: var(--lm-space-20) var(--lm-space-8);
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .ct-doc__tabela {
+    inline-size: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .ct-doc__rotulo,
+  .ct-doc__valor,
+  .ct-doc__branco,
+  .ct-doc__numero {
+    padding: var(--lm-space-4) var(--lm-space-8);
+    border: 1px solid #000000;
+    font-size: 9pt;
+    overflow-wrap: break-word;
+  }
+
+  .ct-doc__rotulo {
+    inline-size: 22%;
+    background-color: #f0f0f0;
+    font-weight: 700;
+  }
+
+  .ct-doc__numero {
+    inline-size: 8%;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  /* Célula a preencher à mão: precisa de altura mesmo vazia, senão a linha
+     colapsa e não sobra espaço para escrever. */
+  .ct-doc__branco {
+    block-size: 22px;
+  }
+
+  .ct-doc__linha-livre {
+    margin-block: var(--lm-space-16);
+    font-size: 9pt;
+  }
+
+  .ct-doc__preencher {
+    display: inline-block;
+    inline-size: 220px;
+    border-block-end: 1px solid #000000;
+    margin-inline: var(--lm-space-4) var(--lm-space-16);
+  }
+
+  .ct-doc__preencher--curto {
+    inline-size: 120px;
+    margin-inline-end: 0;
+  }
+
+  .ct-doc__texto {
+    margin-block: var(--lm-space-16);
+    text-align: justify;
+  }
+
+  .ct-doc__texto p + p {
+    margin-block-start: var(--lm-space-8);
+  }
+
+  .ct-doc__assinatura {
+    margin-block-start: var(--lm-space-48);
+    text-align: center;
+  }
+
+  .ct-doc__assinatura-linha {
+    display: block;
+    inline-size: 320px;
+    margin-inline: auto;
+    border-block-start: 1px solid #000000;
+  }
+
+  .ct-doc__assinatura-nome {
+    margin-block-start: var(--lm-space-4);
+    font-size: 9pt;
+    font-weight: 700;
+  }
+
+  .ct-doc__assinatura-detalhe {
+    font-size: 8pt;
+  }
+}
+
+/* --------------------------------------------------------------
+   IMPRESSÃO.
+
+   Fora de camada e no fim do arquivo, de propósito: são as últimas regras a
+   valer e precisam vencer qualquer coisa que a interface tenha aplicado.
+
+   Substitui o bloco `<style>` que morava dentro do JSX com dez `!important` e
+   `body * { visibility: hidden }` — que escondia tudo e revelava só a área
+   imprimível, deixando o layout da tela influenciar a folha.
+   -------------------------------------------------------------- */
+
+@media print {
+  /* `display: none` na árvore inteira menos o caminho até o documento. É mais
+     previsível que `visibility: hidden`, que preserva a caixa do elemento e
+     fazia a folha nascer deslocada. */
+  body > *:not(:has(#printable-area)) {
+    display: none;
+  }
+
+  .lm-shell,
+  .lm-shell__coluna,
+  .lm-shell__conteudo,
+  .ct {
+    display: block;
+    block-size: auto;
+    overflow: visible;
+    padding: 0;
+    margin: 0;
+    background: none;
+  }
+
+  .lm-nav,
+  .lm-app-bar,
+  .lm-shell__pular,
+  .lm-page-header,
+  .lm-snackbar-region {
+    display: none;
+  }
+
+  .ct-folha {
+    max-inline-size: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Evita que uma tabela ou o bloco de assinatura seja partido entre páginas. */
+  .ct-doc__tabela,
+  .ct-doc__assinatura {
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,99 @@
+@layer lm.components {
+  .lm-progress {
+    display: block;
+  }
+
+  /* --- Linear -------------------------------------------------------------- */
+
+  .lm-progress__track {
+    display: block;
+    inline-size: 100%;
+    block-size: var(--lm-progress-track-height);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-progress-track);
+    /* Contém o indicador enquanto ele varre a pista no modo indeterminado. */
+    overflow: hidden;
+  }
+
+  .lm-progress__indicator {
+    display: block;
+    block-size: 100%;
+    inline-size: calc(var(--_value, 0) * 1%);
+    border-radius: inherit;
+    background-color: var(--lm-progress-indicator);
+    /* Só a largura anima. Um salto de 20% para 60% sem transição lê como erro de
+       renderização, não como progresso. */
+    transition: inline-size var(--lm-duration-standard) var(--lm-easing-standard);
+  }
+
+  .lm-progress[data-indeterminate] .lm-progress__indicator {
+    /* Fração fixa da pista: o tamanho não pode sugerir quanto falta. */
+    inline-size: 40%;
+    /* `--lm-duration-*` cobre interação direta, onde 480ms já é o teto. Uma varredura
+       contínua nessa velocidade fica frenética — daí o múltiplo. Falta um token de
+       permanência para movimento cíclico. */
+    animation: lm-progress-sweep calc(var(--lm-duration-complex) * 3) var(--lm-easing-standard)
+      infinite;
+    transition: none;
+  }
+
+  @keyframes lm-progress-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  /* --- Circular ------------------------------------------------------------
+     Anel por gradiente cônico com o miolo removido por máscara: o arco sai direto de
+     `--_value`, sem SVG e sem número mágico de raio ou de dasharray. */
+
+  .lm-progress__circle {
+    display: block;
+    inline-size: var(--lm-progress-circular-size);
+    block-size: var(--lm-progress-circular-size);
+    border-radius: var(--lm-radius-full);
+    /* A máscara usa só o canal alfa, então qualquer cor opaca serve; `currentColor`
+       evita escrever um literal aqui. */
+    color: var(--lm-progress-indicator);
+    background: conic-gradient(
+      var(--lm-progress-indicator) calc(var(--_value, 0) * 1%),
+      var(--lm-progress-track) 0
+    );
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--lm-progress-circular-stroke)),
+      currentColor 0
+    );
+  }
+
+  .lm-progress[data-variant='circular'][data-indeterminate] .lm-progress__circle {
+    /* Um quarto de volta girando: comunica atividade sem afirmar posição. */
+    --_value: 25;
+
+    animation: lm-progress-spin calc(var(--lm-duration-complex) * 2) linear infinite;
+  }
+
+  @keyframes lm-progress-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  /* Sem movimento não há varredura possível. O indicador fica parado e centrado — o
+     que ainda se lê como "em andamento, sem medida" — e quem anuncia o estado é o
+     `role="progressbar"` sem `aria-valuenow`, que independe de animação. */
+  @media (prefers-reduced-motion: reduce) {
+    .lm-progress[data-indeterminate] .lm-progress__indicator {
+      animation: none;
+      margin-inline: auto;
+    }
+
+    .lm-progress[data-variant='circular'][data-indeterminate] .lm-progress__circle {
+      animation: none;
+    }
+  }
+}

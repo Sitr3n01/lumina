@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AppearanceProvider } from './contexts/AppearanceContext';
 import { PropertyProvider } from './contexts/PropertyContext';
-import TopNav from './components/Sidebar';
+import { SnackbarProvider } from './components/ui';
+import AppShell from './components/layout/AppShell';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -14,7 +17,6 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import AISuggestions from './pages/AISuggestions';
 import CondoTemplate from './pages/CondoTemplate';
-import { RefreshCw } from 'lucide-react';
 import './App.css';
 
 function AppContent() {
@@ -23,8 +25,8 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#101922' }}>
-        <RefreshCw size={32} className="spin" style={{ color: 'var(--primary)' }} />
+      <div className="app-boot" role="status" aria-label="Carregando o LUMINA">
+        <RefreshCw className="spin app-boot__icon" aria-hidden="true" />
       </div>
     );
   }
@@ -44,17 +46,19 @@ function AppContent() {
       case 'statistics':
         return <Statistics />;
       case 'documents':
-        return <Documents />;
+        return <Documents onPageChange={setCurrentPage} />;
       case 'emails':
         return <Emails />;
       case 'notifications':
         return <Notifications />;
       case 'ai-pricing':
         return <AISuggestions onPageChange={setCurrentPage} />;
+      // Não é destino primário: é um documento que se gera, alcançado de dentro
+      // de Documentos. Continua no switch porque continua sendo uma tela.
       case 'condo-template':
-        return <CondoTemplate onBack={() => setCurrentPage('dashboard')} />;
+        return <CondoTemplate onBack={() => setCurrentPage('documents')} />;
       case 'settings':
-        return <Settings />;
+        return <Settings onLogout={logout} />;
       default:
         return <Dashboard />;
     }
@@ -62,28 +66,23 @@ function AppContent() {
 
   return (
     <PropertyProvider>
-      <div className="app">
-        <TopNav
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onLogout={logout}
-        />
-        <main className="main-content">
-          <ErrorBoundary key={currentPage}>
-            {renderPage()}
-          </ErrorBoundary>
-        </main>
-      </div>
+      <SnackbarProvider>
+        <AppShell currentPage={currentPage} onPageChange={setCurrentPage}>
+          {/* `key` remonta a fronteira de erro a cada troca de página: sem ela,
+              uma página que quebrou deixaria a seguinte presa no fallback. */}
+          <ErrorBoundary key={currentPage}>{renderPage()}</ErrorBoundary>
+        </AppShell>
+      </SnackbarProvider>
     </PropertyProvider>
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <AppearanceProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </AppearanceProvider>
   );
 }
-
-export default App;

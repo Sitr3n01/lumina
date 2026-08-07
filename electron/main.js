@@ -96,7 +96,11 @@ function createMainWindow(options = {}) {
         minWidth: 1024,
         minHeight: 720,
         title: 'LUMINA',
-        backgroundColor: '#101922',
+        // Superfície do tema CLARO, que é o padrão do produto. É a cor que a
+        // janela pinta antes do primeiro quadro do React e nas faixas expostas
+        // durante o redimensionamento. O renderer corrige por IPC ('theme:set')
+        // assim que sabe a preferência salva — inclusive para escuro.
+        backgroundColor: '#f7f9fd',
         autoHideMenuBar: true,
         show: false,
         webPreferences: {

@@ -1,0 +1,104 @@
+/* Bancada de desenvolvimento. Fica fora de camada porque não é produto:
+   nada aqui pode influenciar a cascata da aplicação. */
+
+.sb {
+  max-inline-size: 1200px;
+  margin-inline: auto;
+  padding: var(--lm-space-32) var(--lm-space-24) var(--lm-space-96);
+  background-color: var(--lm-color-background);
+  color: var(--lm-color-on-surface);
+}
+
+.sb-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--lm-space-24);
+  padding-block-end: var(--lm-space-24);
+  margin-block-end: var(--lm-space-32);
+  border-block-end: 1px solid var(--lm-color-divider);
+}
+
+.sb-topo__titulo {
+  font-size: var(--lm-type-headline-md-size);
+  line-height: var(--lm-type-headline-md-line);
+  font-weight: var(--lm-type-headline-md-weight);
+  letter-spacing: var(--lm-type-headline-md-tracking);
+}
+
+.sb-topo__nota {
+  margin-block-start: var(--lm-space-4);
+  font-size: var(--lm-type-body-sm-size);
+  color: var(--lm-color-on-surface-variant);
+}
+
+.sb-topo__controles {
+  display: flex;
+  gap: var(--lm-space-16);
+}
+
+.sb-secao {
+  margin-block-end: var(--lm-space-48);
+}
+
+.sb-secao__titulo {
+  font-size: var(--lm-type-title-lg-size);
+  line-height: var(--lm-type-title-lg-line);
+  font-weight: var(--lm-type-title-md-weight);
+  letter-spacing: var(--lm-type-title-lg-tracking);
+}
+
+.sb-secao__nota {
+  margin-block-start: var(--lm-space-4);
+  margin-block-end: var(--lm-space-16);
+  font-size: var(--lm-type-body-sm-size);
+  line-height: var(--lm-type-body-sm-line);
+  color: var(--lm-color-on-surface-variant);
+}
+
+.sb-grade {
+  display: grid;
+  gap: var(--lm-space-16);
+}
+
+.sb-amostra {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: var(--lm-space-16);
+  align-items: start;
+  padding: var(--lm-space-16);
+  border: 1px solid var(--lm-color-outline-variant);
+  border-radius: var(--lm-radius-md);
+  background-color: var(--lm-color-surface-container-low);
+}
+
+.sb-amostra__rotulo {
+  font-family: var(--lm-font-mono);
+  font-size: var(--lm-type-code-size);
+  color: var(--lm-color-on-surface-variant);
+}
+
+.sb-amostra__palco {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--lm-space-16);
+  min-inline-size: 0;
+}
+
+.sb-amostra__palco > * {
+  min-inline-size: 0;
+}
+
+@media (max-width: 839px) {
+  .sb-amostra {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sb-shell-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--lm-space-16);
+}

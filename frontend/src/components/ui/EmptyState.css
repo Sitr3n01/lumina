@@ -1,0 +1,51 @@
+@layer lm.components {
+  .lm-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--lm-density-gap);
+    padding-block: var(--lm-space-48);
+    padding-inline: var(--lm-space-24);
+    text-align: center;
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-empty-state__icon {
+    display: inline-flex;
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-empty-state__icon > svg {
+    inline-size: var(--lm-icon-xl);
+    block-size: var(--lm-icon-xl);
+  }
+
+  .lm-empty-state__title {
+    margin: 0;
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-title-md-size);
+    line-height: var(--lm-type-title-md-line);
+    font-weight: var(--lm-type-title-md-weight);
+    letter-spacing: var(--lm-type-title-md-tracking);
+  }
+
+  .lm-empty-state__description {
+    margin: 0;
+    /* O estado vazio costuma ocupar a área inteira do conteúdo; sem teto, a linha de
+       texto atravessa a tela e fica ilegível. Mesmo teto da coluna de formulário. */
+    max-inline-size: var(--lm-form-column-max-width);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    font-weight: var(--lm-type-body-md-weight);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    text-wrap: pretty;
+  }
+
+  .lm-empty-state__action {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--lm-density-gap);
+    margin-block-start: var(--lm-space-8);
+  }
+}

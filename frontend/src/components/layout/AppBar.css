@@ -1,0 +1,119 @@
+@layer lm.layout {
+  .lm-app-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    flex-shrink: 0;
+    block-size: var(--lm-app-bar-height);
+    padding-inline: var(--lm-space-16) var(--lm-space-12);
+    background-color: var(--lm-app-bar-bg);
+    border-block-end: 1px solid var(--lm-color-divider);
+  }
+
+  .lm-app-bar__titulo {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--lm-type-headline-sm-size);
+    line-height: var(--lm-type-headline-sm-line);
+    font-weight: var(--lm-type-headline-sm-weight);
+    letter-spacing: var(--lm-type-headline-sm-tracking);
+    color: var(--lm-app-bar-title);
+  }
+
+  .lm-app-bar__acoes {
+    display: flex;
+    align-items: center;
+    gap: var(--lm-space-4);
+    flex-shrink: 0;
+  }
+
+  /* --- Sino com contador --- */
+
+  .lm-app-bar__com-badge {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .lm-app-bar__badge {
+    position: absolute;
+    inset-block-start: calc(var(--lm-space-4) * -1);
+    inset-inline-start: calc(100% - var(--lm-space-4));
+  }
+
+  /* --- Conta --- */
+
+  .lm-app-bar__conta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lm-space-8);
+    block-size: var(--lm-density-control);
+    padding-inline: var(--lm-space-8) var(--lm-space-12);
+    border: none;
+    border-radius: var(--lm-radius-full);
+    background-color: transparent;
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-lg-size);
+    line-height: var(--lm-type-label-lg-line);
+    font-weight: var(--lm-type-label-lg-weight);
+    letter-spacing: var(--lm-type-label-lg-tracking);
+    cursor: pointer;
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-app-bar__conta:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-app-bar__avatar {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-app-bar__usuario {
+    max-inline-size: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lm-app-bar__versao {
+    flex-shrink: 0;
+    margin-inline-start: var(--lm-space-8);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Abaixo de 840px o nome de usuário e a versão saem: o título da página é a
+     informação que orienta, e as utilidades precisam do espaço restante. */
+  @media (max-width: 839px) {
+    .lm-app-bar__usuario,
+    .lm-app-bar__versao {
+      display: none;
+    }
+
+    .lm-app-bar__conta {
+      padding-inline: var(--lm-space-8);
+    }
+
+    .lm-app-bar__titulo {
+      font-size: var(--lm-type-title-lg-size);
+      line-height: var(--lm-type-title-lg-line);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .lm-app-bar {
+      block-size: var(--lm-app-bar-height-compact);
+      padding-inline: var(--lm-space-4) var(--lm-space-8);
+    }
+  }
+}

@@ -1,0 +1,160 @@
+@layer lm.components {
+  .lm-dialog {
+    /* O `<dialog>` modal vive na top layer, acima de qualquer empilhamento —
+       por isso não há z-index aqui. Era o `z-index: 1000` triplicado do código
+       anterior (dois modais e um dropdown empatados) que dependia da ordem no DOM. */
+    inline-size: min(var(--lm-dialog-max-width), calc(100vw - var(--lm-space-32)));
+    max-block-size: calc(100vh - var(--lm-space-64));
+    padding: 0;
+    border: none;
+    border-radius: var(--lm-dialog-radius);
+    background-color: var(--lm-dialog-bg);
+    color: var(--lm-color-on-surface);
+    box-shadow: var(--lm-dialog-shadow);
+    overflow: hidden;
+  }
+
+  .lm-dialog:not([open]) {
+    display: none;
+  }
+
+  .lm-dialog[open] {
+    display: grid;
+    /* Cabeçalho e rodapé fixos, corpo rolando entre eles: uma lista longa nunca
+       empurra as ações para fora da tela. */
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    animation: lm-dialog-in var(--lm-duration-emphasized) var(--lm-easing-decelerate);
+  }
+
+  .lm-dialog::backdrop {
+    background-color: var(--lm-scrim-color);
+    opacity: var(--lm-scrim-opacity);
+    animation: lm-dialog-scrim-in var(--lm-duration-standard) var(--lm-easing-standard);
+  }
+
+  @keyframes lm-dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(var(--lm-space-8)) scale(0.98);
+    }
+  }
+
+  @keyframes lm-dialog-scrim-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* --- Cabeçalho --- */
+
+  .lm-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--lm-space-16);
+    padding: var(--lm-dialog-padding);
+    padding-block-end: var(--lm-space-16);
+  }
+
+  .lm-dialog__title {
+    flex: 1;
+    min-inline-size: 0;
+    font-size: var(--lm-type-title-lg-size);
+    line-height: var(--lm-type-title-lg-line);
+    font-weight: var(--lm-type-title-lg-weight);
+    letter-spacing: var(--lm-type-title-lg-tracking);
+    color: var(--lm-color-on-surface);
+  }
+
+  .lm-dialog__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-density-control);
+    block-size: var(--lm-density-control);
+    /* Recuo negativo para o alvo alinhar com a borda óptica do diálogo em vez de
+       ficar afastado dela pelo próprio tamanho do alvo. */
+    margin: calc(var(--lm-space-8) * -1);
+    margin-inline-start: 0;
+    border-radius: var(--lm-radius-full);
+    color: var(--lm-color-on-surface-variant);
+    transition: background-color var(--lm-duration-fast) var(--lm-easing-standard);
+  }
+
+  .lm-dialog__close > svg {
+    inline-size: var(--lm-icon-md);
+    block-size: var(--lm-icon-md);
+  }
+
+  .lm-dialog__close:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .lm-dialog__close:active {
+    background-color: color-mix(
+      in oklab,
+      var(--lm-color-on-surface) calc(var(--lm-state-pressed) * 100%),
+      transparent
+    );
+  }
+
+  /* --- Corpo --- */
+
+  .lm-dialog__body {
+    overflow-y: auto;
+    padding-inline: var(--lm-dialog-padding);
+    padding-block: var(--lm-space-4);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .lm-dialog__description {
+    margin-block-end: var(--lm-space-16);
+    /* Medida de leitura: linha muito longa faz o olho perder o começo da
+       seguinte. O diálogo é estreito, mas o limite protege telas largas. */
+    max-inline-size: var(--lm-form-column-max-width);
+  }
+
+  .lm-dialog__body:empty {
+    display: none;
+  }
+
+  /* --- Rodapé --- */
+
+  .lm-dialog__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--lm-space-8);
+    padding: var(--lm-dialog-padding);
+    padding-block-start: var(--lm-space-16);
+  }
+
+  /* A borda só aparece quando há o que separar — um corpo rolado esconde a
+     fronteira entre conteúdo e ações, e sem rolagem a régua é ruído. */
+  .lm-dialog__body:not(:empty) + .lm-dialog__footer {
+    border-block-start: 1px solid var(--lm-color-divider);
+  }
+
+  /* Em tela estreita as ações empilham e ocupam a largura inteira: dois botões
+     lado a lado abaixo de 600px ficam menores que o alvo mínimo. */
+  @media (max-width: 599px) {
+    .lm-dialog {
+      inline-size: calc(100vw - var(--lm-space-16));
+    }
+
+    .lm-dialog__footer {
+      flex-direction: column-reverse;
+    }
+
+    .lm-dialog__footer > * {
+      inline-size: 100%;
+    }
+  }
+}

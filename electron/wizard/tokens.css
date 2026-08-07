@@ -1,0 +1,1221 @@
+/* =============================================================
+   LUMINA Design System — Tokens para o wizard do Electron
+   ARQUIVO GERADO por scripts/design/generate_tokens.py
+   Não edite à mão. Altere as sementes no gerador e rode-o novamente.
+   ============================================================= */
+
+@layer lm.tokens, lm.wizard;
+
+/* =============================================================
+   LUMINA Design System — Tokens primitivos
+   ARQUIVO GERADO por scripts/design/generate_tokens.py
+   Não edite à mão. Altere as sementes no gerador e rode-o novamente.
+   ============================================================= */
+
+@layer lm.tokens {
+  :root {
+    /* --- Rampas tonais --- */
+    /* Azul LUMINA — marca, ações primárias, seleção */
+    --lm-palette-primary-0: #000000;
+    --lm-palette-primary-4: #000e26;
+    --lm-palette-primary-5: #00102b;
+    --lm-palette-primary-6: #00132e;
+    --lm-palette-primary-10: #001b3c;
+    --lm-palette-primary-12: #001f43;
+    --lm-palette-primary-15: #00264e;
+    --lm-palette-primary-17: #002a55;
+    --lm-palette-primary-20: #003061;
+    --lm-palette-primary-22: #003568;
+    --lm-palette-primary-24: #003970;
+    --lm-palette-primary-25: #003b74;
+    --lm-palette-primary-30: #004788;
+    --lm-palette-primary-35: #00529d;
+    --lm-palette-primary-40: #005eb2;
+    --lm-palette-primary-45: #006ac8;
+    --lm-palette-primary-50: #0077de;
+    --lm-palette-primary-55: #2a83ed;
+    --lm-palette-primary-60: #4590fa;
+    --lm-palette-primary-65: #649dff;
+    --lm-palette-primary-70: #82aaff;
+    --lm-palette-primary-75: #9bb8ff;
+    --lm-palette-primary-80: #b1c5ff;
+    --lm-palette-primary-85: #c6d3ff;
+    --lm-palette-primary-87: #ced9ff;
+    --lm-palette-primary-90: #d9e2ff;
+    --lm-palette-primary-92: #e1e8ff;
+    --lm-palette-primary-94: #e9edff;
+    --lm-palette-primary-95: #ecf0ff;
+    --lm-palette-primary-96: #f0f3ff;
+    --lm-palette-primary-98: #f8f9ff;
+    --lm-palette-primary-99: #fbfcff;
+    --lm-palette-primary-100: #ffffff;
+    /* Azul-acinzentado — apoio calmo, ênfase média */
+    --lm-palette-secondary-0: #000000;
+    --lm-palette-secondary-4: #000f1d;
+    --lm-palette-secondary-5: #021220;
+    --lm-palette-secondary-6: #041522;
+    --lm-palette-secondary-10: #0b1d2d;
+    --lm-palette-secondary-12: #0e2132;
+    --lm-palette-secondary-15: #13273a;
+    --lm-palette-secondary-17: #162c3f;
+    --lm-palette-secondary-20: #1c3247;
+    --lm-palette-secondary-22: #1f364d;
+    --lm-palette-secondary-24: #233b52;
+    --lm-palette-secondary-25: #253d55;
+    --lm-palette-secondary-30: #2f4963;
+    --lm-palette-secondary-35: #3a5570;
+    --lm-palette-secondary-40: #45617e;
+    --lm-palette-secondary-45: #516d8b;
+    --lm-palette-secondary-50: #5e7998;
+    --lm-palette-secondary-55: #6b86a6;
+    --lm-palette-secondary-60: #7893b2;
+    --lm-palette-secondary-65: #86a0bf;
+    --lm-palette-secondary-70: #95adcc;
+    --lm-palette-secondary-75: #a4bbd8;
+    --lm-palette-secondary-80: #b3c8e4;
+    --lm-palette-secondary-85: #c3d6ef;
+    --lm-palette-secondary-87: #c9dcf4;
+    --lm-palette-secondary-90: #d3e4fb;
+    --lm-palette-secondary-92: #daeaff;
+    --lm-palette-secondary-94: #e3efff;
+    --lm-palette-secondary-95: #e8f2ff;
+    --lm-palette-secondary-96: #edf4ff;
+    --lm-palette-secondary-98: #f6faff;
+    --lm-palette-secondary-99: #fafcff;
+    --lm-palette-secondary-100: #ffffff;
+    /* Turquesa — acento expressivo, destaques pontuais */
+    --lm-palette-tertiary-0: #000000;
+    --lm-palette-tertiary-4: #001111;
+    --lm-palette-tertiary-5: #001414;
+    --lm-palette-tertiary-6: #001717;
+    --lm-palette-tertiary-10: #002021;
+    --lm-palette-tertiary-12: #002425;
+    --lm-palette-tertiary-15: #002b2c;
+    --lm-palette-tertiary-17: #003031;
+    --lm-palette-tertiary-20: #003738;
+    --lm-palette-tertiary-22: #003b3d;
+    --lm-palette-tertiary-24: #004042;
+    --lm-palette-tertiary-25: #004345;
+    --lm-palette-tertiary-30: #004f51;
+    --lm-palette-tertiary-35: #005c5e;
+    --lm-palette-tertiary-40: #00696c;
+    --lm-palette-tertiary-45: #00777a;
+    --lm-palette-tertiary-50: #008588;
+    --lm-palette-tertiary-55: #009396;
+    --lm-palette-tertiary-60: #00a1a5;
+    --lm-palette-tertiary-65: #00afb3;
+    --lm-palette-tertiary-70: #1dbec2;
+    --lm-palette-tertiary-75: #46cbce;
+    --lm-palette-tertiary-80: #64d8db;
+    --lm-palette-tertiary-85: #7fe4e7;
+    --lm-palette-tertiary-87: #8ae9ec;
+    --lm-palette-tertiary-90: #9af1f3;
+    --lm-palette-tertiary-92: #a5f6f8;
+    --lm-palette-tertiary-94: #affbfd;
+    --lm-palette-tertiary-95: #b5feff;
+    --lm-palette-tertiary-96: #c5feff;
+    --lm-palette-tertiary-98: #e3ffff;
+    --lm-palette-tertiary-99: #f1ffff;
+    --lm-palette-tertiary-100: #ffffff;
+    /* Neutro de superfícies e texto (leve viés azul) */
+    --lm-palette-neutral-0: #000000;
+    --lm-palette-neutral-4: #0c0e12;
+    --lm-palette-neutral-5: #0f1114;
+    --lm-palette-neutral-6: #111317;
+    --lm-palette-neutral-10: #1a1c1f;
+    --lm-palette-neutral-12: #1d2023;
+    --lm-palette-neutral-15: #23262a;
+    --lm-palette-neutral-17: #282a2e;
+    --lm-palette-neutral-20: #2e3135;
+    --lm-palette-neutral-22: #323539;
+    --lm-palette-neutral-24: #36393e;
+    --lm-palette-neutral-25: #383c40;
+    --lm-palette-neutral-30: #44474c;
+    --lm-palette-neutral-35: #4f5358;
+    --lm-palette-neutral-40: #5b5f65;
+    --lm-palette-neutral-45: #676b71;
+    --lm-palette-neutral-50: #73777e;
+    --lm-palette-neutral-55: #80848a;
+    --lm-palette-neutral-60: #8d9197;
+    --lm-palette-neutral-65: #9a9ea4;
+    --lm-palette-neutral-70: #a8abb2;
+    --lm-palette-neutral-75: #b5b9bf;
+    --lm-palette-neutral-80: #c3c7cc;
+    --lm-palette-neutral-85: #d1d5da;
+    --lm-palette-neutral-87: #d7dadf;
+    --lm-palette-neutral-90: #e0e3e7;
+    --lm-palette-neutral-92: #e6e8ed;
+    --lm-palette-neutral-94: #ebeef2;
+    --lm-palette-neutral-95: #eef1f5;
+    --lm-palette-neutral-96: #f1f4f8;
+    --lm-palette-neutral-98: #f7f9fd;
+    --lm-palette-neutral-99: #fbfcff;
+    --lm-palette-neutral-100: #ffffff;
+    /* Neutro de contornos e divisores */
+    --lm-palette-neutral-variant-0: #000000;
+    --lm-palette-neutral-variant-4: #070f17;
+    --lm-palette-neutral-variant-5: #0b111a;
+    --lm-palette-neutral-variant-6: #0d141c;
+    --lm-palette-neutral-variant-10: #151c25;
+    --lm-palette-neutral-variant-12: #19202a;
+    --lm-palette-neutral-variant-15: #1e2631;
+    --lm-palette-neutral-variant-17: #222b36;
+    --lm-palette-neutral-variant-20: #28313d;
+    --lm-palette-neutral-variant-22: #2c3542;
+    --lm-palette-neutral-variant-24: #303a47;
+    --lm-palette-neutral-variant-25: #323c49;
+    --lm-palette-neutral-variant-30: #3d4756;
+    --lm-palette-neutral-variant-35: #485363;
+    --lm-palette-neutral-variant-40: #545f70;
+    --lm-palette-neutral-variant-45: #606b7c;
+    --lm-palette-neutral-variant-50: #6c7889;
+    --lm-palette-neutral-variant-55: #798596;
+    --lm-palette-neutral-variant-60: #8692a3;
+    --lm-palette-neutral-variant-65: #939fb0;
+    --lm-palette-neutral-variant-70: #a1acbd;
+    --lm-palette-neutral-variant-75: #afbaca;
+    --lm-palette-neutral-variant-80: #bdc7d7;
+    --lm-palette-neutral-variant-85: #ccd5e3;
+    --lm-palette-neutral-variant-87: #d2dbe8;
+    --lm-palette-neutral-variant-90: #dbe3f0;
+    --lm-palette-neutral-variant-92: #e1e9f5;
+    --lm-palette-neutral-variant-94: #e7eefa;
+    --lm-palette-neutral-variant-95: #eaf1fc;
+    --lm-palette-neutral-variant-96: #edf4ff;
+    --lm-palette-neutral-variant-98: #f6faff;
+    --lm-palette-neutral-variant-99: #fbfcff;
+    --lm-palette-neutral-variant-100: #ffffff;
+    /* Erro e ações destrutivas */
+    --lm-palette-error-0: #000000;
+    --lm-palette-error-4: #220500;
+    --lm-palette-error-5: #270600;
+    --lm-palette-error-6: #2b0700;
+    --lm-palette-error-10: #410000;
+    --lm-palette-error-12: #490004;
+    --lm-palette-error-15: #54000a;
+    --lm-palette-error-17: #5c000e;
+    --lm-palette-error-20: #680012;
+    --lm-palette-error-22: #700015;
+    --lm-palette-error-24: #790017;
+    --lm-palette-error-25: #7d0018;
+    --lm-palette-error-30: #92001e;
+    --lm-palette-error-35: #a80024;
+    --lm-palette-error-40: #bb132d;
+    --lm-palette-error-45: #cc2637;
+    --lm-palette-error-50: #dd3742;
+    --lm-palette-error-55: #ec474e;
+    --lm-palette-error-60: #fb585a;
+    --lm-palette-error-65: #ff706d;
+    --lm-palette-error-70: #ff8983;
+    --lm-palette-error-75: #ff9f98;
+    --lm-palette-error-80: #ffb3ad;
+    --lm-palette-error-85: #ffc7c2;
+    --lm-palette-error-87: #ffcfca;
+    --lm-palette-error-90: #ffdad6;
+    --lm-palette-error-92: #ffe1df;
+    --lm-palette-error-94: #ffe9e7;
+    --lm-palette-error-95: #ffedeb;
+    --lm-palette-error-96: #fff0ef;
+    --lm-palette-error-98: #fff8f7;
+    --lm-palette-error-99: #fffbfb;
+    --lm-palette-error-100: #ffffff;
+    /* Sucesso e confirmação */
+    --lm-palette-success-0: #000000;
+    --lm-palette-success-4: #001206;
+    --lm-palette-success-5: #001508;
+    --lm-palette-success-6: #001809;
+    --lm-palette-success-10: #00210f;
+    --lm-palette-success-12: #002612;
+    --lm-palette-success-15: #002d17;
+    --lm-palette-success-17: #00311a;
+    --lm-palette-success-20: #00391f;
+    --lm-palette-success-22: #003e22;
+    --lm-palette-success-24: #004325;
+    --lm-palette-success-25: #004526;
+    --lm-palette-success-30: #00522f;
+    --lm-palette-success-35: #005f37;
+    --lm-palette-success-40: #006d40;
+    --lm-palette-success-45: #007b48;
+    --lm-palette-success-50: #008951;
+    --lm-palette-success-55: #15975c;
+    --lm-palette-success-60: #2fa469;
+    --lm-palette-success-65: #44b177;
+    --lm-palette-success-70: #58be85;
+    --lm-palette-success-75: #6ccb94;
+    --lm-palette-success-80: #81d8a4;
+    --lm-palette-success-85: #96e5b5;
+    --lm-palette-success-87: #9feabc;
+    --lm-palette-success-90: #acf2c6;
+    --lm-palette-success-92: #b5f7cd;
+    --lm-palette-success-94: #befcd5;
+    --lm-palette-success-95: #c3fed8;
+    --lm-palette-success-96: #ceffdf;
+    --lm-palette-success-98: #e7ffef;
+    --lm-palette-success-99: #f3fff7;
+    --lm-palette-success-100: #ffffff;
+    /* Atenção e avisos */
+    --lm-palette-warning-0: #000000;
+    --lm-palette-warning-4: #160c00;
+    --lm-palette-warning-5: #190f00;
+    --lm-palette-warning-6: #1d1100;
+    --lm-palette-warning-10: #281900;
+    --lm-palette-warning-12: #2e1c00;
+    --lm-palette-warning-15: #372100;
+    --lm-palette-warning-17: #3d2500;
+    --lm-palette-warning-20: #462b00;
+    --lm-palette-warning-22: #4c2e00;
+    --lm-palette-warning-24: #523200;
+    --lm-palette-warning-25: #553400;
+    --lm-palette-warning-30: #653e00;
+    --lm-palette-warning-35: #754900;
+    --lm-palette-warning-40: #855400;
+    --lm-palette-warning-45: #955f00;
+    --lm-palette-warning-50: #a66a00;
+    --lm-palette-warning-55: #b87500;
+    --lm-palette-warning-60: #c98100;
+    --lm-palette-warning-65: #d98e13;
+    --lm-palette-warning-70: #e79b2d;
+    --lm-palette-warning-75: #f4aa44;
+    --lm-palette-warning-80: #ffb95f;
+    --lm-palette-warning-85: #ffcb90;
+    --lm-palette-warning-87: #ffd2a1;
+    --lm-palette-warning-90: #ffddb9;
+    --lm-palette-warning-92: #ffe4c8;
+    --lm-palette-warning-94: #ffead6;
+    --lm-palette-warning-95: #ffeedd;
+    --lm-palette-warning-96: #fff1e4;
+    --lm-palette-warning-98: #fff8f2;
+    --lm-palette-warning-99: #fffcf8;
+    --lm-palette-warning-100: #ffffff;
+    /* Identidade Airbnb (badge com rótulo) */
+    --lm-palette-airbnb-0: #000000;
+    --lm-palette-airbnb-4: #260100;
+    --lm-palette-airbnb-5: #2c0100;
+    --lm-palette-airbnb-6: #320000;
+    --lm-palette-airbnb-10: #40000a;
+    --lm-palette-airbnb-12: #48000f;
+    --lm-palette-airbnb-15: #530014;
+    --lm-palette-airbnb-17: #5b0017;
+    --lm-palette-airbnb-20: #67001b;
+    --lm-palette-airbnb-22: #70001e;
+    --lm-palette-airbnb-24: #780021;
+    --lm-palette-airbnb-25: #7c0022;
+    --lm-palette-airbnb-30: #92002a;
+    --lm-palette-airbnb-35: #a80032;
+    --lm-palette-airbnb-40: #be0039;
+    --lm-palette-airbnb-45: #d40742;
+    --lm-palette-airbnb-50: #e4254d;
+    --lm-palette-airbnb-55: #f43959;
+    --lm-palette-airbnb-60: #ff5167;
+    --lm-palette-airbnb-65: #ff6f7b;
+    --lm-palette-airbnb-70: #ff888e;
+    --lm-palette-airbnb-75: #ff9ea1;
+    --lm-palette-airbnb-80: #ffb3b4;
+    --lm-palette-airbnb-85: #ffc6c7;
+    --lm-palette-airbnb-87: #ffcece;
+    --lm-palette-airbnb-90: #ffdad9;
+    --lm-palette-airbnb-92: #ffe1e1;
+    --lm-palette-airbnb-94: #ffe9e8;
+    --lm-palette-airbnb-95: #ffecec;
+    --lm-palette-airbnb-96: #fff0f0;
+    --lm-palette-airbnb-98: #fff8f7;
+    --lm-palette-airbnb-99: #fffbfb;
+    --lm-palette-airbnb-100: #ffffff;
+    /* Identidade Booking.com (badge com rótulo) */
+    --lm-palette-booking-0: #000000;
+    --lm-palette-booking-4: #000f20;
+    --lm-palette-booking-5: #001225;
+    --lm-palette-booking-6: #001429;
+    --lm-palette-booking-10: #001d36;
+    --lm-palette-booking-12: #00213c;
+    --lm-palette-booking-15: #002746;
+    --lm-palette-booking-17: #002b4d;
+    --lm-palette-booking-20: #003258;
+    --lm-palette-booking-22: #00375f;
+    --lm-palette-booking-24: #003b66;
+    --lm-palette-booking-25: #003d6a;
+    --lm-palette-booking-30: #00497c;
+    --lm-palette-booking-35: #00558f;
+    --lm-palette-booking-40: #0061a3;
+    --lm-palette-booking-45: #006eb7;
+    --lm-palette-booking-50: #007bcb;
+    --lm-palette-booking-55: #1788dd;
+    --lm-palette-booking-60: #3894ea;
+    --lm-palette-booking-65: #51a1f6;
+    --lm-palette-booking-70: #6aaeff;
+    --lm-palette-booking-75: #8abbff;
+    --lm-palette-booking-80: #a5c8ff;
+    --lm-palette-booking-85: #bdd6ff;
+    --lm-palette-booking-87: #c7dbff;
+    --lm-palette-booking-90: #d4e3ff;
+    --lm-palette-booking-92: #dde9ff;
+    --lm-palette-booking-94: #e6eeff;
+    --lm-palette-booking-95: #eaf1ff;
+    --lm-palette-booking-96: #eef4ff;
+    --lm-palette-booking-98: #f7f9ff;
+    --lm-palette-booking-99: #fbfcff;
+    --lm-palette-booking-100: #ffffff;
+    /* Família de gráfico — violeta */
+    --lm-palette-chart-violet-0: #000000;
+    --lm-palette-chart-violet-4: #1c0229;
+    --lm-palette-chart-violet-5: #1e042c;
+    --lm-palette-chart-violet-6: #20072f;
+    --lm-palette-chart-violet-10: #290e3c;
+    --lm-palette-chart-violet-12: #2f1142;
+    --lm-palette-chart-violet-15: #36164c;
+    --lm-palette-chart-violet-17: #3c1a52;
+    --lm-palette-chart-violet-20: #441f5c;
+    --lm-palette-chart-violet-22: #492362;
+    --lm-palette-chart-violet-24: #4e2769;
+    --lm-palette-chart-violet-25: #51296c;
+    --lm-palette-chart-violet-30: #5f337b;
+    --lm-palette-chart-violet-35: #6c3e8b;
+    --lm-palette-chart-violet-40: #7a499a;
+    --lm-palette-chart-violet-45: #8855a8;
+    --lm-palette-chart-violet-50: #9561b6;
+    --lm-palette-chart-violet-55: #a36ec3;
+    --lm-palette-chart-violet-60: #b07cd0;
+    --lm-palette-chart-violet-65: #bd89dd;
+    --lm-palette-chart-violet-70: #ca97e8;
+    --lm-palette-chart-violet-75: #d7a6f3;
+    --lm-palette-chart-violet-80: #e3b5fe;
+    --lm-palette-chart-violet-85: #ebc7ff;
+    --lm-palette-chart-violet-87: #eecfff;
+    --lm-palette-chart-violet-90: #f2daff;
+    --lm-palette-chart-violet-92: #f5e1ff;
+    --lm-palette-chart-violet-94: #f8e9ff;
+    --lm-palette-chart-violet-95: #f9ecff;
+    --lm-palette-chart-violet-96: #faf0ff;
+    --lm-palette-chart-violet-98: #fdf8ff;
+    --lm-palette-chart-violet-99: #fefbff;
+    --lm-palette-chart-violet-100: #ffffff;
+    /* Família de gráfico — laranja */
+    --lm-palette-chart-orange-0: #000000;
+    --lm-palette-chart-orange-4: #1c0900;
+    --lm-palette-chart-orange-5: #200b00;
+    --lm-palette-chart-orange-6: #230d00;
+    --lm-palette-chart-orange-10: #331200;
+    --lm-palette-chart-orange-12: #3b1300;
+    --lm-palette-chart-orange-15: #481500;
+    --lm-palette-chart-orange-17: #501700;
+    --lm-palette-chart-orange-20: #5d1900;
+    --lm-palette-chart-orange-22: #651a00;
+    --lm-palette-chart-orange-24: #6e1b00;
+    --lm-palette-chart-orange-25: #721c00;
+    --lm-palette-chart-orange-30: #882000;
+    --lm-palette-chart-orange-35: #9b2905;
+    --lm-palette-chart-orange-40: #ac340f;
+    --lm-palette-chart-orange-45: #bc411a;
+    --lm-palette-chart-orange-50: #cc4e25;
+    --lm-palette-chart-orange-55: #db5c32;
+    --lm-palette-chart-orange-60: #ea6a3f;
+    --lm-palette-chart-orange-65: #f8794e;
+    --lm-palette-chart-orange-70: #ff8b64;
+    --lm-palette-chart-orange-75: #ffa180;
+    --lm-palette-chart-orange-80: #ffb59b;
+    --lm-palette-chart-orange-85: #ffc8b5;
+    --lm-palette-chart-orange-87: #ffd0bf;
+    --lm-palette-chart-orange-90: #ffdbce;
+    --lm-palette-chart-orange-92: #ffe2d8;
+    --lm-palette-chart-orange-94: #ffe9e2;
+    --lm-palette-chart-orange-95: #ffede7;
+    --lm-palette-chart-orange-96: #fff1ec;
+    --lm-palette-chart-orange-98: #fff8f5;
+    --lm-palette-chart-orange-99: #fffbfa;
+    --lm-palette-chart-orange-100: #ffffff;
+    /* Família de gráfico — ciano */
+    --lm-palette-chart-cyan-0: #000000;
+    --lm-palette-chart-cyan-4: #001116;
+    --lm-palette-chart-cyan-5: #001419;
+    --lm-palette-chart-cyan-6: #00161c;
+    --lm-palette-chart-cyan-10: #001f28;
+    --lm-palette-chart-cyan-12: #00232d;
+    --lm-palette-chart-cyan-15: #002a35;
+    --lm-palette-chart-cyan-17: #002e3b;
+    --lm-palette-chart-cyan-20: #003543;
+    --lm-palette-chart-cyan-22: #003a49;
+    --lm-palette-chart-cyan-24: #003f4f;
+    --lm-palette-chart-cyan-25: #004152;
+    --lm-palette-chart-cyan-30: #004e60;
+    --lm-palette-chart-cyan-35: #005a70;
+    --lm-palette-chart-cyan-40: #00677f;
+    --lm-palette-chart-cyan-45: #00748f;
+    --lm-palette-chart-cyan-50: #00829f;
+    --lm-palette-chart-cyan-55: #0090b0;
+    --lm-palette-chart-cyan-60: #009ec1;
+    --lm-palette-chart-cyan-65: #00acd2;
+    --lm-palette-chart-cyan-70: #00bae3;
+    --lm-palette-chart-cyan-75: #32c8f1;
+    --lm-palette-chart-cyan-80: #5ad5fc;
+    --lm-palette-chart-cyan-85: #8ae0ff;
+    --lm-palette-chart-cyan-87: #9de4ff;
+    --lm-palette-chart-cyan-90: #b6eaff;
+    --lm-palette-chart-cyan-92: #c6efff;
+    --lm-palette-chart-cyan-94: #d5f3ff;
+    --lm-palette-chart-cyan-95: #dcf5ff;
+    --lm-palette-chart-cyan-96: #e3f7ff;
+    --lm-palette-chart-cyan-98: #f1fbff;
+    --lm-palette-chart-cyan-99: #f8fdff;
+    --lm-palette-chart-cyan-100: #ffffff;
+    /* Família de gráfico — rosa */
+    --lm-palette-chart-rose-0: #000000;
+    --lm-palette-chart-rose-4: #260012;
+    --lm-palette-chart-rose-5: #2b0015;
+    --lm-palette-chart-rose-6: #2f0017;
+    --lm-palette-chart-rose-10: #3e0020;
+    --lm-palette-chart-rose-12: #450024;
+    --lm-palette-chart-rose-15: #51002b;
+    --lm-palette-chart-rose-17: #580030;
+    --lm-palette-chart-rose-20: #640037;
+    --lm-palette-chart-rose-22: #6c003c;
+    --lm-palette-chart-rose-24: #740041;
+    --lm-palette-chart-rose-25: #780043;
+    --lm-palette-chart-rose-30: #8a0c4f;
+    --lm-palette-chart-rose-35: #9b1b5c;
+    --lm-palette-chart-rose-40: #ab2968;
+    --lm-palette-chart-rose-45: #bb3775;
+    --lm-palette-chart-rose-50: #ca4581;
+    --lm-palette-chart-rose-55: #d9548e;
+    --lm-palette-chart-rose-60: #e6639b;
+    --lm-palette-chart-rose-65: #f372a8;
+    --lm-palette-chart-rose-70: #ff83b5;
+    --lm-palette-chart-rose-75: #ff9ac1;
+    --lm-palette-chart-rose-80: #ffb0cd;
+    --lm-palette-chart-rose-85: #ffc5d9;
+    --lm-palette-chart-rose-87: #ffcdde;
+    --lm-palette-chart-rose-90: #ffd8e5;
+    --lm-palette-chart-rose-92: #ffe0ea;
+    --lm-palette-chart-rose-94: #ffe8f0;
+    --lm-palette-chart-rose-95: #ffecf2;
+    --lm-palette-chart-rose-96: #fff0f5;
+    --lm-palette-chart-rose-98: #fff7fa;
+    --lm-palette-chart-rose-99: #fffbfc;
+    --lm-palette-chart-rose-100: #ffffff;
+
+    /* --- Espaçamento (escala de 4px) --- */
+    --lm-space-0: 0px;
+    --lm-space-2: 2px;
+    --lm-space-4: 4px;
+    --lm-space-8: 8px;
+    --lm-space-12: 12px;
+    --lm-space-16: 16px;
+    --lm-space-20: 20px;
+    --lm-space-24: 24px;
+    --lm-space-32: 32px;
+    --lm-space-40: 40px;
+    --lm-space-48: 48px;
+    --lm-space-64: 64px;
+    --lm-space-80: 80px;
+    --lm-space-96: 96px;
+
+    /* --- Raios --- */
+    --lm-radius-none: 0;
+    --lm-radius-xs: 4px;
+    --lm-radius-sm: 8px;
+    --lm-radius-md: 12px;
+    --lm-radius-lg: 16px;
+    --lm-radius-xl: 24px;
+    --lm-radius-2xl: 32px;
+    --lm-radius-full: 999px;
+
+    /* --- Tamanhos de ícone --- */
+    --lm-icon-sm: 16px;
+    --lm-icon-md: 20px;
+    --lm-icon-lg: 24px;
+    --lm-icon-xl: 40px;
+
+    /* --- Famílias tipográficas --- */
+    --lm-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans", Arial, sans-serif;
+    --lm-font-mono: "Cascadia Mono", Consolas, ui-monospace, "SFMono-Regular", monospace;
+
+    /* --- Escala tipográfica --- */
+    /* 57px — Marketing e telas de foco; raro no produto */
+    --lm-type-display-lg-size: 3.5625rem;
+    --lm-type-display-lg-line: 4rem;
+    --lm-type-display-lg-weight: 400;
+    --lm-type-display-lg-tracking: -0.0044em;
+    /* 45px — Números-herói de dashboard */
+    --lm-type-display-md-size: 2.8125rem;
+    --lm-type-display-md-line: 3.25rem;
+    --lm-type-display-md-weight: 400;
+    --lm-type-display-md-tracking: 0em;
+    /* 36px — Valores de destaque em cards de estatística */
+    --lm-type-display-sm-size: 2.25rem;
+    --lm-type-display-sm-line: 2.75rem;
+    --lm-type-display-sm-weight: 400;
+    --lm-type-display-sm-tracking: 0em;
+    /* 32px — Título de página em telas expanded+ */
+    --lm-type-headline-lg-size: 2rem;
+    --lm-type-headline-lg-line: 2.5rem;
+    --lm-type-headline-lg-weight: 400;
+    --lm-type-headline-lg-tracking: 0em;
+    /* 28px — Título de página padrão */
+    --lm-type-headline-md-size: 1.75rem;
+    --lm-type-headline-md-line: 2.25rem;
+    --lm-type-headline-md-weight: 400;
+    --lm-type-headline-md-tracking: 0em;
+    /* 24px — Título de seção maior; título de página em compact */
+    --lm-type-headline-sm-size: 1.5rem;
+    --lm-type-headline-sm-line: 2rem;
+    --lm-type-headline-sm-weight: 400;
+    --lm-type-headline-sm-tracking: 0em;
+    /* 22px — Título de dialog e de painel */
+    --lm-type-title-lg-size: 1.375rem;
+    --lm-type-title-lg-line: 1.75rem;
+    --lm-type-title-lg-weight: 400;
+    --lm-type-title-lg-tracking: 0em;
+    /* 16px — Título de card e de grupo de formulário */
+    --lm-type-title-md-size: 1rem;
+    --lm-type-title-md-line: 1.5rem;
+    --lm-type-title-md-weight: 500;
+    --lm-type-title-md-tracking: 0.0094em;
+    /* 14px — Subtítulo, cabeçalho de lista */
+    --lm-type-title-sm-size: 0.875rem;
+    --lm-type-title-sm-line: 1.25rem;
+    --lm-type-title-sm-weight: 500;
+    --lm-type-title-sm-tracking: 0.0063em;
+    /* 16px — Texto corrido em telas de leitura */
+    --lm-type-body-lg-size: 1rem;
+    --lm-type-body-lg-line: 1.5rem;
+    --lm-type-body-lg-weight: 400;
+    --lm-type-body-lg-tracking: 0.0313em;
+    /* 14px — Corpo padrão da interface */
+    --lm-type-body-md-size: 0.875rem;
+    --lm-type-body-md-line: 1.25rem;
+    --lm-type-body-md-weight: 400;
+    --lm-type-body-md-tracking: 0.0156em;
+    /* 12px — SOMENTE metadados — nunca texto principal */
+    --lm-type-body-sm-size: 0.75rem;
+    --lm-type-body-sm-line: 1rem;
+    --lm-type-body-sm-weight: 400;
+    --lm-type-body-sm-tracking: 0.025em;
+    /* 14px — Rótulo de botão, aba e item de navegação */
+    --lm-type-label-lg-size: 0.875rem;
+    --lm-type-label-lg-line: 1.25rem;
+    --lm-type-label-lg-weight: 500;
+    --lm-type-label-lg-tracking: 0.0063em;
+    /* 12px — Rótulo de campo, chip, badge */
+    --lm-type-label-md-size: 0.75rem;
+    --lm-type-label-md-line: 1rem;
+    --lm-type-label-md-weight: 500;
+    --lm-type-label-md-tracking: 0.0313em;
+    /* 11px — Cabeçalho de tabela, microrrótulo */
+    --lm-type-label-sm-size: 0.6875rem;
+    --lm-type-label-sm-line: 1rem;
+    --lm-type-label-sm-weight: 500;
+    --lm-type-label-sm-tracking: 0.0455em;
+    /* 13px — IDs, código, dados técnicos (fonte monoespaçada) */
+    --lm-type-code-size: 0.8125rem;
+    --lm-type-code-line: 1.25rem;
+    --lm-type-code-weight: 400;
+    --lm-type-code-tracking: 0em;
+
+    /* --- Movimento --- */
+    --lm-duration-instant: 0ms;
+    --lm-duration-fast: 120ms;
+    --lm-duration-standard: 200ms;
+    --lm-duration-emphasized: 320ms;
+    --lm-duration-complex: 480ms;
+    --lm-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+    --lm-easing-decelerate: cubic-bezier(0, 0, 0, 1);
+    --lm-easing-accelerate: cubic-bezier(0.3, 0, 1, 1);
+    --lm-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    --lm-easing-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+
+    /* --- Permanência (quanto tempo algo fica na tela) --- */
+    --lm-dwell-snackbar: 5000ms;
+    --lm-dwell-snackbar-action: 10000ms;
+    --lm-dwell-tooltip-delay: 500ms;
+    --lm-dwell-tooltip-delay-repeat: 0ms;
+
+    /* --- Camadas de estado (opacidade do overlay) --- */
+    --lm-state-hover: 0.08;
+    --lm-state-focus: 0.10;
+    --lm-state-pressed: 0.12;
+    --lm-state-dragged: 0.16;
+    --lm-state-selected: 0.12;
+    --lm-state-disabled-content: 0.38;
+    --lm-state-disabled-container: 0.12;
+
+    /* --- Camadas (z-index) --- */
+    --lm-z-base: 0;
+    --lm-z-sticky: 100;
+    --lm-z-dropdown: 200;
+    --lm-z-popover: 300;
+    --lm-z-overlay: 400;
+    --lm-z-drawer: 500;
+    --lm-z-modal: 600;
+    --lm-z-toast: 700;
+    --lm-z-critical: 800;
+
+    /* --- Densidade (padrão; sobrescrita por [data-density]) --- */
+    --lm-density-control: 40px;
+    --lm-density-row: 52px;
+    --lm-density-gap: 12px;
+  }
+
+  /* --- Níveis de densidade --- */
+  [data-density="comfortable"] {
+    --lm-density-control: 48px;
+    --lm-density-row: 64px;
+    --lm-density-gap: 16px;
+  }
+  [data-density="standard"] {
+    --lm-density-control: 40px;
+    --lm-density-row: 52px;
+    --lm-density-gap: 12px;
+  }
+  [data-density="compact"] {
+    --lm-density-control: 32px;
+    --lm-density-row: 40px;
+    --lm-density-gap: 8px;
+  }
+
+  /* Densidade confortável forçada onde o ponteiro é grosseiro (toque). */
+  @media (pointer: coarse) {
+    :root {
+      --lm-density-control: 48px;
+      --lm-density-row: 64px;
+      --lm-density-gap: 16px;
+    }
+  }
+}
+
+/* =============================================================
+   LUMINA Design System — Tokens semânticos (tema claro e escuro)
+   ARQUIVO GERADO por scripts/design/generate_tokens.py
+   Não edite à mão. Altere as sementes no gerador e rode-o novamente.
+   ============================================================= */
+
+@layer lm.tokens {
+  /* Tema claro — padrão do produto. */
+  :root {
+    color-scheme: light;
+    --lm-color-primary: #005eb2;
+    --lm-color-on-primary: #ffffff;
+    --lm-color-primary-container: #d9e2ff;
+    --lm-color-on-primary-container: #001b3c;
+    --lm-color-primary-fixed: #d9e2ff;
+    --lm-color-on-primary-fixed: #001b3c;
+    --lm-color-secondary: #45617e;
+    --lm-color-on-secondary: #ffffff;
+    --lm-color-secondary-container: #d3e4fb;
+    --lm-color-on-secondary-container: #0b1d2d;
+    --lm-color-tertiary: #00696c;
+    --lm-color-on-tertiary: #ffffff;
+    --lm-color-tertiary-container: #9af1f3;
+    --lm-color-on-tertiary-container: #002021;
+    --lm-color-background: #f7f9fd;
+    --lm-color-on-background: #1a1c1f;
+    --lm-color-surface: #f7f9fd;
+    --lm-color-on-surface: #1a1c1f;
+    --lm-color-surface-dim: #d7dadf;
+    --lm-color-surface-bright: #f7f9fd;
+    --lm-color-surface-container-lowest: #ffffff;
+    --lm-color-surface-container-low: #f1f4f8;
+    --lm-color-surface-container: #ebeef2;
+    --lm-color-surface-container-high: #e6e8ed;
+    --lm-color-surface-container-highest: #e0e3e7;
+    --lm-color-surface-variant: #dbe3f0;
+    --lm-color-on-surface-variant: #3d4756;
+    --lm-color-inverse-surface: #2e3135;
+    --lm-color-inverse-on-surface: #eef1f5;
+    --lm-color-inverse-primary: #b1c5ff;
+    --lm-color-outline: #6c7889;
+    --lm-color-outline-interactive: #606b7c;
+    --lm-color-outline-variant: #bdc7d7;
+    --lm-color-divider: #d2dbe8;
+    --lm-color-scrim: #000000;
+    --lm-color-shadow: #000000;
+    --lm-color-on-surface-disabled: #6c7889;
+    --lm-color-error: #bb132d;
+    --lm-color-on-error: #ffffff;
+    --lm-color-error-container: #ffdad6;
+    --lm-color-on-error-container: #410000;
+    --lm-color-success: #005f37;
+    --lm-color-on-success: #ffffff;
+    --lm-color-success-container: #acf2c6;
+    --lm-color-on-success-container: #00210f;
+    --lm-color-warning: #754900;
+    --lm-color-on-warning: #ffffff;
+    --lm-color-warning-container: #ffddb9;
+    --lm-color-on-warning-container: #281900;
+    --lm-color-info: #005eb2;
+    --lm-color-on-info: #ffffff;
+    --lm-color-info-container: #d9e2ff;
+    --lm-color-on-info-container: #001b3c;
+    --lm-color-airbnb: #be0039;
+    --lm-color-on-airbnb: #ffffff;
+    --lm-color-airbnb-container: #ffe1e1;
+    --lm-color-on-airbnb-container: #40000a;
+    --lm-color-booking: #0061a3;
+    --lm-color-on-booking: #ffffff;
+    --lm-color-booking-container: #dde9ff;
+    --lm-color-on-booking-container: #001d36;
+    --lm-color-chart-surface: #f1f4f8;
+    --lm-color-chart-ink: #1a1c1f;
+    --lm-color-chart-ink-muted: #3d4756;
+    --lm-color-chart-grid: #d2dbe8;
+    --lm-color-chart-axis: #a1acbd;
+    --lm-color-chart-tooltip-bg: #2e3135;
+    --lm-color-chart-tooltip-label: #eef1f5;
+
+    --lm-elevation-0: none;
+    --lm-elevation-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px 1px rgba(0,0,0,.04);
+    --lm-elevation-2: 0 1px 2px rgba(0,0,0,.06), 0 2px 6px 2px rgba(0,0,0,.05);
+    --lm-elevation-3: 0 4px 8px 3px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.07);
+    --lm-elevation-4: 0 6px 10px 4px rgba(0,0,0,.06), 0 2px 3px rgba(0,0,0,.07);
+    --lm-elevation-5: 0 8px 12px 6px rgba(0,0,0,.07), 0 4px 4px rgba(0,0,0,.08);
+
+    /* Gráficos — paleta categórica em ordem fixa (nunca ciclar) */
+    --lm-chart-series-1: #2a83ed; /* blue */
+    --lm-chart-series-2: #15975c; /* green */
+    --lm-chart-series-3: #a36ec3; /* violet */
+    --lm-chart-series-4: #db5c32; /* orange */
+    --lm-chart-series-5: #009396; /* teal */
+    --lm-chart-series-6: #b87500; /* amber */
+    --lm-chart-series-7: #0090b0; /* cyan */
+    --lm-chart-series-8: #ab2968; /* rose */
+    --lm-chart-sequential-1: #e1e8ff;
+    --lm-chart-sequential-2: #c6d3ff;
+    --lm-chart-sequential-3: #9bb8ff;
+    --lm-chart-sequential-4: #649dff;
+    --lm-chart-sequential-5: #2a83ed;
+    --lm-chart-sequential-6: #006ac8;
+    --lm-chart-sequential-7: #00529d;
+    --lm-chart-sequential-8: #003b74;
+    --lm-chart-ordinal-1: #649dff;
+    --lm-chart-ordinal-2: #2a83ed;
+    --lm-chart-ordinal-3: #006ac8;
+    --lm-chart-ordinal-4: #00529d;
+    --lm-chart-ordinal-5: #003b74;
+    --lm-chart-diverging-negative: #dd3742;
+    --lm-chart-diverging-neutral: #e0e3e7;
+    --lm-chart-diverging-positive: #0077de;
+    --lm-chart-status-good: #007b48;
+    --lm-chart-status-warning: #b87500;
+    --lm-chart-status-serious: #cc4e25;
+    --lm-chart-status-critical: #cc2637;
+  }
+
+  /* Preferência do sistema. O :not() permite que um tema claro
+     escolhido manualmente vença o escuro do SO. */
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --lm-color-primary: #b1c5ff;
+      --lm-color-on-primary: #003061;
+      --lm-color-primary-container: #004788;
+      --lm-color-on-primary-container: #d9e2ff;
+      --lm-color-primary-fixed: #d9e2ff;
+      --lm-color-on-primary-fixed: #001b3c;
+      --lm-color-secondary: #b3c8e4;
+      --lm-color-on-secondary: #1c3247;
+      --lm-color-secondary-container: #2f4963;
+      --lm-color-on-secondary-container: #d3e4fb;
+      --lm-color-tertiary: #64d8db;
+      --lm-color-on-tertiary: #003738;
+      --lm-color-tertiary-container: #004f51;
+      --lm-color-on-tertiary-container: #9af1f3;
+      --lm-color-background: #111317;
+      --lm-color-on-background: #e0e3e7;
+      --lm-color-surface: #111317;
+      --lm-color-on-surface: #e0e3e7;
+      --lm-color-surface-dim: #111317;
+      --lm-color-surface-bright: #36393e;
+      --lm-color-surface-container-lowest: #0c0e12;
+      --lm-color-surface-container-low: #1a1c1f;
+      --lm-color-surface-container: #1d2023;
+      --lm-color-surface-container-high: #282a2e;
+      --lm-color-surface-container-highest: #323539;
+      --lm-color-surface-variant: #3d4756;
+      --lm-color-on-surface-variant: #bdc7d7;
+      --lm-color-inverse-surface: #e0e3e7;
+      --lm-color-inverse-on-surface: #2e3135;
+      --lm-color-inverse-primary: #005eb2;
+      --lm-color-outline: #8692a3;
+      --lm-color-outline-interactive: #939fb0;
+      --lm-color-outline-variant: #3d4756;
+      --lm-color-divider: #323c49;
+      --lm-color-scrim: #000000;
+      --lm-color-shadow: #000000;
+      --lm-color-on-surface-disabled: #8692a3;
+      --lm-color-error: #ffb3ad;
+      --lm-color-on-error: #680012;
+      --lm-color-error-container: #92001e;
+      --lm-color-on-error-container: #ffdad6;
+      --lm-color-success: #81d8a4;
+      --lm-color-on-success: #00391f;
+      --lm-color-success-container: #00522f;
+      --lm-color-on-success-container: #acf2c6;
+      --lm-color-warning: #ffb95f;
+      --lm-color-on-warning: #462b00;
+      --lm-color-warning-container: #653e00;
+      --lm-color-on-warning-container: #ffddb9;
+      --lm-color-info: #b1c5ff;
+      --lm-color-on-info: #003061;
+      --lm-color-info-container: #004788;
+      --lm-color-on-info-container: #d9e2ff;
+      --lm-color-airbnb: #ffb3b4;
+      --lm-color-on-airbnb: #67001b;
+      --lm-color-airbnb-container: #7c0022;
+      --lm-color-on-airbnb-container: #ffdad9;
+      --lm-color-booking: #a5c8ff;
+      --lm-color-on-booking: #003258;
+      --lm-color-booking-container: #003d6a;
+      --lm-color-on-booking-container: #d4e3ff;
+      --lm-color-chart-surface: #1a1c1f;
+      --lm-color-chart-ink: #e0e3e7;
+      --lm-color-chart-ink-muted: #bdc7d7;
+      --lm-color-chart-grid: #323c49;
+      --lm-color-chart-axis: #545f70;
+      --lm-color-chart-tooltip-bg: #e0e3e7;
+      --lm-color-chart-tooltip-label: #2e3135;
+
+      --lm-elevation-0: none;
+      --lm-elevation-1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+      --lm-elevation-2: 0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.18);
+      --lm-elevation-3: 0 4px 8px 3px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.30);
+      --lm-elevation-4: 0 6px 10px 4px rgba(0,0,0,.20), 0 2px 3px rgba(0,0,0,.30);
+      --lm-elevation-5: 0 8px 12px 6px rgba(0,0,0,.22), 0 4px 4px rgba(0,0,0,.32);
+
+      /* Gráficos — paleta categórica em ordem fixa (nunca ciclar) */
+      --lm-chart-series-1: #2a83ed; /* blue */
+      --lm-chart-series-2: #2fa469; /* green */
+      --lm-chart-series-3: #a36ec3; /* violet */
+      --lm-chart-series-4: #db5c32; /* orange */
+      --lm-chart-series-5: #00a1a5; /* teal */
+      --lm-chart-series-6: #c98100; /* amber */
+      --lm-chart-series-7: #009ec1; /* cyan */
+      --lm-chart-series-8: #d9548e; /* rose */
+      --lm-chart-sequential-1: #003b74;
+      --lm-chart-sequential-2: #00529d;
+      --lm-chart-sequential-3: #006ac8;
+      --lm-chart-sequential-4: #2a83ed;
+      --lm-chart-sequential-5: #649dff;
+      --lm-chart-sequential-6: #9bb8ff;
+      --lm-chart-sequential-7: #c6d3ff;
+      --lm-chart-sequential-8: #e1e8ff;
+      --lm-chart-ordinal-1: #005eb2;
+      --lm-chart-ordinal-2: #0077de;
+      --lm-chart-ordinal-3: #4590fa;
+      --lm-chart-ordinal-4: #82aaff;
+      --lm-chart-ordinal-5: #b1c5ff;
+      --lm-chart-diverging-negative: #fb585a;
+      --lm-chart-diverging-neutral: #44474c;
+      --lm-chart-diverging-positive: #4590fa;
+      --lm-chart-status-good: #44b177;
+      --lm-chart-status-warning: #e79b2d;
+      --lm-chart-status-serious: #f8794e;
+      --lm-chart-status-critical: #ff706d;
+    }
+  }
+
+  /* Escolha explícita do usuário — vence nos dois sentidos. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --lm-color-primary: #b1c5ff;
+    --lm-color-on-primary: #003061;
+    --lm-color-primary-container: #004788;
+    --lm-color-on-primary-container: #d9e2ff;
+    --lm-color-primary-fixed: #d9e2ff;
+    --lm-color-on-primary-fixed: #001b3c;
+    --lm-color-secondary: #b3c8e4;
+    --lm-color-on-secondary: #1c3247;
+    --lm-color-secondary-container: #2f4963;
+    --lm-color-on-secondary-container: #d3e4fb;
+    --lm-color-tertiary: #64d8db;
+    --lm-color-on-tertiary: #003738;
+    --lm-color-tertiary-container: #004f51;
+    --lm-color-on-tertiary-container: #9af1f3;
+    --lm-color-background: #111317;
+    --lm-color-on-background: #e0e3e7;
+    --lm-color-surface: #111317;
+    --lm-color-on-surface: #e0e3e7;
+    --lm-color-surface-dim: #111317;
+    --lm-color-surface-bright: #36393e;
+    --lm-color-surface-container-lowest: #0c0e12;
+    --lm-color-surface-container-low: #1a1c1f;
+    --lm-color-surface-container: #1d2023;
+    --lm-color-surface-container-high: #282a2e;
+    --lm-color-surface-container-highest: #323539;
+    --lm-color-surface-variant: #3d4756;
+    --lm-color-on-surface-variant: #bdc7d7;
+    --lm-color-inverse-surface: #e0e3e7;
+    --lm-color-inverse-on-surface: #2e3135;
+    --lm-color-inverse-primary: #005eb2;
+    --lm-color-outline: #8692a3;
+    --lm-color-outline-interactive: #939fb0;
+    --lm-color-outline-variant: #3d4756;
+    --lm-color-divider: #323c49;
+    --lm-color-scrim: #000000;
+    --lm-color-shadow: #000000;
+    --lm-color-on-surface-disabled: #8692a3;
+    --lm-color-error: #ffb3ad;
+    --lm-color-on-error: #680012;
+    --lm-color-error-container: #92001e;
+    --lm-color-on-error-container: #ffdad6;
+    --lm-color-success: #81d8a4;
+    --lm-color-on-success: #00391f;
+    --lm-color-success-container: #00522f;
+    --lm-color-on-success-container: #acf2c6;
+    --lm-color-warning: #ffb95f;
+    --lm-color-on-warning: #462b00;
+    --lm-color-warning-container: #653e00;
+    --lm-color-on-warning-container: #ffddb9;
+    --lm-color-info: #b1c5ff;
+    --lm-color-on-info: #003061;
+    --lm-color-info-container: #004788;
+    --lm-color-on-info-container: #d9e2ff;
+    --lm-color-airbnb: #ffb3b4;
+    --lm-color-on-airbnb: #67001b;
+    --lm-color-airbnb-container: #7c0022;
+    --lm-color-on-airbnb-container: #ffdad9;
+    --lm-color-booking: #a5c8ff;
+    --lm-color-on-booking: #003258;
+    --lm-color-booking-container: #003d6a;
+    --lm-color-on-booking-container: #d4e3ff;
+    --lm-color-chart-surface: #1a1c1f;
+    --lm-color-chart-ink: #e0e3e7;
+    --lm-color-chart-ink-muted: #bdc7d7;
+    --lm-color-chart-grid: #323c49;
+    --lm-color-chart-axis: #545f70;
+    --lm-color-chart-tooltip-bg: #e0e3e7;
+    --lm-color-chart-tooltip-label: #2e3135;
+
+    --lm-elevation-0: none;
+    --lm-elevation-1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+    --lm-elevation-2: 0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.18);
+    --lm-elevation-3: 0 4px 8px 3px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.30);
+    --lm-elevation-4: 0 6px 10px 4px rgba(0,0,0,.20), 0 2px 3px rgba(0,0,0,.30);
+    --lm-elevation-5: 0 8px 12px 6px rgba(0,0,0,.22), 0 4px 4px rgba(0,0,0,.32);
+
+    /* Gráficos — paleta categórica em ordem fixa (nunca ciclar) */
+    --lm-chart-series-1: #2a83ed; /* blue */
+    --lm-chart-series-2: #2fa469; /* green */
+    --lm-chart-series-3: #a36ec3; /* violet */
+    --lm-chart-series-4: #db5c32; /* orange */
+    --lm-chart-series-5: #00a1a5; /* teal */
+    --lm-chart-series-6: #c98100; /* amber */
+    --lm-chart-series-7: #009ec1; /* cyan */
+    --lm-chart-series-8: #d9548e; /* rose */
+    --lm-chart-sequential-1: #003b74;
+    --lm-chart-sequential-2: #00529d;
+    --lm-chart-sequential-3: #006ac8;
+    --lm-chart-sequential-4: #2a83ed;
+    --lm-chart-sequential-5: #649dff;
+    --lm-chart-sequential-6: #9bb8ff;
+    --lm-chart-sequential-7: #c6d3ff;
+    --lm-chart-sequential-8: #e1e8ff;
+    --lm-chart-ordinal-1: #005eb2;
+    --lm-chart-ordinal-2: #0077de;
+    --lm-chart-ordinal-3: #4590fa;
+    --lm-chart-ordinal-4: #82aaff;
+    --lm-chart-ordinal-5: #b1c5ff;
+    --lm-chart-diverging-negative: #fb585a;
+    --lm-chart-diverging-neutral: #44474c;
+    --lm-chart-diverging-positive: #4590fa;
+    --lm-chart-status-good: #44b177;
+    --lm-chart-status-warning: #e79b2d;
+    --lm-chart-status-serious: #f8794e;
+    --lm-chart-status-critical: #ff706d;
+  }
+}
+
+/* =============================================================
+   LUMINA Design System — Tokens de componente
+   ARQUIVO GERADO por scripts/design/generate_tokens.py
+   Não edite à mão. Altere as sementes no gerador e rode-o novamente.
+   ============================================================= */
+
+@layer lm.tokens {
+  :root {
+    /* --- button --- */
+    --lm-button-height: var(--lm-density-control);
+    --lm-button-padding-inline: var(--lm-space-24);
+    --lm-button-radius: var(--lm-radius-full);
+    --lm-button-gap: var(--lm-space-8);
+    --lm-button-filled-bg: var(--lm-color-primary);
+    --lm-button-filled-label: var(--lm-color-on-primary);
+    --lm-button-tonal-bg: var(--lm-color-secondary-container);
+    --lm-button-tonal-label: var(--lm-color-on-secondary-container);
+    --lm-button-outlined-border: var(--lm-color-outline);
+    --lm-button-outlined-label: var(--lm-color-primary);
+    --lm-button-text-label: var(--lm-color-primary);
+    --lm-button-elevated-bg: var(--lm-color-surface-container-low);
+    --lm-button-elevated-shadow: var(--lm-elevation-1);
+    --lm-button-destructive-bg: var(--lm-color-error);
+    --lm-button-destructive-label: var(--lm-color-on-error);
+
+    /* --- icon-button --- */
+    --lm-icon-button-size: var(--lm-density-control);
+    --lm-icon-button-icon-size: var(--lm-icon-md);
+    --lm-icon-button-radius: var(--lm-radius-full);
+    --lm-icon-button-color: var(--lm-color-on-surface-variant);
+    --lm-icon-button-selected-bg: var(--lm-color-secondary-container);
+    --lm-icon-button-selected-color: var(--lm-color-on-secondary-container);
+
+    /* --- field --- */
+    --lm-field-height: var(--lm-density-control);
+    --lm-field-radius: var(--lm-radius-sm);
+    --lm-field-padding-inline: var(--lm-space-16);
+    --lm-field-bg: var(--lm-color-surface-container-highest);
+    --lm-field-border: var(--lm-color-outline);
+    --lm-field-border-hover: var(--lm-color-on-surface);
+    --lm-field-border-focus: var(--lm-color-primary);
+    --lm-field-border-error: var(--lm-color-error);
+    --lm-field-border-width-focus: 2px;
+    --lm-field-label: var(--lm-color-on-surface-variant);
+    --lm-field-text: var(--lm-color-on-surface);
+    --lm-field-placeholder: var(--lm-color-on-surface-variant);
+    --lm-field-help: var(--lm-color-on-surface-variant);
+    --lm-field-error-text: var(--lm-color-error);
+    --lm-field-disabled-text: var(--lm-color-on-surface-disabled);
+    --lm-field-disabled-border: var(--lm-color-outline-variant);
+
+    /* --- card --- */
+    --lm-card-radius: var(--lm-radius-md);
+    --lm-card-padding: var(--lm-space-16);
+    --lm-card-filled-bg: var(--lm-color-surface-container-high);
+    --lm-card-elevated-bg: var(--lm-color-surface-container-low);
+    --lm-card-elevated-shadow: var(--lm-elevation-1);
+    --lm-card-outlined-bg: var(--lm-color-surface);
+    --lm-card-outlined-border: var(--lm-color-outline-variant);
+    --lm-card-selected-bg: var(--lm-color-secondary-container);
+
+    /* --- navigation --- */
+    --lm-navigation-rail-width: 88px;
+    --lm-navigation-rail-width-expanded: 256px;
+    --lm-navigation-drawer-width: 320px;
+    --lm-navigation-item-height: 56px;
+    --lm-navigation-item-radius: var(--lm-radius-full);
+    --lm-navigation-item-label: var(--lm-color-on-surface-variant);
+    --lm-navigation-item-label-selected: var(--lm-color-on-secondary-container);
+    --lm-navigation-item-bg-selected: var(--lm-color-secondary-container);
+    --lm-navigation-surface: var(--lm-color-surface);
+    --lm-navigation-indicator-height: 32px;
+    --lm-navigation-indicator-width: 56px;
+
+    /* --- app-bar --- */
+    --lm-app-bar-height: 64px;
+    --lm-app-bar-height-compact: 56px;
+    --lm-app-bar-bg: var(--lm-color-surface);
+    --lm-app-bar-bg-scrolled: var(--lm-color-surface-container);
+    --lm-app-bar-title: var(--lm-color-on-surface);
+    --lm-app-bar-icon: var(--lm-color-on-surface-variant);
+
+    /* --- dialog --- */
+    --lm-dialog-radius: var(--lm-radius-xl);
+    --lm-dialog-bg: var(--lm-color-surface-container-high);
+    --lm-dialog-shadow: var(--lm-elevation-4);
+    --lm-dialog-padding: var(--lm-space-24);
+    --lm-dialog-max-width: 560px;
+    --lm-dialog-scrim: var(--lm-color-scrim);
+    --lm-dialog-scrim-opacity: 0.32;
+
+    /* --- menu --- */
+    --lm-menu-radius: var(--lm-radius-md);
+    --lm-menu-bg: var(--lm-color-surface-container);
+    --lm-menu-shadow: var(--lm-elevation-2);
+    --lm-menu-item-height: 48px;
+    --lm-menu-min-width: 112px;
+    --lm-menu-max-width: 280px;
+
+    /* --- chip --- */
+    --lm-chip-height: 32px;
+    --lm-chip-radius: var(--lm-radius-sm);
+    --lm-chip-padding-inline: var(--lm-space-12);
+    --lm-chip-border: var(--lm-color-outline-interactive);
+    --lm-chip-label: var(--lm-color-on-surface-variant);
+    --lm-chip-selected-bg: var(--lm-color-secondary-container);
+    --lm-chip-selected-label: var(--lm-color-on-secondary-container);
+
+    /* --- badge --- */
+    --lm-badge-size: 16px;
+    --lm-badge-size-dot: 6px;
+    --lm-badge-min-width: 16px;
+    --lm-badge-padding-inline: var(--lm-space-4);
+    --lm-badge-radius: var(--lm-radius-full);
+    --lm-badge-bg: var(--lm-color-error);
+    --lm-badge-label: var(--lm-color-on-error);
+
+    /* --- skeleton --- */
+    --lm-skeleton-bg: var(--lm-color-surface-container-high);
+    --lm-skeleton-sheen: var(--lm-color-surface-container-lowest);
+    --lm-skeleton-radius: var(--lm-radius-xs);
+    --lm-skeleton-duration: 1400ms;
+
+    /* --- progress --- */
+    --lm-progress-track: var(--lm-color-secondary-container);
+    --lm-progress-indicator: var(--lm-color-primary);
+    --lm-progress-track-height: 4px;
+    --lm-progress-circular-size: 40px;
+    --lm-progress-circular-stroke: 4px;
+
+    /* --- dropzone --- */
+    --lm-dropzone-border-width: 2px;
+    --lm-dropzone-border-style: dashed;
+    --lm-dropzone-border: var(--lm-color-outline-interactive);
+    --lm-dropzone-border-active: var(--lm-color-primary);
+    --lm-dropzone-bg: var(--lm-color-surface-container-low);
+    --lm-dropzone-bg-active: var(--lm-color-primary-container);
+    --lm-dropzone-radius: var(--lm-radius-md);
+    --lm-dropzone-min-height: 160px;
+
+    /* --- side-sheet --- */
+    --lm-side-sheet-width: 360px;
+    --lm-side-sheet-bg: var(--lm-color-surface-container-low);
+    --lm-side-sheet-shadow: var(--lm-elevation-1);
+
+    /* --- supporting-panel --- */
+    --lm-supporting-panel-width: 360px;
+    --lm-supporting-panel-bg: var(--lm-color-surface-container-low);
+    --lm-supporting-panel-radius: var(--lm-radius-lg);
+
+    /* --- form --- */
+    --lm-form-column-max-width: 720px;
+    --lm-form-row-gap: var(--lm-space-20);
+    --lm-form-section-gap: var(--lm-space-32);
+
+    /* --- scrim --- */
+    --lm-scrim-color: var(--lm-color-scrim);
+    --lm-scrim-opacity: 0.32;
+
+    /* --- target --- */
+    --lm-target-min-size: 24px;
+    --lm-target-min-gap: 8px;
+
+    /* --- table --- */
+    --lm-table-header-height: 48px;
+    --lm-table-row-height: var(--lm-density-row);
+    --lm-table-header-label: var(--lm-color-on-surface-variant);
+    --lm-table-cell-text: var(--lm-color-on-surface);
+    --lm-table-divider: var(--lm-color-outline-variant);
+    --lm-table-row-hover: var(--lm-color-on-surface);
+    --lm-table-row-selected-bg: var(--lm-color-secondary-container);
+
+    /* --- snackbar --- */
+    --lm-snackbar-radius: var(--lm-radius-xs);
+    --lm-snackbar-bg: var(--lm-color-inverse-surface);
+    --lm-snackbar-label: var(--lm-color-inverse-on-surface);
+    --lm-snackbar-action: var(--lm-color-inverse-primary);
+    --lm-snackbar-shadow: var(--lm-elevation-3);
+    --lm-snackbar-min-width: 344px;
+    --lm-snackbar-max-width: 560px;
+
+    /* --- tooltip --- */
+    --lm-tooltip-radius: var(--lm-radius-xs);
+    --lm-tooltip-bg: var(--lm-color-inverse-surface);
+    --lm-tooltip-label: var(--lm-color-inverse-on-surface);
+    --lm-tooltip-max-width: 288px;
+
+    /* --- focus --- */
+    --lm-focus-ring-width: 3px;
+    --lm-focus-ring-offset: 2px;
+    --lm-focus-ring-color: var(--lm-color-primary);
+    --lm-focus-ring-color-inverse: var(--lm-color-inverse-primary);
+    --lm-focus-ring-inner-width: 1px;
+    --lm-focus-ring-inner-color: var(--lm-color-surface);
+
+  }
+}

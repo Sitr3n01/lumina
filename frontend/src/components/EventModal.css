@@ -1,165 +1,78 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  box-shadow: var(--shadow-lg);
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
+@layer lm.components {
+  .evt__plataforma {
+    margin-block-end: var(--lm-space-16);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .evt__plataforma[data-plataforma='airbnb'] {
+    --_container: var(--lm-color-airbnb-container);
+    --_content: var(--lm-color-on-airbnb-container);
   }
-}
 
-.modal-header {
-  padding: 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
+  .evt__plataforma[data-plataforma='booking'] {
+    --_container: var(--lm-color-booking-container);
+    --_content: var(--lm-color-on-booking-container);
+  }
 
-.modal-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.modal-close {
-  background: var(--bg-tertiary);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-}
-
-.modal-close:hover {
-  background: var(--border);
-  color: var(--text-primary);
-}
-
-.modal-body {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.event-detail-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section-subtitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.detail-item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.detail-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.detail-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.detail-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.detail-value {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.detail-value.price {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--success);
-}
-
-.detail-value.code {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  background: var(--bg-tertiary);
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-@media (max-width: 768px) {
-  .modal-content {
-    max-width: 100%;
+  .evt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
     margin: 0;
-    border-radius: 12px 12px 0 0;
   }
 
-  .modal-body {
-    padding: 16px;
+  .evt__item {
+    /* Ícone na primeira coluna, rótulo e valor empilhados na segunda. A grade
+       mantém os valores alinhados mesmo com rótulos de larguras diferentes. */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--lm-space-12);
+    align-items: start;
+    padding-block: var(--lm-space-8);
   }
 
-  .modal-header {
-    padding: 16px;
+  .evt__item + .evt__item {
+    border-block-start: 1px solid var(--lm-color-divider);
+  }
+
+  .evt__icone {
+    grid-row: span 2;
+    display: grid;
+    place-items: center;
+    inline-size: var(--lm-space-32);
+    block-size: var(--lm-space-32);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-surface-container-high);
+    color: var(--lm-color-on-surface-variant);
+  }
+
+  .evt__icone > svg {
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  .evt__rotulo {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-transform: uppercase;
+  }
+
+  .evt__valor {
+    margin: 0;
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    overflow-wrap: break-word;
+  }
+
+  /* Identificador externo em monoespaçada: é uma sequência para conferir
+     caractere a caractere, não uma frase para ler. */
+  .evt__valor[data-mono] {
+    font-family: var(--lm-font-mono);
+    font-size: var(--lm-type-code-size);
+    line-height: var(--lm-type-code-line);
   }
 }

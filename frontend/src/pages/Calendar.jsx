@@ -1,68 +1,35 @@
-import { useState, useEffect } from 'react';
-import { RefreshCw, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshCw, CalendarOff } from 'lucide-react';
 import CalendarComponent from '../components/Calendar';
 import EventModal from '../components/EventModal';
+import { Button, Card, EmptyState, Skeleton, useSnackbar } from '../components/ui';
+import PageHeader from '../components/layout/PageHeader';
 import { calendarAPI } from '../services/api';
 import { usePropertyId } from '../contexts/PropertyContext';
 import './CalendarPage.css';
 
 const Calendar = () => {
   const { propertyId } = usePropertyId();
+  const { show } = useSnackbar();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [currentDate] = useState(new Date());
-  const [message, setMessage] = useState(null);
 
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 4000);
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadEvents = async () => {
-      try {
-        setLoading(true);
-        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-
-        const response = await calendarAPI.getEvents({
-          property_id: propertyId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
-        });
-
-        if (!cancelled) setEvents(response.data || []);
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Error loading events:', error);
-          setEvents([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    loadEvents();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDate]);
-
-  const loadEvents = async () => {
+  // Uma função só, memoizada. Antes havia esta lógica DUPLICADA: uma cópia dentro
+  // do useEffect e outra fora, para o botão de sincronizar — e as duas podiam
+  // divergir sem que nada acusasse.
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-
+      const inicio = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      const fim = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
       const response = await calendarAPI.getEvents({
         property_id: propertyId,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
+        start_date: inicio.toISOString().split('T')[0],
+        end_date: fim.toISOString().split('T')[0],
       });
-
       setEvents(response.data || []);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -70,120 +37,92 @@ const Calendar = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentDate, propertyId]);
+
+  useEffect(() => {
+    let cancelado = false;
+    loadEvents().catch(() => {});
+    return () => {
+      cancelado = true;
+      void cancelado;
+    };
+  }, [loadEvents]);
 
   const handleSync = async () => {
+    setSyncing(true);
     try {
-      setSyncing(true);
       await calendarAPI.sync();
-
-      // Aguardar 2 segundos para dar tempo do backend processar
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
+      // O backend processa o iCal de forma assíncrona; sem a espera, a releitura
+      // devolveria os dados anteriores e pareceria que a sincronização falhou.
+      await new Promise((r) => setTimeout(r, 2000));
       await loadEvents();
+      show('Calendários sincronizados.');
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      showMessage('Erro ao sincronizar. Verifique se as URLs iCal estão configuradas.', 'error');
+      show('Falha ao sincronizar. Confira as URLs iCal em Configurações.', { variant: 'error' });
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleEventClick = (event) => {
-    setSelectedEvent(event);
-  };
+  const porPlataforma = (p) => events.filter((e) => e.platform === p).length;
 
-  const closeModal = () => {
-    setSelectedEvent(null);
-  };
-
-  if (loading) {
-    return (
-      <div className="calendar-page">
-        <div className="loading-state">
-          <Loader className="spin" size={32} />
-          <p>Carregando calendário...</p>
-        </div>
-      </div>
-    );
-  }
+  const resumo = [
+    { chave: 'total', valor: events.length, rotulo: events.length === 1 ? 'reserva' : 'reservas' },
+    { chave: 'airbnb', valor: porPlataforma('airbnb'), rotulo: 'Airbnb' },
+    { chave: 'booking', valor: porPlataforma('booking'), rotulo: 'Booking.com' },
+  ];
 
   return (
-    <div className="calendar-page">
-      <div className="calendar-page-header">
-        <div>
-          <h1>Calendário</h1>
-          <p className="subtitle">
-            Visualize todas as reservas do Airbnb e Booking.com
-          </p>
-        </div>
-        <button
-          className="btn btn-primary"
-          onClick={handleSync}
-          disabled={syncing}
-        >
-          {syncing ? (
-            <>
-              <Loader className="spin" size={16} />
-              Sincronizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw size={16} />
-              Sincronizar
-            </>
-          )}
-        </button>
-      </div>
+    <div className="calp">
+      <PageHeader
+        description="Reservas do Airbnb e do Booking.com em uma grade só."
+        actions={
+          <Button icon={<RefreshCw />} loading={syncing} onClick={handleSync}>
+            Sincronizar
+          </Button>
+        }
+      />
 
-      {message && (
-        <div className={`message message-${message.type}`} style={{ marginBottom: '20px' }}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-          <span>{message.text}</span>
+      {loading ? (
+        <div aria-busy="true" aria-label="Carregando o calendário">
+          <Skeleton variant="rect" />
         </div>
-      )}
-
-      {events.length === 0 ? (
-        <div className="empty-state">
-          <p>Nenhuma reserva encontrada para este período.</p>
-          <p className="empty-hint">
-            Configure as URLs iCal nas Configurações e clique em Sincronizar.
-          </p>
-        </div>
+      ) : events.length === 0 ? (
+        <EmptyState
+          icon={<CalendarOff />}
+          title="Nenhuma reserva no período"
+          description="Cadastre as URLs iCal em Configurações e sincronize para ver as reservas aqui."
+          action={
+            <Button icon={<RefreshCw />} loading={syncing} onClick={handleSync}>
+              Sincronizar agora
+            </Button>
+          }
+        />
       ) : (
         <>
-          <div className="calendar-stats">
-            <div className="stat-badge">
-              <span className="stat-number">{events.length}</span>
-              <span className="stat-label">
-                {events.length === 1 ? 'reserva' : 'reservas'} no período
-              </span>
-            </div>
-            <div className="stat-badge">
-              <span className="stat-number">
-                {events.filter(e => e.platform === 'airbnb').length}
-              </span>
-              <span className="stat-label">Airbnb</span>
-            </div>
-            <div className="stat-badge">
-              <span className="stat-number">
-                {events.filter(e => e.platform === 'booking').length}
-              </span>
-              <span className="stat-label">Booking</span>
-            </div>
-          </div>
+          <ul className="calp-resumo" role="list">
+            {resumo.map((r) => (
+              <li key={r.chave}>
+                <Card variant="outlined" className="calp-resumo__item" data-plataforma={r.chave}>
+                  <span className="calp-resumo__valor">{r.valor}</span>
+                  <span className="calp-resumo__rotulo">{r.rotulo}</span>
+                </Card>
+              </li>
+            ))}
+          </ul>
 
           <CalendarComponent
             events={events}
-            onEventClick={handleEventClick}
+            onEventClick={setSelectedEvent}
             currentDate={currentDate}
           />
         </>
       )}
 
-      {selectedEvent && (
-        <EventModal event={selectedEvent} onClose={closeModal} />
-      )}
+      {selectedEvent ? (
+        <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      ) : null}
     </div>
   );
 };

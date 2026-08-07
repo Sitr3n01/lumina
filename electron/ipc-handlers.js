@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const { ipcMain, dialog, Notification, app } = require('electron');
+const { ipcMain, dialog, Notification, app, nativeTheme } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const log = require('electron-log');
@@ -129,6 +129,36 @@ function registerIpcHandlers(mainWindow, pythonManager) {
     // === WINDOW ===
 
     /** Minimiza a janela */
+    // === APARÊNCIA ===
+
+    /**
+     * Sincroniza o tema do CHROME do Electron com o tema do aplicativo.
+     *
+     * O design system governa o que o React desenha, mas duas superfícies ficam
+     * fora dele e continuariam com a aparência antiga:
+     *
+     *   1. `backgroundColor` da BrowserWindow — a cor que a janela pinta antes do
+     *      primeiro quadro do React e nas faixas expostas durante o
+     *      redimensionamento. Estava fixa em #101922, então um app em tema claro
+     *      abriria com um flash escuro e mostraria bordas escuras ao redimensionar.
+     *   2. `nativeTheme.themeSource` — governa os diálogos nativos ("Salvar como",
+     *      confirmação) e a barra de rolagem do próprio Chromium. Sem isto, o
+     *      usuário que escolhe claro no LUMINA e usa Windows no escuro recebe um
+     *      "Salvar como" preto.
+     *
+     * Recebe o tema RESOLVIDO ('light' | 'dark'), nunca 'system': quem sabe o que
+     * está realmente pintado é o renderer.
+     */
+    ipcMain.on('theme:set', (event, tema, corDeFundo) => {
+        if (tema !== 'light' && tema !== 'dark') return;
+        nativeTheme.themeSource = tema;
+        // Só hexadecimal: `setBackgroundColor` aceita string sem validar, e um
+        // valor inválido deixa a janela transparente no Windows.
+        if (typeof corDeFundo === 'string' && /^#[0-9a-fA-F]{6}$/.test(corDeFundo)) {
+            mainWindow?.setBackgroundColor(corDeFundo);
+        }
+    });
+
     ipcMain.on('window:minimize', () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.minimize();

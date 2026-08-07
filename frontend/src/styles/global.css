@@ -1,70 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* O @import do Google Fonts saiu daqui: um app Electron não deve buscar tipografia
+   pela rede em tempo de execução. A pilha agora é `--lm-font-sans`, do sistema. */
 
-:root {
-  /* === DESIGN SYSTEM v2 — Dark Flat (Google Stitch) === */
+/* =============================================================
+   LUMINA — Estilos legados
+   Camada: lm.overrides
 
-  /* Backgrounds */
-  --bg-app:    #101922;
-  --bg-sidebar: #0b1219;
-  --card-bg:   #16202a;
-  --border-color: #23303d;
+   O bloco `:root` que ficava aqui (40 custom properties escritas à
+   mão, em hexadecimal escuro fixo) foi substituído por `bridge.css`,
+   que declara os MESMOS 40 nomes resolvendo para tokens do design
+   system. Nada que consome `var(--card-bg)` precisou mudar, e agora
+   essas variáveis seguem o tema sozinhas.
 
-  /* Primary */
-  --primary:       #137fec;
-  --primary-hover: #1171d4;
-  --primary-glow:  rgba(19, 127, 236, 0.25);
-  --primary-light: rgba(19, 127, 236, 0.12);
+   O reset universal também saiu. Ele continha `outline: none`, que
+   apagava o anel de foco de toda a aplicação; `reset.css` e
+   `base.css` o substituem.
 
-  /* Status */
-  --danger:    #ef4444;
-  --success:   #10b981;
-  --warning:   #f59e0b;
-  --info:      #3b82f6;
-  --secondary: #64748b;
+   Este arquivo encolhe a cada página migrada. Quando esvaziar, some.
+   ============================================================= */
 
-  /* Text */
-  --text-main:    #f1f5f9;
-  --text-muted:   #94a3b8;
-  --text-disable: #475569;
-
-  /* Flat borders (replaces glassmorphism borders) */
-  --border-glass:       1px solid var(--border-color);
-  --border-glass-hover: 1px solid #2e3f50;
-
-  /* Shape */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 24px;
-
-  /* Animations */
-  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast:   0.15s;
-  --duration-normal: 0.25s;
-  --duration-slow:   0.4s;
-
-  /* === BACKWARD-COMPAT ALIASES === */
-  --glass-1:   rgba(22, 32, 42, 0.9);
-  --glass-2:   rgba(26, 38, 52, 0.95);
-  --glass-3:   rgba(30, 46, 60, 1.0);
-  --bg-primary:   var(--card-bg);
-  --bg-secondary: var(--bg-app);
-  --bg-tertiary:  rgba(22, 32, 42, 0.9);
-  --text-primary:   var(--text-main);
-  --text-secondary: var(--text-muted);
-  --border:     var(--border-color);
-  --shadow:     0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-sm:  0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg:  0 8px 32px rgba(0, 0, 0, 0.5);
-  --transition-normal: all 0.25s var(--ease-in-out);
-}
-
-/* --- RESET & BASE --- */
-* { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+@layer lm.legacy {
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--lm-font-sans);
   background-color: var(--bg-app);
   color: var(--text-main);
   min-height: 100vh;
@@ -137,7 +94,7 @@ body {
 /* ========================================= */
 
 /* --- BOTÕES --- */
-button { cursor: pointer; border: none; font-family: inherit; background: none; }
+button:where(:not([class*='lm-'])) { cursor: pointer; border: none; font-family: inherit; background: none; }
 
 .btn {
   display: inline-flex;
@@ -164,7 +121,7 @@ button { cursor: pointer; border: none; font-family: inherit; background: none; 
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 .btn-primary:hover {
@@ -253,15 +210,18 @@ button { cursor: pointer; border: none; font-family: inherit; background: none; 
   font-size: 12px;
 }
 
-/* --- INPUTS / SELECTS / TEXTAREAS --- */
-input, select, textarea {
+/* --- INPUTS / SELECTS / TEXTAREAS ---
+   Mesma contenção das tabelas: `:where()` não muda a especificidade, e impede que
+   `background`, `padding` e `border` do legado preencham o que TextField, Select e
+   Textarea deixarem sem declarar. */
+input:where(:not([class*='lm-'])), select:where(:not([class*='lm-'])), textarea:where(:not([class*='lm-'])) {
   width: 100%;
   background: var(--glass-1);
   border: var(--border-glass);
   color: var(--text-main);
   padding: 12px 16px;
   border-radius: var(--radius-sm);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--lm-font-sans);
   font-size: 14px;
   transition:
     border-color var(--duration-normal) ease,
@@ -269,24 +229,22 @@ input, select, textarea {
     box-shadow var(--duration-normal) ease;
 }
 
-input:hover, select:hover {
+input:where(:not([class*='lm-'])):hover, select:where(:not([class*='lm-'])):hover {
   border: var(--border-glass-hover);
   background: var(--glass-2);
 }
 
-/* Forçar tema escuro no dropdown nativo do Chromium/Electron */
-select {
-  color-scheme: dark;
-}
+/* `color-scheme` agora vem dos tokens semânticos e acompanha o tema — fixar
+   `dark` aqui deixaria o dropdown nativo escuro também no tema claro. */
 select option {
   background: var(--card-bg);
   color: var(--text-main);
 }
 
-input:focus, select:focus, textarea:focus {
+input:where(:not([class*='lm-'])):focus, select:where(:not([class*='lm-'])):focus, textarea:where(:not([class*='lm-'])):focus {
   border-color: var(--primary);
-  background: rgba(19, 127, 236, 0.06);
-  box-shadow: 0 0 0 3px var(--primary-light);
+  background: var(--primary-light);
+  box-shadow: none;
 }
 
 input[readonly] {
@@ -709,15 +667,23 @@ input[readonly] {
 .platform-airbnb { background: rgba(255, 56, 92, 0.15); color: #ff385c; }
 .platform-booking { background: rgba(0, 113, 194, 0.15); color: #0071c2; }
 
-/* --- TABLES --- */
-table {
+/* --- TABLES ---
+   `:where(.legado)` NÃO altera a especificidade (`:where` vale zero), então estas
+   regras continuam valendo exatamente o que valiam para as tabelas antigas — mas
+   param de alcançar as novas.
+
+   Era `td { background: rgba(22,32,42,0.85) }`, um azul-escuro fixo, que pintava
+   as células do DataTable novo no tema CLARO: texto #1a1c1f sobre fundo escuro,
+   1,63:1. O componente não declarava fundo próprio, e um seletor de elemento do
+   legado não precisa de especificidade nenhuma para preencher esse vazio. */
+table:where(:not([class*='lm-'])) {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 8px;
   margin-top: 10px;
 }
 
-th {
+th:where(:not([class*='lm-'])) {
   text-align: left;
   color: var(--text-muted);
   font-weight: 500;
@@ -727,20 +693,20 @@ th {
   padding: 0 16px 12px 16px;
 }
 
-td {
-  background: rgba(22, 32, 42, 0.85);
+td:where(:not([class*='lm-'])) {
+  background: var(--glass-1);
   padding: 16px;
   color: var(--text-main);
   font-size: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-top: var(--border-glass);
+  border-bottom: var(--border-glass);
   transition: background var(--duration-fast) ease;
 }
 
-td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-left: 1px solid rgba(255,255,255,0.02); }
-td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255,255,255,0.02); }
+td:where(:not([class*='lm-'])):first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-left: var(--border-glass); }
+td:where(:not([class*='lm-'])):last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: var(--border-glass); }
 
-tr:hover td {
+tr:hover td:where(:not([class*='lm-'])) {
   background: var(--glass-2);
 }
 
@@ -767,3 +733,5 @@ tr:hover td {
 .notifications-page {
   animation: fadeInUp var(--duration-slow) var(--ease-out-expo);
 }
+
+} /* @layer lm.legacy */

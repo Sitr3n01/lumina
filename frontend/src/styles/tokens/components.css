@@ -1,0 +1,197 @@
+/* =============================================================
+   LUMINA Design System — Tokens de componente
+   ARQUIVO GERADO por scripts/design/generate_tokens.py
+   Não edite à mão. Altere as sementes no gerador e rode-o novamente.
+   ============================================================= */
+
+@layer lm.tokens {
+  :root {
+    /* --- button --- */
+    --lm-button-height: var(--lm-density-control);
+    --lm-button-padding-inline: var(--lm-space-24);
+    --lm-button-radius: var(--lm-radius-full);
+    --lm-button-gap: var(--lm-space-8);
+    --lm-button-filled-bg: var(--lm-color-primary);
+    --lm-button-filled-label: var(--lm-color-on-primary);
+    --lm-button-tonal-bg: var(--lm-color-secondary-container);
+    --lm-button-tonal-label: var(--lm-color-on-secondary-container);
+    --lm-button-outlined-border: var(--lm-color-outline);
+    --lm-button-outlined-label: var(--lm-color-primary);
+    --lm-button-text-label: var(--lm-color-primary);
+    --lm-button-elevated-bg: var(--lm-color-surface-container-low);
+    --lm-button-elevated-shadow: var(--lm-elevation-1);
+    --lm-button-destructive-bg: var(--lm-color-error);
+    --lm-button-destructive-label: var(--lm-color-on-error);
+
+    /* --- icon-button --- */
+    --lm-icon-button-size: var(--lm-density-control);
+    --lm-icon-button-icon-size: var(--lm-icon-md);
+    --lm-icon-button-radius: var(--lm-radius-full);
+    --lm-icon-button-color: var(--lm-color-on-surface-variant);
+    --lm-icon-button-selected-bg: var(--lm-color-secondary-container);
+    --lm-icon-button-selected-color: var(--lm-color-on-secondary-container);
+
+    /* --- field --- */
+    --lm-field-height: var(--lm-density-control);
+    --lm-field-radius: var(--lm-radius-sm);
+    --lm-field-padding-inline: var(--lm-space-16);
+    --lm-field-bg: var(--lm-color-surface-container-highest);
+    --lm-field-border: var(--lm-color-outline);
+    --lm-field-border-hover: var(--lm-color-on-surface);
+    --lm-field-border-focus: var(--lm-color-primary);
+    --lm-field-border-error: var(--lm-color-error);
+    --lm-field-border-width-focus: 2px;
+    --lm-field-label: var(--lm-color-on-surface-variant);
+    --lm-field-text: var(--lm-color-on-surface);
+    --lm-field-placeholder: var(--lm-color-on-surface-variant);
+    --lm-field-help: var(--lm-color-on-surface-variant);
+    --lm-field-error-text: var(--lm-color-error);
+    --lm-field-disabled-text: var(--lm-color-on-surface-disabled);
+    --lm-field-disabled-border: var(--lm-color-outline-variant);
+
+    /* --- card --- */
+    --lm-card-radius: var(--lm-radius-md);
+    --lm-card-padding: var(--lm-space-16);
+    --lm-card-filled-bg: var(--lm-color-surface-container-high);
+    --lm-card-elevated-bg: var(--lm-color-surface-container-low);
+    --lm-card-elevated-shadow: var(--lm-elevation-1);
+    --lm-card-outlined-bg: var(--lm-color-surface);
+    --lm-card-outlined-border: var(--lm-color-outline-variant);
+    --lm-card-selected-bg: var(--lm-color-secondary-container);
+
+    /* --- navigation --- */
+    --lm-navigation-rail-width: 88px;
+    --lm-navigation-rail-width-expanded: 256px;
+    --lm-navigation-drawer-width: 320px;
+    --lm-navigation-item-height: 56px;
+    --lm-navigation-item-radius: var(--lm-radius-full);
+    --lm-navigation-item-label: var(--lm-color-on-surface-variant);
+    --lm-navigation-item-label-selected: var(--lm-color-on-secondary-container);
+    --lm-navigation-item-bg-selected: var(--lm-color-secondary-container);
+    --lm-navigation-surface: var(--lm-color-surface);
+    --lm-navigation-indicator-height: 32px;
+    --lm-navigation-indicator-width: 56px;
+
+    /* --- app-bar --- */
+    --lm-app-bar-height: 64px;
+    --lm-app-bar-height-compact: 56px;
+    --lm-app-bar-bg: var(--lm-color-surface);
+    --lm-app-bar-bg-scrolled: var(--lm-color-surface-container);
+    --lm-app-bar-title: var(--lm-color-on-surface);
+    --lm-app-bar-icon: var(--lm-color-on-surface-variant);
+
+    /* --- dialog --- */
+    --lm-dialog-radius: var(--lm-radius-xl);
+    --lm-dialog-bg: var(--lm-color-surface-container-high);
+    --lm-dialog-shadow: var(--lm-elevation-4);
+    --lm-dialog-padding: var(--lm-space-24);
+    --lm-dialog-max-width: 560px;
+    --lm-dialog-scrim: var(--lm-color-scrim);
+    --lm-dialog-scrim-opacity: 0.32;
+
+    /* --- menu --- */
+    --lm-menu-radius: var(--lm-radius-md);
+    --lm-menu-bg: var(--lm-color-surface-container);
+    --lm-menu-shadow: var(--lm-elevation-2);
+    --lm-menu-item-height: 48px;
+    --lm-menu-min-width: 112px;
+    --lm-menu-max-width: 280px;
+
+    /* --- chip --- */
+    --lm-chip-height: 32px;
+    --lm-chip-radius: var(--lm-radius-sm);
+    --lm-chip-padding-inline: var(--lm-space-12);
+    --lm-chip-border: var(--lm-color-outline-interactive);
+    --lm-chip-label: var(--lm-color-on-surface-variant);
+    --lm-chip-selected-bg: var(--lm-color-secondary-container);
+    --lm-chip-selected-label: var(--lm-color-on-secondary-container);
+
+    /* --- badge --- */
+    --lm-badge-size: 16px;
+    --lm-badge-size-dot: 6px;
+    --lm-badge-min-width: 16px;
+    --lm-badge-padding-inline: var(--lm-space-4);
+    --lm-badge-radius: var(--lm-radius-full);
+    --lm-badge-bg: var(--lm-color-error);
+    --lm-badge-label: var(--lm-color-on-error);
+
+    /* --- skeleton --- */
+    --lm-skeleton-bg: var(--lm-color-surface-container-high);
+    --lm-skeleton-sheen: var(--lm-color-surface-container-lowest);
+    --lm-skeleton-radius: var(--lm-radius-xs);
+    --lm-skeleton-duration: 1400ms;
+
+    /* --- progress --- */
+    --lm-progress-track: var(--lm-color-secondary-container);
+    --lm-progress-indicator: var(--lm-color-primary);
+    --lm-progress-track-height: 4px;
+    --lm-progress-circular-size: 40px;
+    --lm-progress-circular-stroke: 4px;
+
+    /* --- dropzone --- */
+    --lm-dropzone-border-width: 2px;
+    --lm-dropzone-border-style: dashed;
+    --lm-dropzone-border: var(--lm-color-outline-interactive);
+    --lm-dropzone-border-active: var(--lm-color-primary);
+    --lm-dropzone-bg: var(--lm-color-surface-container-low);
+    --lm-dropzone-bg-active: var(--lm-color-primary-container);
+    --lm-dropzone-radius: var(--lm-radius-md);
+    --lm-dropzone-min-height: 160px;
+
+    /* --- side-sheet --- */
+    --lm-side-sheet-width: 360px;
+    --lm-side-sheet-bg: var(--lm-color-surface-container-low);
+    --lm-side-sheet-shadow: var(--lm-elevation-1);
+
+    /* --- supporting-panel --- */
+    --lm-supporting-panel-width: 360px;
+    --lm-supporting-panel-bg: var(--lm-color-surface-container-low);
+    --lm-supporting-panel-radius: var(--lm-radius-lg);
+
+    /* --- form --- */
+    --lm-form-column-max-width: 720px;
+    --lm-form-row-gap: var(--lm-space-20);
+    --lm-form-section-gap: var(--lm-space-32);
+
+    /* --- scrim --- */
+    --lm-scrim-color: var(--lm-color-scrim);
+    --lm-scrim-opacity: 0.32;
+
+    /* --- target --- */
+    --lm-target-min-size: 24px;
+    --lm-target-min-gap: 8px;
+
+    /* --- table --- */
+    --lm-table-header-height: 48px;
+    --lm-table-row-height: var(--lm-density-row);
+    --lm-table-header-label: var(--lm-color-on-surface-variant);
+    --lm-table-cell-text: var(--lm-color-on-surface);
+    --lm-table-divider: var(--lm-color-outline-variant);
+    --lm-table-row-hover: var(--lm-color-on-surface);
+    --lm-table-row-selected-bg: var(--lm-color-secondary-container);
+
+    /* --- snackbar --- */
+    --lm-snackbar-radius: var(--lm-radius-xs);
+    --lm-snackbar-bg: var(--lm-color-inverse-surface);
+    --lm-snackbar-label: var(--lm-color-inverse-on-surface);
+    --lm-snackbar-action: var(--lm-color-inverse-primary);
+    --lm-snackbar-shadow: var(--lm-elevation-3);
+    --lm-snackbar-min-width: 344px;
+    --lm-snackbar-max-width: 560px;
+
+    /* --- tooltip --- */
+    --lm-tooltip-radius: var(--lm-radius-xs);
+    --lm-tooltip-bg: var(--lm-color-inverse-surface);
+    --lm-tooltip-label: var(--lm-color-inverse-on-surface);
+    --lm-tooltip-max-width: 288px;
+
+    /* --- focus --- */
+    --lm-focus-ring-width: 3px;
+    --lm-focus-ring-offset: 2px;
+    --lm-focus-ring-color: var(--lm-color-primary);
+    --lm-focus-ring-color-inverse: var(--lm-color-inverse-primary);
+    --lm-focus-ring-inner-width: 1px;
+    --lm-focus-ring-inner-color: var(--lm-color-surface);
+
+  }
+}

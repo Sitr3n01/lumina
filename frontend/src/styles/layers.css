@@ -1,0 +1,28 @@
+/* =============================================================
+   LUMINA — Ordem canônica das camadas de cascata
+   Especifica: docs/design-system/07-implementacao.md §2
+
+   Este arquivo declara a ordem e NADA MAIS. Precisa ser o
+   primeiro import da aplicação: uma camada citada aqui fica
+   registrada na posição certa mesmo que seu CSS chegue depois.
+   É isso que torna a ordem de import irrelevante.
+
+   Prioridade cresce da esquerda para a direita (declaração
+   normal). Para declaração !important a ordem se inverte — por
+   isso o bloco de prefers-reduced-motion vive em lm.base, cedo,
+   e vence qualquer !important de lm.overrides.
+   ============================================================= */
+
+@layer lm.reset, lm.tokens, lm.bridge, lm.base, lm.legacy, lm.layout, lm.components, lm.utilities,
+  lm.overrides;
+
+/* `lm.legacy` é um acréscimo à ordem canônica de 07-implementacao.md §2, e existe
+   só durante a migração. Ele abriga `global.css`.
+
+   Sem ele o legado ficava em `lm.overrides` — DEPOIS de `lm.components` — e um
+   seletor de elemento fraquíssimo derrubava um componente inteiro: `button
+   { background: none }` vencia `.lm-button { background-color: var(--_container) }`,
+   porque ordem de camada decide antes de especificidade. O botão primário saía
+   transparente com texto branco.
+
+   A camada some junto com `global.css`. */

@@ -1,11 +1,22 @@
 /* ============================================================
-   LUMINA - Setup Wizard Styles v2
-   Design: Dark flat (Google Stitch system)
-   Colors: bg #101922, sidebar #0b1219, card #16202a, border #23303d
-   Primary: #137fec
+   LUMINA — Wizard de instalação
+
+   As cores NÃO moram mais aqui. `tokens.css` (gerado por
+   scripts/design/generate_tokens.py, carregado por wizard.html antes deste
+   arquivo) traz os mesmos tokens do aplicativo, e o bloco `:root` abaixo é uma
+   ponte: mantém os nomes que as 1.000 linhas seguintes usam e os aponta para o
+   sistema.
+
+   O que isto conserta: os 21 tokens eram redigitados à mão, e dois tinham
+   significado CONTRADITÓRIO com o app — `--text-muted` valia #94a3b8 no React e
+   #475569 aqui. Era consistência por coincidência: bastava ajustar a paleta num
+   lado para os dois divergirem em silêncio. Agora o wizard também segue tema
+   claro e escuro, que antes ele nem tinha.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Sem @import de fonte remota. O wizard é a PRIMEIRA tela da instalação, onde a
+   rede pode nem estar configurada ainda — e ele caía num fallback diferente do
+   app, deixando o produto com duas tipografias. Agora os dois usam a do sistema. */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -14,41 +25,59 @@
 }
 
 :root {
-  /* Color tokens */
-  --bg-app:        #101922;
-  --sidebar-bg:    #0b1219;
-  --card-bg:       #16202a;
-  --border:        #23303d;
-  --primary:       #137fec;
-  --primary-hover: #1171d4;
-  --primary-light: rgba(19, 127, 236, 0.12);
+  /* Superfícies */
+  --bg-app:        var(--lm-color-background);
+  --sidebar-bg:    var(--lm-color-surface-container-low);
+  --card-bg:       var(--lm-color-surface-container-low);
+  --border:        var(--lm-color-outline-variant);
 
-  --success:    #10b981;
-  --success-bg: rgba(16, 185, 129, 0.1);
-  --error:      #ef4444;
-  --error-bg:   rgba(239, 68, 68, 0.1);
-  --warning:    #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.1);
+  /* Primária. O hover é a camada de estado do sistema, e não um segundo azul
+     escolhido à mão que não guarda relação com o primeiro. */
+  --primary:       var(--lm-color-primary);
+  --primary-hover: color-mix(
+                     in oklab,
+                     var(--lm-color-on-primary) calc(var(--lm-state-hover) * 100%),
+                     var(--lm-color-primary)
+                   );
+  --primary-light: var(--lm-color-primary-container);
+  --on-primary:    var(--lm-color-on-primary);
 
-  /* Text */
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
+  /* Status. O par sólido + contêiner vem do sistema: as versões `-bg` eram a
+     mesma cor a 10% de opacidade, o que no tema claro fica quase branco. */
+  --success:    var(--lm-color-success);
+  --success-bg: var(--lm-color-success-container);
+  --error:      var(--lm-color-error);
+  --error-bg:   var(--lm-color-error-container);
+  --warning:    var(--lm-color-warning);
+  --warning-bg: var(--lm-color-warning-container);
 
-  /* Shape */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 24px;
+  /* Texto. Atenção ao histórico: `--text-muted` valia #475569 aqui e #94a3b8 no
+     app — o mesmo nome com duas cores.
 
-  /* Transition */
-  --transition: 0.2s ease;
+     `--text-muted` NÃO vai para `on-surface-disabled`, apesar do nome sugerir.
+     O wizard o usa em CONTEÚDO de verdade — nomes das etapas, dicas de campo,
+     legenda da marca — e não em coisas desabilitadas. A tinta de desabilitado
+     vale 4,06:1, abaixo dos 4,5:1 que texto normal exige; medido, reprovava em
+     22 lugares no tema claro. Fica no mesmo papel de `--text-secondary`: o
+     sistema tem duas tintas de conteúdo, não três. */
+  --text-primary:   var(--lm-color-on-surface);
+  --text-secondary: var(--lm-color-on-surface-variant);
+  --text-muted:     var(--lm-color-on-surface-variant);
+
+  /* Forma */
+  --radius-sm: var(--lm-radius-sm);
+  --radius-md: var(--lm-radius-md);
+  --radius-lg: var(--lm-radius-xl);
+
+  /* Movimento */
+  --transition: var(--lm-duration-standard) var(--lm-easing-standard);
 }
 
 html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans", Arial, sans-serif;
   font-size: 14px;
   color: var(--text-primary);
   background: var(--bg-app);
@@ -147,7 +176,7 @@ html, body {
 .step-circle.completed {
   border-color: var(--success);
   background: var(--success);
-  color: #fff;
+  color: var(--lm-color-on-success);
 }
 
 .step-name {
@@ -202,7 +231,7 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--lm-elevation-4);
 }
 
 /* Scrollable step content inside card */
@@ -322,13 +351,12 @@ select,
 textarea {
   width: 100%;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 4%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.875rem;
-  outline: none;
   transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
 }
 
@@ -336,7 +364,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
-  background: rgba(19, 127, 236, 0.06);
+  background: color-mix(in oklab, var(--lm-color-primary) 6%, transparent);
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
@@ -383,7 +411,6 @@ input[type="range"] {
   height: 4px;
   background: var(--border);
   border-radius: 2px;
-  outline: none;
   padding: 0;
   cursor: pointer;
   -webkit-appearance: none;
@@ -398,7 +425,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(19, 127, 236, 0.4);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--lm-color-primary) 40%, transparent);
 }
 
 .slider-value {
@@ -459,7 +486,6 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 0.875rem;
   font-weight: 500;
   transition: background var(--transition), transform var(--transition), opacity var(--transition);
-  outline: none;
   white-space: nowrap;
 }
 
@@ -470,7 +496,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
 }
 
 .btn-primary:not(:disabled):hover {
@@ -479,13 +505,13 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 6%, transparent);
   color: var(--text-secondary);
   border: 1px solid var(--border);
 }
 
 .btn-secondary:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 10%, transparent);
   color: var(--text-primary);
 }
 
@@ -516,19 +542,19 @@ input[type="range"]::-webkit-slider-thumb {
 .inline-message.success {
   background: var(--success-bg);
   color: var(--success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid color-mix(in oklab, var(--lm-color-success) 20%, transparent);
 }
 
 .inline-message.error {
   background: var(--error-bg);
   color: var(--error);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid color-mix(in oklab, var(--lm-color-error) 20%, transparent);
 }
 
 .inline-message.info {
   background: var(--primary-light);
-  color: #7db8f5;
-  border: 1px solid rgba(19, 127, 236, 0.2);
+  color: var(--lm-color-primary);
+  border: 1px solid color-mix(in oklab, var(--lm-color-primary) 20%, transparent);
 }
 
 /* ============================================================
@@ -558,13 +584,13 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 3%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   transition: border-color var(--transition);
 }
 
-.feature-item:hover { border-color: rgba(19, 127, 236, 0.3); }
+.feature-item:hover { border-color: color-mix(in oklab, var(--lm-color-primary) 30%, transparent); }
 
 .feature-icon { font-size: 1.2rem; flex-shrink: 0; }
 
@@ -589,7 +615,7 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 3%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -650,7 +676,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .review-card {
   padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 3%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
@@ -670,7 +696,7 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 8px;
   font-size: 0.8rem;
   padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid color-mix(in oklab, var(--lm-color-on-surface) 4%, transparent);
 }
 
 .review-row:last-child { border-bottom: none; }
@@ -687,10 +713,17 @@ input[type="range"]::-webkit-slider-thumb {
    LOADING OVERLAY
    ============================================================ */
 
+/* Superfície opaca, não véu.
+
+   Um scrim é um preto translúcido: serve para escurecer o que fica ATRÁS de um
+   diálogo, e o conteúdo por cima dele precisa de tinta invertida. Aqui não há
+   nada atrás para revelar — a tela toda é substituída durante a configuração —
+   e o texto usava a tinta normal, o que dava 1,02:1 sobre o véu. Uma superfície
+   opaca resolve os dois: cobre de verdade e mantém a tinta padrão legível. */
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(16, 25, 34, 0.9);
+  background: var(--lm-color-surface);
   display: none;
   flex-direction: column;
   align-items: center;
@@ -704,7 +737,7 @@ input[type="range"]::-webkit-slider-thumb {
 .loading-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid rgba(19, 127, 236, 0.2);
+  border: 3px solid color-mix(in oklab, var(--lm-color-primary) 20%, transparent);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -728,6 +761,18 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--border);
 }
 
+/* --------------------------------------------------------------
+   Bloco de PAPEL. Os valores fixos daqui até o fim da seção são
+   intencionais e NÃO devem virar token: isto simula uma folha impressa,
+   que é branca com tinta preta independentemente do tema da interface.
+   Trocar por tokens faria o preview mudar de cor junto com o app e
+   mentir sobre o que vai sair na impressora.
+
+   PENDÊNCIA CONHECIDA: este preview usa Georgia serif e #1a1a2e, enquanto
+   o mesmo documento no app React (pages/CondoTemplate.jsx) usa Arial e
+   #000. O mesmo papel tem duas aparências dependendo de onde é visto —
+   resolver quando CondoTemplate for migrado.
+   -------------------------------------------------------------- */
 .template-document {
   background: #ffffff;
   color: #1a1a2e;
@@ -810,9 +855,9 @@ input[type="range"]::-webkit-slider-thumb {
   justify-content: center;
   gap: 8px;
   padding: 36px 24px;
-  border: 2px dashed rgba(19, 127, 236, 0.35);
+  border: 2px dashed color-mix(in oklab, var(--lm-color-primary) 35%, transparent);
   border-radius: var(--radius-md);
-  background: rgba(19, 127, 236, 0.04);
+  background: color-mix(in oklab, var(--lm-color-primary) 4%, transparent);
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   text-align: center;
@@ -820,7 +865,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .pdf-drop-zone.drag-over {
   border-color: var(--primary);
-  background: rgba(19, 127, 236, 0.1);
+  background: color-mix(in oklab, var(--lm-color-primary) 10%, transparent);
 }
 
 .pdf-drop-icon { font-size: 2.5rem; line-height: 1; margin-bottom: 4px; }
@@ -847,7 +892,7 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in oklab, var(--lm-color-on-surface) 4%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -892,7 +937,7 @@ input[type="range"]::-webkit-slider-thumb {
 .pdf-analysis-result {
   padding: 14px 16px;
   background: var(--success-bg);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid color-mix(in oklab, var(--lm-color-success) 25%, transparent);
   border-radius: var(--radius-sm);
 }
 
@@ -921,8 +966,8 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 4px;
   padding: 3px 10px;
-  background: rgba(19, 127, 236, 0.12);
-  border: 1px solid rgba(19, 127, 236, 0.25);
+  background: color-mix(in oklab, var(--lm-color-primary) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--lm-color-primary) 25%, transparent);
   border-radius: 20px;
   font-size: 12px;
   color: var(--text-primary);
@@ -930,7 +975,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .pdf-field-tag.error {
   background: var(--error-bg);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: color-mix(in oklab, var(--lm-color-error) 30%, transparent);
 }
 
 .pdf-section-divider {
@@ -986,8 +1031,8 @@ details[open] .template-preview-summary::before { transform: rotate(90deg); }
    ============================================================ */
 
 .credentials-card {
-  background: rgba(245, 158, 11, 0.06);
-  border: 1.5px solid rgba(245, 158, 11, 0.28);
+  background: color-mix(in oklab, var(--lm-color-warning) 6%, transparent);
+  border: 1.5px solid color-mix(in oklab, var(--lm-color-warning) 28%, transparent);
   border-radius: var(--radius-md);
   padding: 20px;
   margin-top: 24px;
@@ -1058,7 +1103,7 @@ details[open] .template-preview-summary::before { transform: rotate(90deg); }
 .btn-copy {
   background: var(--primary-light);
   color: var(--primary);
-  border: 1px solid rgba(19, 127, 236, 0.3);
+  border: 1px solid color-mix(in oklab, var(--lm-color-primary) 30%, transparent);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -1068,12 +1113,12 @@ details[open] .template-preview-summary::before { transform: rotate(90deg); }
   white-space: nowrap;
 }
 
-.btn-copy:hover { background: rgba(19, 127, 236, 0.2); }
+.btn-copy:hover { background: color-mix(in oklab, var(--lm-color-primary) 20%, transparent); }
 
 .btn-copy.copied {
   background: var(--success-bg);
   color: var(--success);
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: color-mix(in oklab, var(--lm-color-success) 30%, transparent);
 }
 
 .btn-ghost-sm {
@@ -1082,4 +1127,72 @@ details[open] .template-preview-summary::before { transform: rotate(90deg); }
   border: 1px solid var(--border);
   padding: 5px 8px;
   flex-shrink: 0;
+}
+
+/* ============================================================
+   FOCO
+   As tres declaracoes `outline: none` que existiam aqui (campo, range e .btn)
+   deixavam o wizard inteiro sem indicacao de foco — a mesma falha do app, que
+   tinha `* { outline: none }`. Nao havia nenhum `:focus-visible` no arquivo.
+
+   O par abaixo e indivisivel: sem a segunda regra o anel apareceria tambem no
+   clique de mouse, que foi a motivacao errada da supressao original.
+   ============================================================ */
+
+:where(a[href], button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--lm-focus-ring-width) solid var(--lm-focus-ring-color);
+  outline-offset: var(--lm-focus-ring-offset);
+}
+
+:where(a[href], button, input, select, textarea, summary, [tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ============================================================
+   ICONES
+   Substituem os 54 emoji que existiam entre wizard.html e wizard.js. Emoji e
+   tipografia, nao ilustracao: o desenho muda por plataforma, nao acompanha
+   `currentColor`, e o leitor de tela le o nome do caractere no meio da frase
+   ("marca de verificacao branca pesada"). Todos vao com aria-hidden — quem
+   carrega a informacao e o texto ao lado.
+   ============================================================ */
+
+.wz-icone {
+  inline-size: var(--lm-icon-md);
+  block-size: var(--lm-icon-md);
+  flex-shrink: 0;
+  vertical-align: text-bottom;
+}
+
+/* Dentro de titulo de etapa e de botao o icone acompanha a linha do texto. */
+.step-title .wz-icone,
+.btn .wz-icone,
+.inline-message .wz-icone {
+  inline-size: 1em;
+  block-size: 1em;
+}
+
+.feature-icon .wz-icone,
+.pdf-drop-icon .wz-icone {
+  inline-size: var(--lm-icon-lg);
+  block-size: var(--lm-icon-lg);
+}
+
+.step-circle .wz-icone {
+  inline-size: var(--lm-icon-sm);
+  block-size: var(--lm-icon-sm);
+}
+
+.inline-message {
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-8);
 }

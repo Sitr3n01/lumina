@@ -1,0 +1,53 @@
+@layer lm.components {
+  .lm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    block-size: var(--lm-badge-size);
+    min-inline-size: var(--lm-badge-min-width);
+    /* O recuo lateral é o que deixa "99+" crescer sem estourar o contêiner:
+       a largura mínima segura um dígito, o recuo acomoda três glifos. */
+    padding-inline: var(--lm-badge-padding-inline);
+    border-radius: var(--lm-badge-radius);
+    background-color: var(--lm-badge-bg);
+    color: var(--lm-badge-label);
+    font-family: inherit;
+    font-size: var(--lm-type-label-md-size);
+    line-height: var(--lm-type-label-md-line);
+    font-weight: var(--lm-type-label-md-weight);
+    letter-spacing: var(--lm-type-label-md-tracking);
+    /* Dígitos de mesma largura: sem isto a contagem "estremece" a cada
+       atualização e desloca o que estiver ao lado. */
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    /* Badge nunca é alvo. O clique atravessa para o elemento ancorado, mesmo
+       quando o badge cobre um canto dele. */
+    pointer-events: none;
+  }
+
+  .lm-badge[data-variant='dot'] {
+    inline-size: var(--lm-badge-size-dot);
+    min-inline-size: var(--lm-badge-size-dot);
+    block-size: var(--lm-badge-size-dot);
+    padding-inline: var(--lm-space-0);
+  }
+
+  /* Oculto visualmente, presente para o leitor de tela. `display: none` e
+     `visibility: hidden` removeriam também da árvore de acessibilidade, que é
+     exatamente o oposto do que se quer aqui.
+
+     A receita canônica usa 1px; a escala não tem 1px e a régua proíbe literal,
+     então usa-se o menor degrau (2px) — o `clip-path` recorta tudo de qualquer
+     forma, e o elemento é absoluto, logo não ocupa espaço. */
+  .lm-badge__sr {
+    position: absolute;
+    inline-size: var(--lm-space-2);
+    block-size: var(--lm-space-2);
+    margin: calc(var(--lm-space-2) * -1);
+    padding: var(--lm-space-0);
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: none;
+  }
+}

@@ -8,6 +8,37 @@
 // ESTADO DO WIZARD
 // ============================================================
 
+
+/**
+ * Ícones do wizard.
+ *
+ * Substituem os 34 emoji que estavam espalhados por este arquivo. Emoji é
+ * tipografia, não ilustração: o desenho muda por plataforma e por versão do
+ * sistema, não acompanha a cor do contexto (`currentColor` não o alcança), e um
+ * leitor de tela anuncia "marca de verificação branca pesada" no meio da frase.
+ *
+ * `aria-hidden` em todos: quem carrega a informação é o texto ao lado. O SVG só
+ * a reforça.
+ */
+const ICONES = (() => {
+    const svg = (d, extra = '') =>
+        `<svg class="wz-icone" viewBox="0 0 20 20" fill="none" stroke="currentColor" ` +
+        `stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ` +
+        `aria-hidden="true" focusable="false">${d}${extra}</svg>`;
+    return {
+        ok: svg('<path d="m4 10.5 4 4 8-9"/>'),
+        erro: svg('<path d="M5 5l10 10M15 5L5 15"/>'),
+        aviso: svg('<path d="M10 2.5 18.5 17H1.5z"/><path d="M10 8v3.5M10 14v.3"/>'),
+        carregando: svg('<path d="M17 10a7 7 0 1 1-2-4.9"/><path d="M17 3v3.5h-3.5"/>'),
+        documento: svg('<path d="M5 2.5h6l4 4V17.5H5z"/><path d="M11 2.5v4h4"/>'),
+        busca: svg('<circle cx="9" cy="9" r="5.5"/><path d="m13 13 4 4"/>'),
+        olho: svg('<path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10Z"/><circle cx="10" cy="10" r="2.5"/>'),
+        olhoFechado: svg('<path d="M3 3l14 14"/><path d="M8.2 8.3A2.5 2.5 0 0 0 11.7 11.8"/><path d="M6.3 6.4C3.6 7.8 1.5 10 1.5 10S4.5 15.5 10 15.5c1.5 0 2.8-.4 3.9-1"/><path d="M16.2 12.6c1.4-1.3 2.3-2.6 2.3-2.6S15.5 4.5 10 4.5c-.6 0-1.2.1-1.7.2"/>'),
+        adiante: svg('<path d="M4 10h12"/><path d="m11 5 5 5-5 5"/>'),
+    };
+})();
+
+
 const TOTAL_STEPS = 8;
 const SKIPPABLE_STEPS = [4, 5, 7]; // Calendários, Email e Template podem ser pulados
 
@@ -113,7 +144,7 @@ function renderStepsIndicator() {
         stepEl.id = `stepCircle_${i}`;
 
         if (i < currentStep) {
-            stepEl.textContent = '✓';
+            stepEl.innerHTML = ICONES.ok;
         } else {
             stepEl.innerHTML = `<span class="step-num">${i}</span>`;
         }
@@ -158,11 +189,11 @@ function updateNavigation() {
 
     // Texto do botão principal
     if (currentStep === 1) {
-        btnNext.textContent = 'Começar →';
+        btnNext.innerHTML = 'Começar ' + ICONES.adiante;
     } else if (currentStep === TOTAL_STEPS) {
-        btnNext.textContent = '✅ Salvar e Iniciar';
+        btnNext.innerHTML = ICONES.ok + ' Salvar e iniciar';
     } else {
-        btnNext.textContent = 'Próximo →';
+        btnNext.innerHTML = 'Próximo ' + ICONES.adiante;
     }
 
     // Atualizar indicator visual
@@ -479,12 +510,12 @@ function showPdfSuccess(filename) {
     const titleEl = document.getElementById('pdfAnalysisTitle');
     const fieldsGridEl = document.getElementById('pdfFieldsGrid');
 
-    if (iconEl) iconEl.textContent = '✅';
+    if (iconEl) iconEl.innerHTML = ICONES.ok;
     if (titleEl) titleEl.textContent = 'Template salvo! Será analisado ao iniciar o sistema.';
     if (fieldsGridEl) {
         fieldsGridEl.innerHTML = `
-            <div class="pdf-field-tag">📄 ${escapeHtml(filename)}</div>
-            <div class="pdf-field-tag">🔍 Análise automática na inicialização</div>
+            <div class="pdf-field-tag">${ICONES.documento} ${escapeHtml(filename)}</div>
+            <div class="pdf-field-tag">${ICONES.busca} Análise automática na inicialização</div>
         `;
     }
     if (resultEl) resultEl.style.display = 'block';
@@ -504,7 +535,7 @@ function showPdfError(message) {
     const titleEl = document.getElementById('pdfAnalysisTitle');
     const fieldsGridEl = document.getElementById('pdfFieldsGrid');
 
-    if (iconEl) iconEl.textContent = '❌';
+    if (iconEl) iconEl.innerHTML = ICONES.erro;
     if (titleEl) titleEl.textContent = 'Erro ao processar o arquivo';
     if (fieldsGridEl) fieldsGridEl.innerHTML = `<div class="pdf-field-tag error">${escapeHtml(message)}</div>`;
     if (resultEl) resultEl.style.display = 'block';
@@ -583,7 +614,7 @@ function populateReview() {
 
     const sections = [
         {
-            title: '🏠 Imóvel',
+            title: 'Imóvel',
             rows: [
                 ['Nome', escapeHtml(formData.PROPERTY_NAME)],
                 ['Endereço', escapeHtml(formData.PROPERTY_ADDRESS)],
@@ -593,7 +624,7 @@ function populateReview() {
             ],
         },
         {
-            title: '👤 Proprietário',
+            title: 'Proprietário',
             rows: [
                 ['Nome', escapeHtml(formData.OWNER_NAME)],
                 ['Email', escapeHtml(formData.OWNER_EMAIL)],
@@ -603,27 +634,27 @@ function populateReview() {
             ],
         },
         {
-            title: '📅 Calendários',
+            title: 'Calendários',
             rows: [
-                ['Airbnb', formData.AIRBNB_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
-                ['Booking', formData.BOOKING_ICAL_URL ? '✅ Configurado' : '⚠️ Não configurado'],
+                ['Airbnb', formData.AIRBNB_ICAL_URL ? ICONES.ok + ' Configurado' : ICONES.aviso + ' Não configurado'],
+                ['Booking', formData.BOOKING_ICAL_URL ? ICONES.ok + ' Configurado' : ICONES.aviso + ' Não configurado'],
                 ['Intervalo', `${parseInt(formData.CALENDAR_SYNC_INTERVAL_MINUTES) || 30} minutos`],
             ],
         },
         {
-            title: '📧 Email',
+            title: 'E-mail',
             rows: [
                 ['Provedor', escapeHtml(formData.EMAIL_PROVIDER) || 'gmail'],
-                ['Remetente', escapeHtml(formData.EMAIL_FROM) || '⚠️ Não configurado'],
-                ['Senha', formData.EMAIL_PASSWORD ? '••••••••' : '⚠️ Não configurada'],
+                ['Remetente', escapeHtml(formData.EMAIL_FROM) || ICONES.aviso + ' Não configurado'],
+                ['Senha', formData.EMAIL_PASSWORD ? '••••••••' : ICONES.aviso + ' Não configurada'],
             ],
         },
         {
-            title: '🔐 Admin',
+            title: 'Administrador',
             rows: [
                 ['Email', escapeHtml(formData.adminEmail)],
-                ['Usuário', escapeHtml(formData.adminUsername) || '⚠️ Não definido'],
-                ['Senha', formData.adminPassword ? '••••••••' : '⚠️ Não definida'],
+                ['Usuário', escapeHtml(formData.adminUsername) || ICONES.aviso + ' Não definido'],
+                ['Senha', formData.adminPassword ? '••••••••' : ICONES.aviso + ' Não definida'],
             ],
         },
     ];
@@ -673,13 +704,13 @@ function toggleCredPassword(btn) {
         passwordEl.textContent = '•'.repeat(passwordEl.dataset.actual.length);
         passwordEl.classList.add('masked');
         passwordEl.dataset.visible = 'false';
-        btn.textContent = '👁';
+        btn.innerHTML = ICONES.olho;
         btn.title = 'Mostrar senha';
     } else {
         passwordEl.textContent = passwordEl.dataset.actual;
         passwordEl.classList.remove('masked');
         passwordEl.dataset.visible = 'true';
-        btn.textContent = '🙈';
+        btn.innerHTML = ICONES.olhoFechado;
         btn.title = 'Ocultar senha';
     }
 }
@@ -691,14 +722,14 @@ function copyCredential(elementId, btn) {
     const valueToCopy = el.dataset.actual || el.textContent;
     navigator.clipboard.writeText(valueToCopy).then(() => {
         const original = btn.textContent;
-        btn.textContent = '✅ Copiado';
+        btn.innerHTML = ICONES.ok + ' Copiado';
         btn.classList.add('copied');
         setTimeout(() => {
             btn.textContent = original;
             btn.classList.remove('copied');
         }, 2000);
     }).catch(() => {
-        btn.textContent = '❌ Erro';
+        btn.innerHTML = ICONES.erro + ' Erro';
         setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
     });
 }
@@ -742,7 +773,7 @@ function showCompletionError(msg) {
     const msgEl = document.getElementById('completionMessage');
     msgEl.innerHTML = `
     <div class="inline-message error" style="margin-top:16px;">
-      ❌ ${escapeHtml(msg)}
+      ${ICONES.erro} ${escapeHtml(msg)}
     </div>
   `;
 }
@@ -756,21 +787,21 @@ async function testIcal(fieldId, resultId) {
     const resultEl = document.getElementById(resultId);
 
     if (!url) {
-        resultEl.innerHTML = '<div class="inline-message error">⚠️ Digite uma URL primeiro</div>';
+        resultEl.innerHTML = '<div class="inline-message error">' + ICONES.aviso + ' Digite uma URL primeiro</div>';
         return;
     }
     if (!isValidUrl(url)) {
-        resultEl.innerHTML = '<div class="inline-message error">❌ URL inválida</div>';
+        resultEl.innerHTML = '<div class="inline-message error">' + ICONES.erro + ' URL inválida</div>';
         return;
     }
 
-    resultEl.innerHTML = '<div class="inline-message info">🔄 Testando...</div>';
+    resultEl.innerHTML = '<div class="inline-message info">' + ICONES.carregando + ' Testando...</div>';
 
     const result = await window.wizardAPI.testIcalUrl(url);
     if (result.success) {
-        resultEl.innerHTML = `<div class="inline-message success">✅ Calendário válido! ${escapeHtml(result.events)} evento(s) encontrado(s)</div>`;
+        resultEl.innerHTML = `<div class="inline-message success">${ICONES.ok} Calendário válido! ${escapeHtml(result.events)} evento(s) encontrado(s)</div>`;
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'URL inválida')}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">${ICONES.erro} ${escapeHtml(result.error || 'URL inválida')}</div>`;
     }
 }
 
@@ -779,7 +810,7 @@ async function testEmail() {
     const btn = document.getElementById('testEmailBtn');
     btn.disabled = true;
 
-    resultEl.innerHTML = '<div class="inline-message info">🔄 Testando conexão SMTP...</div>';
+    resultEl.innerHTML = '<div class="inline-message info">' + ICONES.carregando + ' Testando conexão SMTP...</div>';
 
     const config = {
         EMAIL_PROVIDER: document.getElementById('EMAIL_PROVIDER')?.value,
@@ -792,9 +823,9 @@ async function testEmail() {
     btn.disabled = false;
 
     if (result.success) {
-        resultEl.innerHTML = '<div class="inline-message success">✅ Conexão SMTP estabelecida com sucesso!</div>';
+        resultEl.innerHTML = '<div class="inline-message success">' + ICONES.ok + ' Conexão SMTP estabelecida com sucesso!</div>';
     } else {
-        resultEl.innerHTML = `<div class="inline-message error">❌ ${escapeHtml(result.error || 'Falha na conexão')}</div>`;
+        resultEl.innerHTML = `<div class="inline-message error">${ICONES.erro} ${escapeHtml(result.error || 'Falha na conexão')}</div>`;
     }
 }
 

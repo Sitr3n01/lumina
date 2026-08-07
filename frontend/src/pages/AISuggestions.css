@@ -1,0 +1,226 @@
+@layer lm.overrides {
+  /* Esta tela não tinha arquivo CSS: eram 55 objetos `style={{}}`, 4
+     `style={variavel}` e um bloco `<style>` com keyframes dentro do JSX. */
+
+  .ai {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* --- Assistente --- */
+
+  .ai-chat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+    /* Sem `calc(100vh - 220px)`. Aquele 220 era a soma de um cabeçalho que não
+       existe mais, e qualquer mudança de layout o deixava errado em silêncio.
+       O shell já define a altura; aqui basta ocupar o que sobrar. */
+    min-block-size: 0;
+  }
+
+  .ai-thread {
+    max-block-size: 52vh;
+    overflow-y: auto;
+    padding: var(--lm-space-16);
+    border: 1px solid var(--lm-color-outline-variant);
+    border-radius: var(--lm-card-radius);
+    background-color: var(--lm-color-surface-container-low);
+    /* A rolagem gruda no fim: mensagem nova não exige rolar à mão. */
+    scroll-behavior: smooth;
+  }
+
+  .ai-thread__lista {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ai-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--lm-space-8);
+    max-inline-size: 80%;
+  }
+
+  .ai-msg[data-de='usuario'] {
+    flex-direction: row-reverse;
+    margin-inline-start: auto;
+  }
+
+  .ai-msg__avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: var(--lm-space-32);
+    block-size: var(--lm-space-32);
+    border-radius: var(--lm-radius-full);
+    background-color: var(--lm-color-tertiary-container);
+    color: var(--lm-color-on-tertiary-container);
+  }
+
+  .ai-msg[data-de='usuario'] .ai-msg__avatar {
+    background-color: var(--lm-color-primary-container);
+    color: var(--lm-color-on-primary-container);
+  }
+
+  .ai-msg__avatar > svg {
+    inline-size: var(--lm-icon-sm);
+    block-size: var(--lm-icon-sm);
+  }
+
+  .ai-msg__bolha {
+    padding: var(--lm-space-12) var(--lm-space-16);
+    border-radius: var(--lm-radius-lg);
+    background-color: var(--lm-color-surface-container-high);
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+    letter-spacing: var(--lm-type-body-md-tracking);
+    /* Preserva quebras de linha da resposta sem permitir que uma palavra longa
+       (uma URL) estoure a bolha. */
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  /* O canto rente ao avatar some: é o que faz a bolha "apontar" para quem falou,
+     sem precisar de um triângulo desenhado. */
+  .ai-msg[data-de='assistente'] .ai-msg__bolha {
+    border-start-start-radius: var(--lm-radius-xs);
+  }
+
+  .ai-msg[data-de='usuario'] .ai-msg__bolha {
+    border-start-end-radius: var(--lm-radius-xs);
+    background-color: var(--lm-color-primary-container);
+    color: var(--lm-color-on-primary-container);
+  }
+
+  /* Texto só para leitor de tela. `clip-path` em vez de `display: none`, que o
+     removeria também da árvore de acessibilidade. */
+  .lm-sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .ai-sugestoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lm-space-8);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ai-compositor {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--lm-space-8);
+    max-inline-size: var(--lm-form-column-max-width);
+  }
+
+  .ai-compositor > :first-child {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .ai-limpar {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  /* --- Precificação --- */
+
+  .ai-carregando {
+    display: grid;
+    justify-items: center;
+    gap: var(--lm-space-16);
+    padding-block: var(--lm-space-48);
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-md-size);
+    line-height: var(--lm-type-body-md-line);
+  }
+
+  .ai-precos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-16);
+  }
+
+  .ai-precos__topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lm-space-16);
+    flex-wrap: wrap;
+  }
+
+  .ai-precos__nota {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  .ai-precos__lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--lm-space-12);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ai-preco {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lm-space-4);
+    padding: var(--lm-space-16);
+    block-size: 100%;
+  }
+
+  .ai-preco__data {
+    color: var(--lm-color-tertiary);
+    font-size: var(--lm-type-label-sm-size);
+    line-height: var(--lm-type-label-sm-line);
+    font-weight: var(--lm-type-label-sm-weight);
+    letter-spacing: var(--lm-type-label-sm-tracking);
+    text-transform: uppercase;
+  }
+
+  .ai-preco__valor {
+    color: var(--lm-color-on-surface);
+    font-size: var(--lm-type-headline-sm-size);
+    line-height: var(--lm-type-headline-sm-line);
+    font-weight: var(--lm-type-headline-sm-weight);
+    letter-spacing: var(--lm-type-headline-sm-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ai-preco__motivo {
+    color: var(--lm-color-on-surface-variant);
+    font-size: var(--lm-type-body-sm-size);
+    line-height: var(--lm-type-body-sm-line);
+    letter-spacing: var(--lm-type-body-sm-tracking);
+  }
+
+  @media (max-width: 599px) {
+    .ai-msg {
+      max-inline-size: 92%;
+    }
+
+    .ai-compositor {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+}
