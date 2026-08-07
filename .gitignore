@@ -60,7 +60,15 @@ frontend/build/
 frontend/.cache/
 
 # Dependencies
-package-lock.json
+#
+# `package-lock.json` NÃO é ignorado. Estava, e isso anulava na prática qualquer
+# correção de dependência: sem o lock versionado cada `npm install` resolve uma
+# árvore própria, e "subimos o Electron para 43" não vale para mais ninguém —
+# nem para o CI, que precisa de `npm ci` e só funciona com o lock no repositório.
+# Regra geral: biblioteca não versiona lock; APLICAÇÃO que empacota binário, sim.
+#
+# yarn e pnpm continuam ignorados porque o projeto é npm; um lock de outro
+# gerenciador aqui só existiria por engano.
 yarn.lock
 pnpm-lock.yaml
 
@@ -170,6 +178,18 @@ legacy/web-deployment/configs/nginx/ssl/*.crt
 # Coverage reports
 .coverage.*
 coverage/
+
+# === PORTÃO DE QUALIDADE ===
+# `reports/` é saída GERADA a cada execução (audit, eslint, jscpd, cobertura,
+# quality-gate.json/md). Versionar isso produz conflito em todo PR e, pior,
+# deixa relatório velho no repositório parecendo estado atual.
+reports/
+# `quality/` é o CONTRÁRIO — política e baseline versionadas de propósito.
+# Sem a baseline commitada o ratchet não tem contra o que comparar e o portão
+# inteiro vira consultivo. As duas linhas abaixo não são redundantes: a segunda
+# reverte qualquer ignore futuro mais amplo.
+!quality/
+!quality/*.json
 
 # === ELECTRON ===
 python-dist/
