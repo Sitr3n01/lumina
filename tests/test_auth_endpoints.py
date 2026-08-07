@@ -226,3 +226,64 @@ def test_change_password_weak_new(client, admin_user, auth_headers):
         headers=auth_headers,
     )
     assert response.status_code == 422
+
+
+def test_change_password_revoga_sessao_antiga(client, admin_user, auth_headers):
+    """
+    Trocar a senha derruba a sessao que ja estava aberta.
+
+    Esta e a propriedade de seguranca que o endpoint promete na resposta ("Faca login
+    novamente com a nova senha") e que nao existia: o token nao carregava `iat`, entao
+    `is_user_revoked()` nunca era alcancado e a sessao antiga sobrevivia ate o TTL.
+
+    O `sleep` nao e enfeite: a revogacao e comparada com o `iat` do token, e `iat` tem
+    resolucao de SEGUNDO. Sem cruzar a fronteira do segundo, emissao e revogacao caem no
+    mesmo instante e o token antigo sobrevive por empate — janela real de ate 1s, aceita
+    de proposito para nao derrubar o token novo emitido logo apos a troca.
+    """
+    import time
+
+    # O token de `auth_headers` ja foi emitido pela fixture; cruzar a fronteira do segundo.
+    time.sleep(1.1)
+
+    response = client.post(
+        "/api/v1/auth/change-password",
+        json={"old_password": "Admin123", "new_password": "NewAdmin456"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+
+    # O token ANTIGO tem de estar morto.
+    me_antigo = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert me_antigo.status_code == 401, "sessao antiga sobreviveu a troca de senha"
+
+    # E o token NOVO tem de funcionar — corrigir a revogacao nao pode trancar o usuario
+    # para fora da propria conta.
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "NewAdmin456"},
+    )
+    assert login.status_code == 200
+    novo = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    assert client.get("/api/v1/auth/me", headers=novo).status_code == 200
+
+
+def test_logout_nao_derruba_outra_sessao(client, admin_user):
+    """
+    Sair de uma sessao nao pode derrubar as outras.
+
+    Sem o claim `jti` o JWT era funcao deterministica de (sub, type, exp), e `exp` tem
+    resolucao de segundo: dois logins do mesmo usuario no mesmo segundo produziam uma
+    string identica. Revogar uma no logout revogava a outra junto.
+    """
+    credenciais = {"username": "admin", "password": "Admin123"}
+
+    primeira = client.post("/api/v1/auth/login", json=credenciais).json()["access_token"]
+    segunda = client.post("/api/v1/auth/login", json=credenciais).json()["access_token"]
+
+    assert primeira != segunda, "dois logins geraram o mesmo token"
+
+    assert client.post("/api/v1/auth/logout", headers={"Authorization": f"Bearer {primeira}"}).status_code == 200
+
+    assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {primeira}"}).status_code == 401
+    assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {segunda}"}).status_code == 200

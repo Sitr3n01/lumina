@@ -3,7 +3,7 @@
 Middleware de autenticação JWT com Token Blacklist.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -70,9 +70,12 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verificar se TODOS os tokens do usuário foram revogados
+    # Verificar se TODOS os tokens do usuário foram revogados (ex: troca de senha).
+    # `UTC` explícito: `fromtimestamp` sem tzinfo devolve hora LOCAL, e o `.timestamp()`
+    # do outro lado reinterpretaria como local. Funcionava por acaso, e só enquanto as
+    # duas pontas rodassem no mesmo fuso.
     token_issued_at = payload.get("iat")
-    if token_issued_at and blacklist.is_user_revoked(int(user_id), datetime.fromtimestamp(token_issued_at)):
+    if token_issued_at and blacklist.is_user_revoked(int(user_id), datetime.fromtimestamp(token_issued_at, UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token foi revogado (senha alterada)",

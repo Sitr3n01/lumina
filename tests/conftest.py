@@ -67,11 +67,14 @@ def db_session(db_engine):
 
     from app.core.token_blacklist import get_token_blacklist
 
-    blacklist = get_token_blacklist()
-    if hasattr(blacklist, "blacklisted_tokens"):
-        blacklist.blacklisted_tokens.clear()
-    elif hasattr(blacklist, "_tokens"):
-        blacklist._tokens.clear()
+    # A blacklist é um singleton de módulo e NÃO nasce de novo a cada teste. Sem esta
+    # limpeza um token revogado por um `/logout` sobrevivia para o teste seguinte, que
+    # — com o mesmo `user_id` e o mesmo segundo de emissão — recebia um token idêntico
+    # e já revogado, e falhava com 401. Era a origem da intermitência.
+    #
+    # Chamada direta e sem `hasattr`: se `reset` sumir, isto quebra alto, em vez de
+    # silenciosamente parar de limpar.
+    get_token_blacklist().reset()
 
     session.rollback()
 

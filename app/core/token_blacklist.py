@@ -34,8 +34,29 @@ class TokenBlacklist:
         self._redis_client: object | None = None
         self._memory_blacklist: set[str] = set()
         self._memory_expiry: dict[str, float] = {}  # FIX: Track expiration times
+        # Valor associado a uma chave, quando ela tem um. Só `user_revoked:*` usa:
+        # guarda QUANDO a revogação aconteceu, que é o que permite distinguir um token
+        # emitido antes dela de um emitido depois. O ramo Redis já guardava isso via
+        # SETEX; o ramo in-memory só tinha o set, e por isso respondia "revogado" para
+        # qualquer token do usuário — inclusive o novo, emitido após a troca de senha.
+        self._memory_values: dict[str, int] = {}
         self._setup_redis()
         self._start_cleanup_task()  # FIX: Iniciar limpeza automática
+
+    def reset(self) -> None:
+        """
+        Descarta todo o estado in-memory.
+
+        Existe para os testes: a blacklist é um singleton de módulo, então sem isto o
+        estado vaza de um teste para o próximo. O `conftest` chamava `.clear()` em dois
+        atributos que nunca existiram (`blacklisted_tokens`, `_tokens`) protegidos por
+        `hasattr`, o que fazia a limpeza ser um no-op SILENCIOSO — a suíte falhava de
+        forma intermitente e nada indicava a causa. Um método nomeado quebra alto se
+        sumir, em vez de não fazer nada.
+        """
+        self._memory_blacklist.clear()
+        self._memory_expiry.clear()
+        self._memory_values.clear()
 
     def _setup_redis(self):
         """Tenta conectar ao Redis, usa in-memory como fallback"""
@@ -173,8 +194,10 @@ class TokenBlacklist:
                 return False
 
         else:
-            # In-memory: marcar usuário
+            # In-memory: guardar QUANDO revogou, espelhando o valor que o Redis grava.
+            # Só a presença da chave não basta — ver `is_user_revoked`.
             self._memory_blacklist.add(key)
+            self._memory_values[key] = int(time.time())
             self._schedule_cleanup(key, ttl_seconds)
             return True
 
@@ -208,8 +231,17 @@ class TokenBlacklist:
                 return False
 
         else:
-            # In-memory simplificado: se key existe, considera revogado
-            return key in self._memory_blacklist
+            # Mesma semântica do ramo Redis acima, e por um motivo concreto: "a chave
+            # existe, logo está revogado" derrubaria também o token NOVO, emitido logo
+            # após a troca de senha — o usuário trocaria a senha e ficaria trancado
+            # para fora até o TTL expirar. Só é inválido o token emitido ANTES da
+            # revogação. Em produção não há Redis configurado, então este é o ramo que
+            # de fato roda.
+            revoked_at = self._memory_values.get(key)
+            if revoked_at is None:
+                return False
+
+            return revoked_at > int(token_issued_at.timestamp())
 
     def _schedule_cleanup(self, key: str, delay_seconds: int):
         """
@@ -236,6 +268,7 @@ class TokenBlacklist:
 
         for key in expired_keys:
             self._memory_blacklist.discard(key)
+            self._memory_values.pop(key, None)
             del self._memory_expiry[key]
 
         if expired_keys:

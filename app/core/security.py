@@ -3,6 +3,7 @@
 Módulo de segurança: Autenticação, hashing de senhas e geração de tokens JWT.
 """
 
+import secrets
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -61,12 +62,30 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     """
     to_encode = data.copy()
 
-    if expires_delta:
-        expire = datetime.now(UTC).replace(tzinfo=None) + expires_delta
-    else:
-        expire = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    agora = datetime.now(UTC).replace(tzinfo=None)
 
-    to_encode.update({"exp": expire})
+    janela = expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = agora + janela
+
+    # `jti` e `iat` NÃO são decorativos — cada um sustenta um mecanismo de revogação.
+    #
+    # `jti`: sem ele o token é uma função determinística de (sub, type, exp), e `exp`
+    # tem resolução de SEGUNDO. Dois logins do mesmo usuário no mesmo segundo geravam
+    # uma string JWT byte a byte idêntica, então revogar uma sessão no logout derrubava
+    # junto qualquer outra sessão aberta naquele segundo. A blacklist indexa pelo token
+    # inteiro; o `jti` é o que torna esse índice de fato único por sessão.
+    #
+    # `iat`: é o único dado que permite a `is_user_revoked()` distinguir um token emitido
+    # ANTES da troca de senha de um emitido DEPOIS. Sem ele o middleware lia `None`,
+    # a condição fazia curto-circuito, e `revoke_all_user_tokens()` não revogava nada —
+    # trocar a senha deixava a sessão antiga viva até o TTL inteiro expirar.
+    to_encode.update(
+        {
+            "exp": expire,
+            "iat": agora,
+            "jti": secrets.token_urlsafe(16),
+        }
+    )
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     return encoded_jwt
