@@ -85,17 +85,39 @@ Ordenadas por impacto na Fase 4 do plano (biblioteca de primitivos).
 
 ---
 
-## Lacuna de processo
+## Lacuna de processo — FECHADA
 
-Uma pendência que não é de token, levantada por [`07-implementacao.md`](07-implementacao.md):
+Era uma pendência que não é de token, levantada por
+[`07-implementacao.md`](07-implementacao.md):
 
 > A validação de separação da paleta de gráficos sob daltonismo existe como **comentário**
 > em `scripts/design/generate_tokens.py`, não como portão executável. `--check` valida
 > contraste WCAG, mas não valida ΔE sob protanopia e deuteranopia. Se alguém alterar uma
 > semente de matiz, a paleta pode regredir em silêncio.
 
-Correção proposta: portar a verificação de ΔE para dentro do `--check`, para que o mesmo
-comando cubra contraste **e** separação. Enquanto isso, a regra é revalidar manualmente com
-o validador externo sempre que uma semente de matiz ou o afunilamento de croma mudar — e o
-gerador registra em comentário as superfícies e os números da última validação
-(`#f1f4f8` / `#1a1c1f`; CVD 11,8 claro / 9,0 escuro).
+**Fechada.** `check_chart_separation()` roda dentro de `--check` e sai com 1 em falha. O
+mesmo comando cobre agora contraste **e** separação — não há mais revalidação manual com
+ferramenta externa.
+
+Simula protanopia, deuteranopia e tritanopia pelas matrizes de Machado, Oliveira e
+Fernandes (2009) em severidade 1.0, aplicadas sobre RGB **linear**, e mede ΔE por distância
+euclidiana em OKLab ×100 — a mesma escala dos comentários da paleta. A implementação
+reproduz os números que estavam registrados à mão, o que confirma que mede a mesma coisa
+que o validador externo media:
+
+| Medida | Registrado à mão | Medido pelo portão |
+|---|---|---|
+| adjacente CVD, claro | 11,8 | 11,79 |
+| adjacente CVD, escuro | 9,0 | 9,07 |
+| adjacente visão normal | 21,0 | 21,01 |
+| 3ª série, todos-os-pares | 6,7 (azul × violeta) | 6,67 |
+
+Os mínimos em `SEPARACAO_MINIMA` são o **chão medido** da paleta atual, não números
+aspiracionais: é o que faz disto um ratchet. Verificado que o portão de fato reprova — com
+os slots reordenados de propósito, ele acusa 8 falhas e aponta `blue × green` em 6,67.
+
+Só protanopia e deuteranopia reprovam. Tritanopia é medida e exibida como `INFO` (5,38
+claro / 4,64 escuro): a paleta nunca prometeu sustentá-la, e reprovar por uma promessa que
+ninguém fez só ensinaria a ignorar o portão. **Continua valendo** que a partir da 3ª série
+em cenário sem adjacência (scatter, small multiples) é obrigatória codificação secundária —
+rótulo direto ou forma distinta.

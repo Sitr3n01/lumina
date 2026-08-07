@@ -15,11 +15,22 @@ Saídas (todas geradas, nunca editadas à mão):
 Uso:
 
     python scripts/design/generate_tokens.py            # gera os arquivos
-    python scripts/design/generate_tokens.py --check    # valida contraste WCAG 2.2 AA (exit 1 em falha)
+    python scripts/design/generate_tokens.py --check    # valida contraste e daltonismo (exit 1 em falha)
 
-O modo --check é o teste de contraste do sistema: ele percorre todos os pares
-"on-<papel> sobre <papel>" nos dois temas e falha se algum ficar abaixo do
-mínimo exigido. Rode-o sempre que alterar uma semente.
+O modo --check é o portão do sistema, e cobre DUAS propriedades independentes:
+
+1. Contraste WCAG 2.2 AA — percorre todos os pares "on-<papel> sobre <papel>"
+   nos dois temas e falha se algum ficar abaixo do mínimo exigido.
+
+2. Separação da paleta de gráficos sob daltonismo — simula protanopia e
+   deuteranopia e mede ΔE OKLab entre slots adjacentes.
+
+As duas precisam existir porque medem coisas diferentes: contraste é uma
+propriedade de LUMINÂNCIA, e duas cores podem ter luminâncias bem distintas e
+ainda assim ser indistinguíveis para quem tem deuteranopia. Azul e violeta
+passam no contraste e colidem sob daltonismo.
+
+Rode-o sempre que alterar uma semente.
 """
 
 from __future__ import annotations
@@ -120,6 +131,71 @@ def contrast(fg: str, bg: str) -> float:
     a, b = relative_luminance(fg), relative_luminance(bg)
     lighter, darker = max(a, b), min(a, b)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def hex_to_oklab(value: str) -> tuple[float, float, float]:
+    """sRGB hex para OKLab.
+
+    OKLab e não CIELab porque é perceptualmente mais uniforme na faixa de croma que
+    esta paleta ocupa: distância euclidiana em OKLab corresponde melhor a "quão
+    diferentes essas duas cores parecem".
+    """
+    r, g, b = (_srgb_to_linear(c) for c in hex_to_rgb(value))
+
+    lms_l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
+    lms_m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
+    lms_s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
+
+    l_, m_, s_ = (math.copysign(abs(c) ** (1 / 3), c) for c in (lms_l, lms_m, lms_s))
+
+    return (
+        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+    )
+
+
+def delta_e_oklab(a: str, b: str) -> float:
+    """Distância euclidiana em OKLab, x100 — a escala usada nos comentários da paleta."""
+    la, aa, ba = hex_to_oklab(a)
+    lb, ab, bb = hex_to_oklab(b)
+    return 100 * math.sqrt((la - lb) ** 2 + (aa - ab) ** 2 + (ba - bb) ** 2)
+
+
+# Simulação de deficiência de visão de cores.
+#
+# Matrizes de Machado, Oliveira e Fernandes (2009), "A Physiologically-based Model for
+# Simulation of Color Vision Deficiency", severidade 1.0 (dicromacia completa). Operam
+# sobre RGB LINEAR, não sobre sRGB codificado — aplicar sobre o valor com gama produz
+# cores erradas e um resultado otimista, que é o pior tipo de erro num portão de
+# acessibilidade.
+#
+# Protanopia e deuteranopia são as duas que a paleta declara ter validado, e juntas
+# respondem pela grande maioria dos casos. Tritanopia entra porque é barata de medir.
+CVD_MATRICES: dict[str, tuple[tuple[float, float, float], ...]] = {
+    "protanopia": (
+        (0.152286, 1.052583, -0.204868),
+        (0.114503, 0.786281, 0.099216),
+        (-0.003882, -0.048116, 1.051998),
+    ),
+    "deuteranopia": (
+        (0.367322, 0.860646, -0.227968),
+        (0.280085, 0.672501, 0.047413),
+        (-0.011820, 0.042940, 0.968881),
+    ),
+    "tritanopia": (
+        (1.255528, -0.076749, -0.178779),
+        (-0.078411, 0.930809, 0.147602),
+        (0.004733, 0.691367, 0.303900),
+    ),
+}
+
+
+def simulate_cvd(value: str, kind: str) -> str:
+    r, g, b = (_srgb_to_linear(c) for c in hex_to_rgb(value))
+    m = CVD_MATRICES[kind]
+    out = tuple(row[0] * r + row[1] * g + row[2] * b for row in m)
+    return rgb_to_hex(*(_linear_to_srgb(max(0.0, min(1.0, c))) for c in out))
 
 
 # --------------------------------------------------------------------------- #
@@ -1066,6 +1142,106 @@ def check_contrast(tokens: dict) -> int:
     return failures
 
 
+# --------------------------------------------------------------------------- #
+# Verificação de separação da paleta de gráficos sob daltonismo
+# --------------------------------------------------------------------------- #
+
+# Mínimos que a paleta categórica precisa sustentar. Os valores são o CHÃO MEDIDO
+# da paleta atual, não números aspiracionais — é o que transforma isto num
+# ratchet: qualquer regressão cai abaixo e reprova.
+#
+#   adjacente CVD 9.0   — pior caso medido: 9.07 (escuro, deuteranopia)
+#   adjacente normal 20.0 — medido: 21.01 nos dois temas
+#   duas séries 20.0    — medido: 23.28 (claro) e 23.32 (escuro)
+#   contraste 3.0       — WCAG 1.4.11 para elemento não-textual
+SEPARACAO_MINIMA = {
+    "adjacente_cvd": 9.0,
+    "adjacente_normal": 20.0,
+    "duas_series_cvd": 20.0,
+    "contraste_superficie": 3.0,
+}
+
+# Só protanopia e deuteranopia REPROVAM: são as duas que a paleta declara ter
+# validado, e juntas cobrem a grande maioria dos casos. Tritanopia é medida e
+# exibida, mas não reprova — a paleta nunca prometeu sustentá-la, e fazer o portão
+# falhar por uma promessa que ninguém fez só ensinaria a ignorar o portão.
+CVD_BLOQUEANTES = ("protanopia", "deuteranopia")
+
+
+def check_chart_separation(tokens: dict) -> int:
+    """Valida que a paleta categórica continua separável sob daltonismo.
+
+    Fecha a "lacuna de processo" registrada em `docs/design-system/LACUNAS.md`: esta
+    verificação existia só como COMENTÁRIO no topo de `CHART_CATEGORICAL`, revalidado
+    à mão com uma ferramenta externa. `--check` cobria contraste WCAG, que é uma
+    propriedade de luminância — e luminância não diz nada sobre confundir azul com
+    violeta. Mudar uma semente de matiz podia degradar a paleta sem que nada
+    apontasse.
+    """
+    rotulos = [rotulo for rotulo, _, _, _ in CHART_CATEGORICAL]
+    medidas: list[tuple[str, str, float, float | None, str]] = []
+
+    for theme in ("light", "dark"):
+        cores = tokens["chart"]["categorical"][theme]
+        superficie = tokens["semantic"][theme]["color"]["chart-surface"]
+
+        # Adjacência é o que importa numa série empilhada, numa linha ou numa legenda
+        # em ordem: são os vizinhos que o olho compara. Por isso a ORDEM dos slots é
+        # fixa e nunca deve ser ciclada.
+        for tipo in (*CVD_BLOQUEANTES, "tritanopia"):
+            simuladas = [simulate_cvd(c, tipo) for c in cores]
+            pior, par = min(
+                (
+                    (delta_e_oklab(simuladas[i], simuladas[i + 1]), f"{rotulos[i]}x{rotulos[i + 1]}")
+                    for i in range(len(cores) - 1)
+                ),
+                key=lambda medida: medida[0],
+            )
+            # Tritanopia entra com mínimo `None`: medida e exibida, nunca bloqueante.
+            minimo = SEPARACAO_MINIMA["adjacente_cvd"] if tipo in CVD_BLOQUEANTES else None
+            medidas.append((theme, f"adjacente · {tipo}", pior, minimo, par))
+
+        pior_normal = min(delta_e_oklab(cores[i], cores[i + 1]) for i in range(len(cores) - 1))
+        medidas.append((theme, "adjacente · visão normal", pior_normal, SEPARACAO_MINIMA["adjacente_normal"], ""))
+
+        # Em scatter e small multiples não há adjacência: qualquer par pode encostar.
+        # A paleta só promete DUAS séries limpas nesse cenário; a partir da terceira
+        # exige codificação secundária (rótulo direto ou forma).
+        duas = min(delta_e_oklab(simulate_cvd(cores[0], k), simulate_cvd(cores[1], k)) for k in CVD_BLOQUEANTES)
+        medidas.append((theme, "todos-os-pares · 2 séries · CVD", duas, SEPARACAO_MINIMA["duas_series_cvd"], ""))
+
+        pior_contraste = min(contrast(c, superficie) for c in cores)
+        medidas.append((theme, "slot x chart-surface", pior_contraste, SEPARACAO_MINIMA["contraste_superficie"], ""))
+
+    print(f"\n{'tema':6s} {'medida':34s} {'valor':>7s}  {'min':>5s}  status")
+    print("-" * 92)
+    falhas = 0
+    tema_anterior = None
+    for theme, nome, valor, minimo, par in medidas:
+        if tema_anterior is not None and theme != tema_anterior:
+            print("-" * 92)
+        tema_anterior = theme
+        if minimo is None:
+            status, limite = "INFO", "—"
+        else:
+            ok = valor >= minimo
+            falhas += 0 if ok else 1
+            status, limite = ("PASS" if ok else "FAIL"), f"{minimo:.1f}"
+        sufixo = f"  ({par})" if par else ""
+        print(f"{theme:6s} {nome:34s} {valor:7.2f}  {limite:>5s}  {status}{sufixo}")
+    print("-" * 92)
+
+    if falhas:
+        print(
+            f"\n{falhas} medida(s) de separação abaixo do mínimo.\n"
+            "A paleta regrediu. Ver o comentário de CHART_CATEGORICAL: a ordem dos slots é\n"
+            "o mecanismo de segurança, e mudar uma semente de matiz invalida a validação."
+        )
+    else:
+        print("\nA paleta categórica mantém a separação sob protanopia e deuteranopia.")
+    return falhas
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Gera os design tokens do LUMINA.")
     parser.add_argument("--check", action="store_true", help="Valida contraste sem escrever arquivos.")
@@ -1074,7 +1250,9 @@ def main() -> int:
     tokens = build_tokens()
 
     if args.check:
-        return 1 if check_contrast(tokens) else 0
+        # Os dois somados, e não `or`: as duas verificações rodam sempre, para que um
+        # relatório mostre TODAS as falhas de uma vez em vez de uma por execução.
+        return 1 if check_contrast(tokens) + check_chart_separation(tokens) else 0
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "tokens.json").write_text(json.dumps(tokens, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -1105,7 +1283,7 @@ def main() -> int:
     print(f"gerado  {WIZARD_OUT.relative_to(REPO_ROOT)}  ({WIZARD_OUT.stat().st_size:,} bytes)")
 
     print()
-    return 1 if check_contrast(tokens) else 0
+    return 1 if check_contrast(tokens) + check_chart_separation(tokens) else 0
 
 
 if __name__ == "__main__":

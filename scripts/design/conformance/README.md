@@ -44,8 +44,35 @@ Retorna `{ total, pass, fail, resultados }`. Sai limpo quando `fail === 0`.
   `:focus-visible`, e uma janela sem foco não casa nem `:focus`. O harness verifica a regra
   pelo CSSOM e o contraste por token; a verificação renderizada exige teclado real numa
   janela com foco.
-- **`forced-colors`** e **`prefers-reduced-motion`** — precisam de emulação via CDP.
-- **Zoom de 200%** — precisa de mudança de escala no nível do navegador.
+- **`forced-colors` renderizado** e **`prefers-reduced-motion`** — precisam de emulação via CDP.
+  Ver abaixo o que já foi medido sem ela.
+
+## Impressão, `forced-colors` e zoom — medidos em 2026-08-07
+
+Os três estavam listados aqui como não cobertos. Foram medidos **no aplicativo rodando**, e
+não neste harness: são propriedades do produto, e este harness carrega só a camada de tokens.
+O alvo é `PageSandbox` (`http://localhost:5173/#pages`), que expõe `window.__irPara(tela)` e
+`window.__telas` justamente para varreduras assim.
+
+**Zoom — passa.** 200% equivale a um viewport CSS de 640×400 numa janela de 1280×800; 400%,
+que é o limite real da WCAG 1.4.10, equivale a 320px. Medido em 10 telas × 2 temas nos dois
+níveis: **nenhuma rolagem horizontal do documento**. A 320px o `DataTable` fica mais largo que
+o viewport (382px de tabela), mas rola dentro do próprio `.lm-data-table__scroller`
+(`overflow-x: auto`) — que é exatamente a exceção que a 1.4.10 abre para conteúdo tabular,
+contida do jeito certo.
+
+**Impressão — passa.** Os **13** seletores dentro de `@media print` casam com elementos reais
+na tela do documento; nenhum morto. É a regressão que importa: renomear `.lm-shell` ou
+`.lm-nav` faria a folha voltar a sair com a navegação impressa junto, sem erro nenhum.
+
+**`forced-colors` — parcial.** Dos **20** seletores sob `@media (forced-colors: active)`, 13
+foram alcançados varrendo as dez telas. Os 7 restantes não estão mortos — dependem de estado
+ou largura que a varredura não exercitou: `summary` (não há `<details>` no produto),
+`.lm-radio__input` e `.lm-switch__input` com seus `::after` de marcação, e os dois
+`.lm-nav__link[data-forma="expanded"|"drawer"]`, que só existem em outras classes de janela.
+
+Isto verifica que as regras **alcançam** o documento. Verificar que a fronteira continua
+**visível** com o alto contraste do Windows ligado exige emulação via CDP, e continua aberto.
 
 ## Armadilhas conhecidas (custaram tempo)
 

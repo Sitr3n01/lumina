@@ -768,18 +768,22 @@ input[type="range"]::-webkit-slider-thumb {
    Trocar por tokens faria o preview mudar de cor junto com o app e
    mentir sobre o que vai sair na impressora.
 
-   PENDÊNCIA CONHECIDA: este preview usa Georgia serif e #1a1a2e, enquanto
-   o mesmo documento no app React (pages/CondoTemplate.jsx) usa Arial e
-   #000. O mesmo papel tem duas aparências dependendo de onde é visto —
-   resolver quando CondoTemplate for migrado.
+   UNIFICADO com `frontend/src/pages/CondoTemplate.css` (.ct-folha): mesma
+   pilha de fonte, mesma tinta, mesmo corpo. Era Georgia 11pt sobre #1a1a2e
+   aqui e Arial 10pt sobre #000 no app — o MESMO papel com duas aparências,
+   e quem configurasse pelo wizard via um documento diferente do que o
+   aplicativo depois imprimia.
+
+   Se um dos dois lados mudar, o outro muda junto. Não há token a usar: o
+   papel é deliberadamente independente do tema (ver acima).
    -------------------------------------------------------------- */
 .template-document {
   background: #ffffff;
-  color: #1a1a2e;
+  color: #000000;
   padding: 32px 28px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 11pt;
-  line-height: 1.6;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.4;
 }
 
 .template-doc-header {
