@@ -128,7 +128,7 @@ class PythonManager {
                 this._emitLog(`Backend dev pronto em ${this.getUrl()}`);
                 this._onReadyCallbacks.forEach(cb => cb());
             } catch (err) {
-                throw new Error(`Backend dev na porta ${devPort} não respondeu: ${err.message}`);
+                throw new Error(`Backend dev na porta ${devPort} não respondeu: ${err.message}`, { cause: err });
             }
             return;
         }
@@ -239,7 +239,7 @@ class PythonManager {
             this._onReadyCallbacks.forEach(cb => cb());
         } catch (err) {
             this._process?.kill();
-            throw new Error(`Backend não iniciou a tempo: ${err.message}`);
+            throw new Error(`Backend não iniciou a tempo: ${err.message}`, { cause: err });
         }
     }
 

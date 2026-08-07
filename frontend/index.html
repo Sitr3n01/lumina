@@ -2,6 +2,42 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!-- Content Security Policy.
+
+         Precisa ser META, e não cabeçalho HTTP: em produção a janela carrega o React por
+         `loadFile()`, ou seja `file://`, e `onHeadersReceived` não roda para um documento
+         que não veio por HTTP. Um CSP instalado no processo principal protegeria só o modo
+         de desenvolvimento — justamente o ambiente que menos precisa.
+
+         O app renderiza conteúdo que não é nosso: corpo de e-mail sincronizado das
+         plataformas e texto devolvido pelo provedor de IA. `contextIsolation` e `sandbox`
+         limitam o estrago de um XSS; o CSP é o que impede o passo seguinte, que é falar
+         com a rede.
+
+         connect-src: em dev a origem é http://localhost:5173 e a API vai pelo proxy do
+         Vite (mesma origem) — mas o HMR usa WebSocket. Em produção a origem é `file://`,
+         opaca, então `'self'` NÃO cobre o backend: ele precisa estar listado por host, com
+         porta livre porque a porta é escolhida em tempo de execução.
+
+         'unsafe-inline' em script-src existe pelo bloco de tema logo abaixo, que precisa
+         rodar antes da primeira pintura. Trocar por hash exige que o hash sobreviva ao
+         build do Vite; enquanto não for verificado, fica declarado aqui em vez de fingir
+         que o problema não existe. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        font-src 'self' data:;
+        connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*;
+        object-src 'none';
+        frame-src 'none';
+        base-uri 'none';
+        form-action 'none';
+      "
+    />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LUMINA - Gestão de Apartamento</title>

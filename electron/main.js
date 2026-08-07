@@ -131,21 +131,61 @@ function createMainWindow(options = {}) {
     // Previne que links externos abram dentro do Electron (potencial phishing/MITM).
     // URLs externas são abertas no browser padrão do sistema via shell.openExternal.
     const { shell } = require('electron');
-    const ALLOWED_ORIGINS = [
-        'http://localhost:5173',  // Vite dev server
-        'http://127.0.0.1',       // Backend local (qualquer porta)
-        'file://',                 // Arquivos estáticos em produção
-    ];
 
-    const isAllowedUrl = (url) =>
-        ALLOWED_ORIGINS.some(origin => url.startsWith(origin));
+    // Hosts que podem navegar DENTRO da janela do Electron. Comparados por igualdade
+    // exata de hostname, nunca por prefixo.
+    //
+    // A versão anterior fazia `url.startsWith('http://127.0.0.1')`, e um prefixo não
+    // respeita a fronteira de um domínio: `http://127.0.0.1.evil.com/` e
+    // `http://localhost:5173.evil.com/` passavam pela allowlist e carregavam dentro do
+    // aplicativo — exatamente o phishing que este bloco existe para impedir.
+    const HOSTS_INTERNOS = new Set(['localhost', '127.0.0.1']);
+
+    const isAllowedUrl = (url) => {
+        let alvo;
+        try {
+            alvo = new URL(url);
+        } catch {
+            return false; // URL que nem parseia não navega em lugar nenhum
+        }
+
+        // Produção serve o React do disco; qualquer file:// é conteúdo nosso.
+        if (alvo.protocol === 'file:') return true;
+
+        // Dev (Vite em 5173) e backend local (porta livre). `hostname` já vem sem porta
+        // e sem credenciais, então não há como escondê-lo dentro de outra string.
+        return (alvo.protocol === 'http:' || alvo.protocol === 'https:') && HOSTS_INTERNOS.has(alvo.hostname);
+    };
+
+    // Entrega ao navegador do sistema — e SÓ o que é navegação web de verdade.
+    //
+    // `shell.openExternal` repassa a URL ao sistema operacional, que a resolve pelo
+    // esquema. No Windows isso alcança handlers como `ms-msdt:` e `search-ms:`, além de
+    // caminhos UNC `\\host\share` — vetor conhecido de execução e de vazamento de hash
+    // NTLM. Restringir a http/https deixa de fora tudo isso.
+    const abrirNoNavegador = (url) => {
+        let alvo;
+        try {
+            alvo = new URL(url);
+        } catch {
+            log.warn('[Main] URL malformada ignorada:', url);
+            return;
+        }
+
+        if (alvo.protocol !== 'http:' && alvo.protocol !== 'https:') {
+            log.warn('[Main] Esquema não permitido, URL descartada:', alvo.protocol);
+            return;
+        }
+
+        shell.openExternal(url).catch((err) => {
+            log.warn('[Main] Falha ao abrir URL externa:', url, err.message);
+        });
+    };
 
     win.webContents.on('will-navigate', (event, url) => {
         if (!isAllowedUrl(url)) {
             event.preventDefault();
-            shell.openExternal(url).catch((err) => {
-                log.warn('[Main] Falha ao abrir URL externa:', url, err.message);
-            });
+            abrirNoNavegador(url);
             log.info('[Main] URL externa redirecionada para browser:', url);
         }
     });
@@ -153,9 +193,7 @@ function createMainWindow(options = {}) {
     // Interceptar abertura de novas janelas (links com target="_blank")
     win.webContents.setWindowOpenHandler(({ url }) => {
         if (!isAllowedUrl(url)) {
-            shell.openExternal(url).catch((err) => {
-                log.warn('[Main] Falha ao abrir nova janela externa:', url, err.message);
-            });
+            abrirNoNavegador(url);
         }
         return { action: 'deny' }; // Nunca abrir nova janela Electron
     });
