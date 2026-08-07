@@ -8,6 +8,19 @@ que toca, o que precisa ser verdade ao final, como verificar, e qual seção do 
 especifica. Os oito documentos são a especificação de referência — este é o que se abre
 para trabalhar.
 
+> **Estado (rodada de qualidade de 2026-08-07).** A remoção do legado está **concluída**:
+> `global.css` (737 linhas) e `bridge.css` (108) foram apagados, e as camadas `lm.legacy` e
+> `lm.bridge` saíram de `layers.css`. O levantamento mostrou as 53 classes do legado sem um
+> único consumidor, e a ponte de 40 variáveis consumida só pelo próprio legado — o último a
+> segurar os dois era `ErrorBoundary`, hoje escrito com `EmptyState` e `Button`.
+>
+> Efeito colateral medido: as células do documento em `CondoTemplate` deixaram de ser pintadas
+> pelo `td { background: var(--glass-1) }` do legado, que dava tinta translúcida e cantos
+> arredondados de 8px a uma folha que deveria simular papel branco.
+>
+> O que este plano diz sobre os dois arquivos vira registro histórico. O risco **R7** (validação
+> de daltonismo como comentário) continua aberto — ver [`LACUNAS.md`](LACUNAS.md).
+
 ---
 
 ## Sumário

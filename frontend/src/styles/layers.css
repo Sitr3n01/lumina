@@ -13,16 +13,19 @@
    e vence qualquer !important de lm.overrides.
    ============================================================= */
 
-@layer lm.reset, lm.tokens, lm.bridge, lm.base, lm.legacy, lm.layout, lm.components, lm.utilities,
-  lm.overrides;
+@layer lm.reset, lm.tokens, lm.base, lm.layout, lm.components, lm.utilities, lm.overrides;
 
-/* `lm.legacy` é um acréscimo à ordem canônica de 07-implementacao.md §2, e existe
-   só durante a migração. Ele abriga `global.css`.
+/* `lm.bridge` e `lm.legacy` saíram desta lista: as duas nasceram com data de remoção
+   (07-implementacao.md §2 e §6) e a data chegou.
 
-   Sem ele o legado ficava em `lm.overrides` — DEPOIS de `lm.components` — e um
-   seletor de elemento fraquíssimo derrubava um componente inteiro: `button
-   { background: none }` vencia `.lm-button { background-color: var(--_container) }`,
-   porque ordem de camada decide antes de especificidade. O botão primário saía
-   transparente com texto branco.
+   `lm.legacy` abrigava `global.css`; `lm.bridge` abrigava `bridge.css`, o remapeamento
+   das 40 variáveis legadas para tokens. Os dois arquivos foram apagados — as 53 classes
+   do legado tinham ficado sem um único consumidor, e a ponte só era consumida pelo
+   próprio legado. O último a segurar os dois de pé era `ErrorBoundary`, que agora usa
+   `EmptyState` e `Button` como todo o resto do produto.
 
-   A camada some junto com `global.css`. */
+   Registro do que a camada resolvia, porque a armadilha volta se alguém reintroduzir
+   CSS antigo: em `lm.overrides` — DEPOIS de `lm.components` — um seletor de elemento
+   fraquíssimo derrubava um componente inteiro. `button { background: none }` vencia
+   `.lm-button { background-color: var(--_container) }`, porque ordem de camada decide
+   antes de especificidade, e o botão primário saía transparente com texto branco. */

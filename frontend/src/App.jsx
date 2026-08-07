@@ -26,7 +26,7 @@ function AppContent() {
   if (loading) {
     return (
       <div className="app-boot" role="status" aria-label="Carregando o LUMINA">
-        <RefreshCw className="spin app-boot__icon" aria-hidden="true" />
+        <RefreshCw className="app-boot__icon" aria-hidden="true" />
       </div>
     );
   }

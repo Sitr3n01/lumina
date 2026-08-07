@@ -13,9 +13,12 @@
      tema claro quanto no escuro. Trocar por token faria o preview
      mentir sobre o resultado impresso.
 
-     O mesmo documento no wizard (electron/wizard/wizard.css) usa
-     Georgia; aqui é Arial. São duas aparências para o mesmo papel —
-     pendência registrada nos dois arquivos.
+     O mesmo documento no wizard (electron/wizard/wizard.css, bloco
+     `.template-document`) usa EXATAMENTE esta pilha de fonte, esta tinta
+     e este corpo. Eram duas aparências para o mesmo papel — Georgia 11pt
+     sobre #1a1a2e lá, Arial 10pt sobre #000 aqui — e quem configurava
+     pelo wizard via um documento diferente do que o app depois imprimia.
+     Se mudar aqui, mude lá.
      -------------------------------------------------------------- */
 
   .ct-folha {

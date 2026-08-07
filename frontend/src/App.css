@@ -42,5 +42,20 @@
     inline-size: var(--lm-icon-xl);
     block-size: var(--lm-icon-xl);
     color: var(--lm-color-primary);
+    animation: lm-app-boot-spin var(--lm-duration-complex) linear infinite;
+  }
+
+  /* Vinha de `.spin`, uma classe utilitária global em `global.css` com um único
+     consumidor — este ícone. Um nome global que só uma tela usa é acoplamento sem
+     retorno, então a animação passou a viver junto de quem gira.
+
+     `prefers-reduced-motion` não aparece aqui de propósito: o bloco global de
+     `base.css` já zera a duração de toda animação, e repetir a regra criaria um
+     segundo lugar para ela divergir. O wizard do Electron tem os próprios
+     `@keyframes spin`, em folha separada — os dois nunca se encontraram. */
+  @keyframes lm-app-boot-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 }

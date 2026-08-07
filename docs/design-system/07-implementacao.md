@@ -40,16 +40,20 @@ recurso com suporte garantido é dívida sem credor.
 
 ### 1.1 A árvore alvo de `frontend/src/styles/`
 
+> **Estado: migração concluída.** `bridge.css` e `global.css` foram **apagados**, e com eles as
+> camadas `lm.bridge` e `lm.legacy`. As 53 classes do legado ficaram sem consumidor; a ponte só
+> era consumida pelo próprio legado. O último a segurar os dois era `ErrorBoundary`, hoje escrito
+> com `EmptyState` e `Button`. O que este documento diz sobre os dois arquivos continua valendo
+> como **registro do porquê** — as armadilhas descritas voltam se alguém reintroduzir CSS antigo.
+
 ```
 frontend/src/styles/
 ├── layers.css              ESCRITO  · uma linha: a ordem canônica das camadas
 ├── fonts.css               ESCRITO  · @font-face da Inter, fora de qualquer camada
 ├── reset.css               ESCRITO  · @layer lm.reset
 ├── base.css                ESCRITO  · @layer lm.base
-├── bridge.css              ESCRITO  · @layer lm.bridge — TEMPORÁRIO (§6)
 ├── layout.css              ESCRITO  · @layer lm.layout — shell, grid, regiões
 ├── utilities.css           ESCRITO  · @layer lm.utilities — conjunto fechado
-├── global.css              LEGADO   · @layer lm.overrides — encolhe até sumir (§6.6)
 └── tokens/
     ├── primitives.css      GERADO   · @layer lm.tokens
     ├── semantic.css        GERADO   · @layer lm.tokens
@@ -177,17 +181,21 @@ app e não contém mais nada:
 
 ```css
 /* frontend/src/styles/layers.css — o arquivo inteiro */
-@layer lm.reset, lm.tokens, lm.bridge, lm.base, lm.legacy, lm.layout, lm.components, lm.utilities,
-  lm.overrides;
+@layer lm.reset, lm.tokens, lm.base, lm.layout, lm.components, lm.utilities, lm.overrides;
 ```
 
-Nove camadas, ordem crescente de prioridade: `lm.overrides` vence todas, `lm.reset` perde para
+Sete camadas, ordem crescente de prioridade: `lm.overrides` vence todas, `lm.reset` perde para
 todas.
 
-#### `lm.legacy` — camada de migração, com prazo de validade
+#### `lm.legacy` e `lm.bridge` — encerradas
 
-Acréscimo à ordem original, e o único lugar de `global.css` enquanto ele existir. Foi
-introduzida depois de um defeito medido, não por gosto de arquitetura.
+As duas nasceram com data de remoção e a data chegou: saíram da ordem junto com `global.css` e
+`bridge.css`. A seção continua aqui porque o defeito que motivou `lm.legacy` é uma armadilha
+geral do mecanismo de camadas, e volta a valer no dia em que qualquer CSS antigo reentrar no
+projeto.
+
+Acréscimo à ordem original, `lm.legacy` era o único lugar de `global.css`. Foi introduzida
+depois de um defeito medido, não por gosto de arquitetura.
 
 `global.css` estava em `lm.overrides` — a **última** camada, portanto acima de `lm.components`.
 O efeito: `button { background: none }`, um seletor de elemento com especificidade (0,0,1),
@@ -223,12 +231,12 @@ participa da cascata, e o bloco `prefers-reduced-motion` de `01-fundamentos.md` 
 |---|---|---|---|
 | `lm.reset` | Normalização do agente de usuário: `box-sizing`, zeragem de margem, herança de fonte em controles de formulário, `text-size-adjust`, `img`/`svg` como `block`. **Nunca `outline: none`** | Elemento e universal | `reset.css` |
 | `lm.tokens` | **Só** os três `.css` gerados. Nada mais, nunca | `:root`, `[data-density]`, `[data-theme]` | `tokens/*.css` |
-| `lm.bridge` | **Só** o remapeamento das variáveis legadas (§6). Nasce com data de remoção | `:root` | `bridge.css` |
+| ~~`lm.bridge`~~ | Remapeava as variáveis legadas (§6). **Removida** — nasceu com data de remoção e a data chegou | — | — |
 | `lm.base` | Padrão de elemento **usando token**: `html`/`body`, tipografia base, links, `::selection`, barra de rolagem, o anel de foco de `03-acessibilidade.md` §3.3, o bloco `prefers-reduced-motion` | Elemento, envolto em `:where()` | `base.css` |
 | `lm.layout` | Estrutura sem decoração: shell da aplicação, grid, regiões de navegação, contêineres de página, `--lm-form-column-max-width` | Classe `.lm-*` | `layout.css` |
 | `lm.components` | Um bloco por componente de `components/ui/`. Anatomia, variantes, estados | Classe `.lm-*` e `[data-*]` do próprio componente. **Nunca seletor de elemento** | `ui/*/**.css` |
 | `lm.utilities` | Conjunto **fechado** de auxiliares de propósito único: `.lm-visually-hidden`, `.lm-truncate`, `.lm-stack`. Crescer essa lista é sintoma, não solução | Classe `.lm-*` | `utilities.css` |
-| `lm.overrides` | Escape com prazo. Hoje: `global.css` inteiro. Nada novo entra aqui | Qualquer | `global.css` |
+| `lm.overrides` | Escape com prazo. Hoje: só folhas de página que precisam vencer os componentes (`CondoTemplate.css` e afins). Nada de legado entra aqui | Qualquer | `pages/*.css` |
 
 **Por que `lm.tokens` vem depois de `lm.reset`.** Não por precedência — custom property em
 `:root` não disputa com reset — mas porque a leitura do arquivo deve espelhar a ordem de

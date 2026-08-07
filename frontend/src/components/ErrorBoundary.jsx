@@ -1,6 +1,19 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button, EmptyState } from './ui';
 
+/**
+ * Fronteira de erro de renderização.
+ *
+ * Era o último componente fora do design system: desenhava a si mesmo com dez
+ * propriedades `style={{}}`, consumia `var(--warning)` e `var(--text-muted)` — nomes da
+ * ponte legada — e usava `className="btn btn-primary"`, as duas últimas classes vivas de
+ * `global.css`. Eram elas que seguravam o arquivo inteiro de pé.
+ *
+ * `EmptyState` é o primitivo certo aqui: uma ausência explicada, com a saída ao lado.
+ * É a mesma forma de qualquer outra tela vazia do produto, o que importa justamente num
+ * componente que só aparece quando algo já deu errado.
+ */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -22,32 +35,16 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '300px',
-          padding: '40px',
-          textAlign: 'center',
-          gap: '16px',
-        }}>
-          <AlertTriangle size={48} style={{ color: 'var(--warning, #f59e0b)' }} />
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>
-            Algo deu errado
-          </h2>
-          <p style={{ color: 'var(--text-muted, #94a3b8)', maxWidth: '400px', lineHeight: 1.5 }}>
-            Ocorreu um erro inesperado nesta seção. Tente recarregar a página.
-          </p>
-          <button
-            className="btn btn-primary"
-            onClick={this.handleReset}
-            style={{ marginTop: '8px' }}
-          >
-            <RefreshCw size={16} />
-            Tentar Novamente
-          </button>
-        </div>
+        <EmptyState
+          icon={<AlertTriangle aria-hidden="true" />}
+          title="Algo deu errado"
+          description="Ocorreu um erro inesperado nesta seção. Tente carregar de novo."
+          action={
+            <Button variant="filled" icon={<RefreshCw />} onClick={this.handleReset}>
+              Tentar novamente
+            </Button>
+          }
+        />
       );
     }
 
