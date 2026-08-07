@@ -1,0 +1,81 @@
+name: Quality Gate
+
+# O portão roda em PR e em push para main. Nada aqui aprova ou reprova por opinião:
+# `quality:check` compara métricas com `quality/baseline.json` e sai 1 se algo regrediu.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Sem permissão de escrita: este workflow lê o código e reporta. Não comenta, não
+# aprova, não mescla, e não atualiza a baseline — atualizar baseline dentro de um PR é
+# exatamente como uma regressão passa despercebida.
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O portão compara o branch contra `origin/main` para saber o que mudou e o
+          # que é arquivo novo. Com o checkout raso padrão (depth 1) esse merge-base
+          # não existe, e a comparação silenciosamente vira "nenhum arquivo mudou".
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # `npm ci` e não `npm install`: o portão precisa da árvore exata do lockfile,
+      # senão ele mede uma combinação de dependências que ninguém tem localmente.
+      - name: Instalar dependências
+        run: |
+          npm ci
+          npm ci --prefix frontend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint Python
+        run: |
+          python -m ruff check app/ tests/ scripts/
+          python -m ruff format --check app/ tests/ scripts/
+
+      - name: Testes e cobertura
+        run: python -m pytest tests/ -q --cov=app --cov-report=json:reports/coverage-python.json
+
+      - name: Portão do design system (contraste WCAG + daltonismo)
+        run: python scripts/design/generate_tokens.py --check
+
+      # Confirma que os tokens versionados são de fato o que o gerador produz. Se
+      # alguém editar um `.css` gerado à mão, o diff aparece aqui em vez de sumir.
+      - name: Tokens gerados estão em dia
+        run: |
+          python scripts/design/generate_tokens.py
+          git diff --exit-code frontend/src/styles/tokens/ electron/wizard/tokens.css
+
+      - name: Coletar métricas
+        run: |
+          npm run lint:report
+          npm run complexity:ci
+          npm run duplication:ci
+          npm run audit:report
+
+      # Passo final e bloqueante. Sem `continue-on-error`: se este passo não puder
+      # reprovar o build, o portão inteiro é decoração.
+      - name: Portão de qualidade
+        run: npm run quality:check
+
+      - name: Publicar relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: reports/
+          retention-days: 14

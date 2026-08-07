@@ -43,7 +43,7 @@ const TOTAL_STEPS = 8;
 const SKIPPABLE_STEPS = [4, 5, 7]; // Calendários, Email e Template podem ser pulados
 
 let currentStep = 1;
-let formData = {};
+const formData = {};
 let defaults = {};
 
 // Nomes dos steps para exibição
@@ -313,8 +313,12 @@ function validateStep(step) {
     clearErrors();
     const errors = [];
 
+    // Cada `case` tem chaves próprias. Sem elas, todos os `const` daqui compartilham UM
+    // único escopo de bloco — o do `switch` inteiro. Hoje ninguém cruza a fronteira, mas
+    // basta um caso ler a variável de outro para receber ReferenceError por zona morta
+    // temporal, num caminho que só roda no passo correspondente do wizard.
     switch (step) {
-        case 2: // Imóvel
+        case 2: { // Imóvel
             const propName = document.getElementById('PROPERTY_NAME')?.value?.trim();
             if (!propName) errors.push({ field: 'PROPERTY_NAME', msg: 'Nome do imóvel é obrigatório' });
 
@@ -323,8 +327,9 @@ function validateStep(step) {
                 errors.push({ field: 'CONDO_EMAIL', msg: 'Email inválido' });
             }
             break;
+        }
 
-        case 3: // Proprietário
+        case 3: { // Proprietário
             const ownerName = document.getElementById('OWNER_NAME')?.value?.trim();
             if (!ownerName) errors.push({ field: 'OWNER_NAME', msg: 'Nome do proprietário é obrigatório' });
 
@@ -333,15 +338,17 @@ function validateStep(step) {
                 errors.push({ field: 'OWNER_EMAIL', msg: 'Email inválido' });
             }
             break;
+        }
 
-        case 5: // Email (apenas se preenchido)
+        case 5: { // Email (apenas se preenchido)
             const emailFrom = document.getElementById('EMAIL_FROM')?.value?.trim();
             if (emailFrom && !isValidEmail(emailFrom)) {
                 errors.push({ field: 'EMAIL_FROM', msg: 'Email inválido' });
             }
             break;
+        }
 
-        case 6: // Admin
+        case 6: { // Admin
             const adminEmail = document.getElementById('adminEmail')?.value?.trim();
             if (!adminEmail) {
                 errors.push({ field: 'adminEmail', msg: 'Email é obrigatório' });
@@ -370,6 +377,7 @@ function validateStep(step) {
                 errors.push({ field: 'adminPasswordConfirm', msg: 'As senhas não conferem' });
             }
             break;
+        }
     }
 
     return errors;
