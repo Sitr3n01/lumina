@@ -42,6 +42,6 @@ nsis:
 
 publish:
   provider: github
-  owner: zegil
-  repo: AP_Controller
+  owner: Sitr3n01
+  repo: lumina
   releaseType: release

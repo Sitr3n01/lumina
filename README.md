@@ -6,8 +6,8 @@
 
 **Aplicativo Desktop Windows · Alpha A.0.1.0**
 
-[![Release](https://img.shields.io/github/v/release/Sitr3n01/apartment_rental_manager?label=release&color=blue)](https://github.com/Sitr3n01/apartment_rental_manager/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://github.com/Sitr3n01/apartment_rental_manager/releases)
+[![Release](https://img.shields.io/github/v/release/Sitr3n01/lumina?label=release&color=blue)](https://github.com/Sitr3n01/lumina/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://github.com/Sitr3n01/lumina/releases)
 [![Python](https://img.shields.io/badge/python-3.11%2B-yellow)](https://www.python.org/)
 [![Electron](https://img.shields.io/badge/electron-29-47848F)](https://www.electronjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688)](https://fastapi.tiangolo.com/)
@@ -47,7 +47,7 @@ Release Alpha A.0.1.0, distribuída como instalador Windows: backend, banco e in
 
 ### Para Usuários (Windows 10/11)
 
-1. Acesse a página de [**Releases**](https://github.com/Sitr3n01/apartment_rental_manager/releases)
+1. Acesse a página de [**Releases**](https://github.com/Sitr3n01/lumina/releases)
 2. Baixe o arquivo `LUMINA-Setup-A.0.1.0.exe`
 3. Execute o instalador e siga as instruções
 4. Na primeira execução, o **Wizard de Configuração** abrirá automaticamente
@@ -114,8 +114,8 @@ O projeto passou por uma **revisão interna de segurança** com correções apli
 ### Setup rápido
 
 ```bash
-git clone https://github.com/Sitr3n01/apartment_rental_manager.git
-cd apartment_rental_manager
+git clone https://github.com/Sitr3n01/lumina.git
+cd lumina
 
 python -m venv venv
 venv\Scripts\activate
@@ -171,7 +171,7 @@ Roadmap completo: [`docs/roadmap.md`](docs/roadmap.md).
 4. Escreva testes para sua mudança quando aplicável
 5. Abra um Pull Request
 
-Bugs e pedidos de feature: [Issues](https://github.com/Sitr3n01/apartment_rental_manager/issues).
+Bugs e pedidos de feature: [Issues](https://github.com/Sitr3n01/lumina/issues).
 
 ---
 
@@ -188,7 +188,7 @@ Bugs e pedidos de feature: [Issues](https://github.com/Sitr3n01/apartment_rental
 
 ---
 
-> **Nota histórica:** Este repositório foi renomeado de `AP_Controller` para `apartment_rental_manager`. Links antigos continuam funcionando por redirect do GitHub.
+> **Nota histórica:** Este repositório foi renomeado de `AP_Controller` para `apartment_rental_manager` e, em outubro de 2026, para `lumina`. Links antigos continuam funcionando por redirect do GitHub.
 
 ---
 
