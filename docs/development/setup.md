@@ -21,12 +21,12 @@
 - Nenhum outro software necessário
 
 ### Passos
-1. Acesse a página de [Releases](https://github.com/Sitr3n01/apartment_rental_manager/releases)
+1. Acesse a página de [Releases](https://github.com/Sitr3n01/lumina/releases)
 2. Baixe o arquivo `LUMINA-Setup-A.0.1.0.exe` (ou `.zip` portátil)
 3. Execute o instalador e siga os passos
 4. Na primeira execução, o **Wizard de Configuração** abrirá automaticamente para guiar você pela configuração inicial
 
-> **Nota Alpha:** Esta é uma versão de testes. Recomendamos manter backups dos seus dados. Relate bugs em [Issues](https://github.com/Sitr3n01/apartment_rental_manager/issues).
+> **Nota Alpha:** Esta é uma versão de testes. Recomendamos manter backups dos seus dados. Relate bugs em [Issues](https://github.com/Sitr3n01/lumina/issues).
 
 ---
 
@@ -52,8 +52,8 @@ npm --version       # 10+
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/Sitr3n01/apartment_rental_manager.git
-cd apartment_rental_manager
+git clone https://github.com/Sitr3n01/lumina.git
+cd lumina
 ```
 
 ---
@@ -221,7 +221,7 @@ O instalador gerado estará em `release/`.
 ## 🗂️ Estrutura do Projeto
 
 ```
-apartment_rental_manager/
+lumina/
   app/                  # Backend FastAPI (Python)
     api/v1/             # Endpoints auth, health
     core/               # Sync, conflict detection, security
@@ -282,5 +282,5 @@ apartment_rental_manager/
 - [Documentação da API](docs/architecture/API_DOCUMENTATION.md)
 - [Estado do Projeto](docs/LUMINA_PROJECT_STATE.md)
 - [Oportunidades de Melhoria](../roadmap.md)
-- [Issues / Bug Reports](https://github.com/Sitr3n01/apartment_rental_manager/issues)
-- [Releases](https://github.com/Sitr3n01/apartment_rental_manager/releases)
+- [Issues / Bug Reports](https://github.com/Sitr3n01/lumina/issues)
+- [Releases](https://github.com/Sitr3n01/lumina/releases)

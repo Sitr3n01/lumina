@@ -89,7 +89,7 @@ TELEGRAM_ADMIN_USER_IDS=123456789,987654321
 Execute o script de instalação:
 
 ```bash
-# Windows (via CMD ou PowerShell) — execute na raiz do repositorio apartment_rental_manager
+# Windows (via CMD ou PowerShell) — execute na raiz do repositorio lumina
 pip install python-telegram-bot
 
 # Ou reinstale todas as dependências
